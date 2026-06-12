@@ -93,7 +93,9 @@ class Example:
         self.table_top_z = float(self.table_pos[2] + self.table_half[2])
         self.cable_radius = 0.008
         self.cable_friction = 1.5
-        self.gripper_body_contact_margin = self.cable_radius
+        self.cable_contact_margin = 0.001
+        self.gripper_proxy_margin = 0.001
+        self.gripper_proxy_gap = self.cable_radius
         self.soft_start_pos = np.array(
             [0.28, -0.30, self.table_top_z + 0.03],
             dtype=np.float32,
@@ -110,8 +112,15 @@ class Example:
         self.cable_segment_length = 0.035
         self.cable_node_count = 15
         self.grasp_tcp_height = self.table_top_z
-        self.gripper_open = 0.045
-        self.gripper_closed = 0.0
+        self.gripper_open = 0.04
+        # The cable exists only in the VBD object model, so no contact force can
+        # stop the fingers in the robot model. The close target must itself stop
+        # at the cable: pad face at cable radius plus the summed contact margins,
+        # minus a small interference whose contact stiffness sets the grip force.
+        grasp_interference = 0.001
+        self.gripper_closed = (
+            self.cable_radius + self.cable_contact_margin + self.gripper_proxy_margin - grasp_interference
+        )
         self.home_q = np.array(
             [
                 -0.0036802115,
@@ -136,21 +145,19 @@ class Example:
         self.ee_offset = np.array([0.0, 0.0, 0.22], dtype=np.float32)
         initial_ee_pos = self._body_offset_position(ik_state, self.ee_body, self.ee_offset)
         self.cable_start_pos = initial_ee_pos.copy()
+        # Clamp so the whole cable rests on the table: a real-weight cable end
+        # draping past the edge drags the entire cable off before the grasp.
+        cable_extent = self.cable_direction * self.cable_segment_length * (self.cable_node_count - 1)
         table_margin = 0.04
-        self.cable_start_pos[0] = np.clip(
-            self.cable_start_pos[0],
-            float(self.table_pos[0] - self.table_half[0] + table_margin),
-            float(self.table_pos[0] + self.table_half[0] - table_margin),
-        )
-        self.cable_start_pos[1] = np.clip(
-            self.cable_start_pos[1],
-            float(self.table_pos[1] - self.table_half[1] + table_margin),
-            float(self.table_pos[1] + self.table_half[1] - table_margin),
-        )
+        for axis in range(2):
+            self.cable_start_pos[axis] = np.clip(
+                self.cable_start_pos[axis],
+                float(self.table_pos[axis] - self.table_half[axis] + table_margin),
+                float(self.table_pos[axis] + self.table_half[axis] - table_margin - max(cable_extent[axis], 0.0)),
+            )
         self.cable_start_pos[2] = self.table_top_z + self.cable_radius
-        grasp_pos = self.cable_start_pos + self.cable_direction * self.cable_segment_length * (
-            self.cable_node_count - 1
-        ) * 0.25
+        self.cable_node_positions = self._cable_layout_positions()
+        grasp_pos = 0.5 * (self.cable_node_positions[3] + self.cable_node_positions[4])
         grasp_pos[2] = self.grasp_tcp_height
         self.pickup_q = self._solve_gripper_ik(ik_model, ik_state, grasp_pos)
 
@@ -218,6 +225,14 @@ class Example:
             iterations=args.vbd_iterations,
             rigid_body_contact_buffer_size=512,
             rigid_contact_history=True,
+            # Keep hard contacts (penalty-only friction loses the lifted cable),
+            # but disable sticky contact-point replay and resolve penetration
+            # fully each step (alpha=0, as in Newton's cable_twist, which also
+            # drives kinematic bodies in persistent cable contact): penetration
+            # accumulating against the moving pads spikes the contact force and
+            # its friction bound, kicking the pinched cable out.
+            rigid_contact_stick_motion_eps=0.0,
+            rigid_avbd_contact_alpha=0.0,
             particle_self_contact_radius=self.particle_self_contact_radius,
             particle_self_contact_margin=self.particle_self_contact_margin,
             particle_enable_self_contact=False,
@@ -243,6 +258,19 @@ class Example:
     @staticmethod
     def _device_from_args(args):
         return wp.get_device(args.device) if args.device else None
+
+    def _cable_layout_positions(self) -> list[np.ndarray]:
+        # A straight round rod on a flat table has a free rolling mode (no
+        # rolling resistance in VBD); a gentle bow locks it geometrically,
+        # like a real cable that never rests perfectly straight.
+        bow = 0.02
+        normal = np.array([-self.cable_direction[1], self.cable_direction[0], 0.0], dtype=np.float32)
+        positions = []
+        for i in range(self.cable_node_count):
+            s = i / (self.cable_node_count - 1)
+            p = self.cable_start_pos + self.cable_direction * self.cable_segment_length * i
+            positions.append((p + normal * bow * math.sin(math.pi * s)).astype(np.float32))
+        return positions
 
     def _build_robot_builder(self) -> newton.ModelBuilder:
         builder = newton.ModelBuilder()
@@ -342,8 +370,8 @@ class Example:
             is_visible=False,
             has_shape_collision=True,
             has_particle_collision=False,
-            margin=self.gripper_body_contact_margin,
-            gap=self.gripper_body_contact_margin,
+            margin=self.gripper_proxy_margin,
+            gap=self.gripper_proxy_gap,
             ke=5.0e4,
             kd=1.0e2,
             mu=1.0,
@@ -370,15 +398,15 @@ class Example:
                 label_prefix=label,
             )
 
-        positions = [
-            wp.vec3(*(cable_start_pos + self.cable_direction * self.cable_segment_length * i))
-            for i in range(self.cable_node_count)
-        ]
+        positions = [wp.vec3(*p) for p in self.cable_node_positions]
 
         self.cable_body_start = builder.body_count
         cable_cfg = newton.ModelBuilder.ShapeConfig(
-            density=80.0,
-            margin=0.001,
+            # Realistic jacketed-cable density; the previous 80 kg/m^3 made the
+            # 0.6 g segments so light that pinch-contact residuals during arm
+            # motion converted into multi-m/s ejection kicks.
+            density=1200.0,
+            margin=self.cable_contact_margin,
             ke=2.0e4,
             kd=20.0,
             mu=self.cable_friction,
@@ -524,10 +552,13 @@ class Example:
             q = (1.0 - alpha) * pickup_closed + alpha * home_closed
         else:
             phase = 2.0 * math.pi * 0.18 * (t - sweep_start)
+            # Ramp the sweep in so the commanded velocity is continuous at onset;
+            # a step in target velocity kicks the pinched cable out of the grasp.
+            ramp = _smoothstep((t - sweep_start) / 1.5)
             q = home_closed.copy()
-            q[0] += 0.55 * math.sin(phase)
-            q[3] += 0.18 * math.sin(phase + 0.35)
-            q[5] -= 0.20 * math.sin(phase)
+            q[0] += 0.55 * ramp * math.sin(phase)
+            q[3] += 0.18 * ramp * math.sin(phase + 0.35)
+            q[5] -= 0.20 * ramp * math.sin(phase)
 
         target = self.robot_control.joint_target_q.numpy()
         target[:9] = q
@@ -613,12 +644,22 @@ class Example:
         if particle_q.size and np.min(particle_q[:, 2]) < self.table_top_z - 0.03:
             raise ValueError("The soft body fell through the table.")
 
+        # After the lift completes the cable must still be grasped: its nearest
+        # node should track the gripper, well above the table.
+        if self.sim_time >= 7.0:
+            ee = self._end_effector_position()
+            d = np.linalg.norm(cable_q[:, :3] - ee[None, :], axis=1)
+            if d.min() > 0.05:
+                raise ValueError("The cable is no longer grasped by the gripper.")
+            if cable_q[d.argmin(), 2] < self.table_top_z + 0.05:
+                raise ValueError("The grasped cable node is not lifted above the table.")
+
     @staticmethod
     def create_parser():
         parser = examples.create_parser()
         parser.set_defaults(output_path=str(Path("outputs") / "cable_soft_franka.usd"), num_frames=720)
         parser.add_argument("--substeps", type=int, default=8, help="Simulation substeps per rendered frame.")
-        parser.add_argument("--vbd-iterations", type=int, default=8, help="VBD iterations for the cable.")
+        parser.add_argument("--vbd-iterations", type=int, default=12, help="VBD iterations for the cable.")
         return parser
 
 
