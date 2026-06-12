@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import os
 from pathlib import Path
 import sys
@@ -87,7 +86,9 @@ def _set_robot_targets_kernel(
     substep: int,
     sim_dt: float,
     home_q: wp.array(dtype=float),
+    pregrasp_q: wp.array(dtype=float),
     pickup_q: wp.array(dtype=float),
+    drop_q: wp.array(dtype=float),
     gripper_open: float,
     gripper_closed: float,
     joint_target_q: wp.array(dtype=float),
@@ -97,31 +98,30 @@ def _set_robot_targets_kernel(
     i = wp.tid()
     t = t_frame[0] + float(substep) * sim_dt
 
-    close_start = 2.8
-    hold_start = 4.0
-    lift_start = 4.8
-    sweep_start = 6.8
+    descend_start = 2.2
+    close_start = 3.2
+    hold_start = 4.4
+    carry_start = 5.0
+    settle_start = 7.0
+    release_start = 8.0
+    retreat_start = 8.6
 
-    if t < close_start:
-        alpha = _wp_smoothstep(t / close_start)
-        q = (1.0 - alpha) * home_q[i] + alpha * pickup_q[i]
-    elif t < lift_start:
+    if t < descend_start:
+        alpha = _wp_smoothstep(t / descend_start)
+        q = (1.0 - alpha) * home_q[i] + alpha * pregrasp_q[i]
+    elif t < close_start:
+        alpha = _wp_smoothstep((t - descend_start) / (close_start - descend_start))
+        q = (1.0 - alpha) * pregrasp_q[i] + alpha * pickup_q[i]
+    elif t < carry_start:
         q = pickup_q[i]
-    elif t < sweep_start:
-        alpha = _wp_smoothstep((t - lift_start) / (sweep_start - lift_start))
-        q = (1.0 - alpha) * pickup_q[i] + alpha * home_q[i]
+    elif t < settle_start:
+        alpha = _wp_smoothstep((t - carry_start) / (settle_start - carry_start))
+        q = (1.0 - alpha) * pickup_q[i] + alpha * drop_q[i]
+    elif t < retreat_start:
+        q = drop_q[i]
     else:
-        q = home_q[i]
-        phase = 2.0 * 3.141592653589793 * 0.18 * (t - sweep_start)
-        # Ramp the sweep in so the commanded velocity is continuous at onset;
-        # a step in target velocity kicks the pinched cable out of the grasp.
-        ramp = _wp_smoothstep((t - sweep_start) / 1.5)
-        if i == 0:
-            q += 0.55 * ramp * wp.sin(phase)
-        elif i == 3:
-            q += 0.18 * ramp * wp.sin(phase + 0.35)
-        elif i == 5:
-            q -= 0.20 * ramp * wp.sin(phase)
+        alpha = _wp_smoothstep((t - retreat_start) / 2.0)
+        q = (1.0 - alpha) * drop_q[i] + alpha * home_q[i]
 
     if i >= 7:
         if t < close_start:
@@ -129,8 +129,13 @@ def _set_robot_targets_kernel(
         elif t < hold_start:
             alpha = _wp_smoothstep((t - close_start) / (hold_start - close_start))
             q = (1.0 - alpha) * gripper_open + alpha * gripper_closed
-        else:
+        elif t < release_start:
             q = gripper_closed
+        elif t < retreat_start:
+            alpha = _wp_smoothstep((t - release_start) / (retreat_start - release_start))
+            q = (1.0 - alpha) * gripper_closed + alpha * gripper_open
+        else:
+            q = gripper_open
 
     joint_target_q[i] = q
 
@@ -164,29 +169,68 @@ class Example:
         self.table_pos = wp.vec3(0.12, -0.45, 0.035)
         self.table_half = wp.vec3(0.45, 0.35, 0.035)
         self.table_top_z = float(self.table_pos[2] + self.table_half[2])
-        self.cable_radius = 0.008
-        self.cable_friction = 1.5
-        self.cable_contact_margin = 0.001
+        self.original_cube_half = 0.025
+        self.original_cube_density = 7800.0
+        self.sheet_half = np.array([0.09, 0.06, 0.004], dtype=np.float32)
+        self.handle_half = np.array([0.016, 0.012, 0.024], dtype=np.float32)
+        self.sheet_contact_margin = 0.001
         self.gripper_proxy_margin = 0.001
-        self.gripper_proxy_gap = self.cable_radius
-        self.cube_half = 0.025
-        self.cube_start_pos = np.array(
-            [0.28, -0.30, self.table_top_z + self.cube_half],
+        self.gripper_proxy_gap = 0.008
+        self.sheet_start_pos = np.array(
+            [0.10, -0.55, self.table_top_z + self.sheet_half[2]],
             dtype=np.float32,
         )
-        self.cable_direction = np.array([1.0, 0.05, 0.0], dtype=np.float32)
-        self.cable_direction /= np.linalg.norm(self.cable_direction)
-        self.cable_segment_length = 0.035
-        self.cable_node_count = 15
-        self.grasp_tcp_height = self.table_top_z
+        self.handle_local_pos = np.array(
+            [0.0, 0.0, self.sheet_half[2] + self.handle_half[2]],
+            dtype=np.float32,
+        )
+        self.handle_start_pos = self.sheet_start_pos + self.handle_local_pos
+        cube_volume = (2.0 * self.original_cube_half) ** 3
+        sheet_volume = float(np.prod(2.0 * self.sheet_half))
+        handle_volume = float(np.prod(2.0 * self.handle_half))
+        self.sheet_density = 2.0 * self.original_cube_density * cube_volume / (sheet_volume + handle_volume)
+        # Soft body: the FEM block from Newton's rigid_soft_contact example
+        # (the only upstream two-way VBD rigid+soft scene), scaled to the
+        # table. soft_start_pos is the block center on the table.
+        self.soft_start_pos = np.array(
+            [0.28, -0.30, self.table_top_z],
+            dtype=np.float32,
+        )
+        # Same size as the rigid cube in the companion example (5 cm sides).
+        self.soft_grid_dims = (4, 4, 4)
+        self.soft_grid_cell = 0.0125
+        # Drop one half-block-width off center so the sheet lands partly over
+        # the soft body rather than centered on it.
+        self.soft_drop_offset = np.array(
+            [0.5 * self.soft_grid_dims[0] * self.soft_grid_cell, 0.0, 0.0],
+            dtype=np.float32,
+        )
+        # Very soft FEM response: about 5% of the upstream stiffness, so the
+        # sheet visibly sinks into the block like a small pillow.
+        self.soft_k_mu = 1.0e4
+        self.soft_k_lambda = 5.0e4
+        # Contact boundary sits one particle radius above the rendered surface;
+        # 3.5 mm keeps it visually tight while leaving >2 substeps of contact
+        # engagement at the impact speed (~1.5 mm/substep).
+        self.soft_particle_radius = 0.0035
+        self.soft_body_contact_margin = 0.01
+        self.particle_self_contact_radius = 0.003
+        self.particle_self_contact_margin = 0.005
+        self.soft_contact_ke = 1.0e5
+        self.soft_contact_kd = 1.0e-4
+        self.soft_contact_kf = 1.0e3
+        self.soft_contact_mu = 0.3
+        self.grasp_tcp_height = float(self.handle_start_pos[2])
+        self.drop_tcp_height = self.table_top_z + 0.19
         self.gripper_open = 0.04
-        # The cable exists only in the VBD object model, so no contact force can
+        # The sheet exists only in the VBD object model, so no contact force can
         # stop the fingers in the robot model. The close target must itself stop
-        # at the cable: pad face at cable radius plus the summed contact margins,
-        # minus a small interference whose contact stiffness sets the grip force.
+        # at the handle: pad face at handle half-width plus the summed contact
+        # margins, minus a small interference whose contact stiffness sets the
+        # grip force.
         grasp_interference = 0.001
         self.gripper_closed = (
-            self.cable_radius + self.cable_contact_margin + self.gripper_proxy_margin - grasp_interference
+            self.handle_half[1] + self.sheet_contact_margin + self.gripper_proxy_margin - grasp_interference
         )
         self.home_q = np.array(
             [
@@ -210,23 +254,21 @@ class Example:
 
         self.ee_body = _find_body(list(ik_model.body_label), "fr3_link7")
         self.ee_offset = np.array([0.0, 0.0, 0.22], dtype=np.float32)
-        initial_ee_pos = self._body_offset_position(ik_state, self.ee_body, self.ee_offset)
-        self.cable_start_pos = initial_ee_pos.copy()
-        # Clamp so the whole cable rests on the table: a real-weight cable end
-        # draping past the edge drags the entire cable off before the grasp.
-        cable_extent = self.cable_direction * self.cable_segment_length * (self.cable_node_count - 1)
-        table_margin = 0.04
-        for axis in range(2):
-            self.cable_start_pos[axis] = np.clip(
-                self.cable_start_pos[axis],
-                float(self.table_pos[axis] - self.table_half[axis] + table_margin),
-                float(self.table_pos[axis] + self.table_half[axis] - table_margin - max(cable_extent[axis], 0.0)),
-            )
-        self.cable_start_pos[2] = self.table_top_z + self.cable_radius
-        self.cable_node_positions = self._cable_layout_positions()
-        grasp_pos = 0.5 * (self.cable_node_positions[3] + self.cable_node_positions[4])
-        grasp_pos[2] = self.grasp_tcp_height
-        self.pickup_q = self._solve_gripper_ik(ik_model, ik_state, grasp_pos)
+
+        # Pre-grasp waypoint straight above the handle: the joint-space descent
+        # from home traces an arc, and without the waypoint the open pads clip
+        # the handle sideways before the grasp.
+        pregrasp_pos = self.handle_start_pos.copy()
+        pregrasp_pos[2] = self.table_top_z + 0.12
+        self.pregrasp_q = self._solve_gripper_ik(ik_model, ik_state, pregrasp_pos)
+
+        pickup_pos = self.handle_start_pos.copy()
+        pickup_pos[2] = self.grasp_tcp_height
+        self.pickup_q = self._solve_gripper_ik(ik_model, ik_state, pickup_pos)
+
+        drop_pos = self.soft_start_pos + self.soft_drop_offset
+        drop_pos[2] = self.drop_tcp_height
+        self.drop_q = self._solve_gripper_ik(ik_model, ik_state, drop_pos)
 
         self.robot_finger_bodies = [
             _find_body(list(ik_model.body_label), "fr3_leftfinger"),
@@ -266,15 +308,23 @@ class Example:
         object_builder.color(balance_colors=False)
 
         self.object_model = object_builder.finalize(device=ik_model.device)
+        self.object_model.soft_contact_ke = self.soft_contact_ke
+        self.object_model.soft_contact_kd = self.soft_contact_kd
+        self.object_model.soft_contact_kf = self.soft_contact_kf
+        self.object_model.soft_contact_mu = self.soft_contact_mu
         self.object_model.shape_material_ke.fill_(5.0e4)
         self.object_model.shape_material_kd.fill_(1.0e2)
         self.object_model.shape_material_mu.fill_(0.8)
-        self._restore_cable_materials()
         self._restore_gripper_proxy_materials()
+        self._restore_sheet_materials()
         self.object_state_0 = self.object_model.state()
         self.object_state_1 = self.object_model.state()
         self.object_control = self.object_model.control()
-        self.object_collision_pipeline = newton.CollisionPipeline(self.object_model, contact_matching="latest")
+        self.object_collision_pipeline = newton.CollisionPipeline(
+            self.object_model,
+            contact_matching="latest",
+            soft_contact_margin=self.soft_body_contact_margin,
+        )
         self.object_contacts = self.object_model.contacts(collision_pipeline=self.object_collision_pipeline)
         newton.eval_fk(self.object_model, self.object_model.joint_q, self.object_model.joint_qd, self.object_state_0)
         newton.eval_fk(self.object_model, self.object_model.joint_q, self.object_model.joint_qd, self.object_state_1)
@@ -284,15 +334,24 @@ class Example:
             self.object_model,
             iterations=args.vbd_iterations,
             rigid_body_contact_buffer_size=512,
+            # The flat sheet face pressing into the soft block produces hundreds of
+            # contacts; an overflowing buffer drops contacts frame-to-frame and
+            # destabilizes the impact.
+            rigid_body_particle_contact_buffer_size=4096,
             rigid_contact_history=True,
-            # Keep hard contacts (penalty-only friction loses the lifted cable),
-            # but disable sticky contact-point replay and resolve penetration
-            # fully each step (alpha=0, as in Newton's cable_twist, which also
-            # drives kinematic bodies in persistent cable contact): penetration
-            # accumulating against the moving pads spikes the contact force and
-            # its friction bound, kicking the pinched cable out.
+            # Same contact configuration as the cable examples: hard contacts
+            # with sticky replay disabled and full per-step penetration
+            # correction, so the kinematically-driven gripper pads do not kick
+            # the grasped object.
             rigid_contact_stick_motion_eps=0.0,
             rigid_avbd_contact_alpha=0.0,
+            particle_self_contact_radius=self.particle_self_contact_radius,
+            particle_self_contact_margin=self.particle_self_contact_margin,
+            particle_enable_self_contact=False,
+            particle_enable_tile_solve=False,
+            particle_vertex_contact_buffer_size=32,
+            particle_edge_contact_buffer_size=64,
+            particle_collision_detection_interval=-1,
         )
 
         # Device-side trajectory/sync state so the substep loop has no host
@@ -300,7 +359,9 @@ class Example:
         # per frame instead of hundreds of individual kernel launches).
         self._t_frame = wp.zeros(1, dtype=wp.float32, device=ik_model.device)
         self._home_q_wp = wp.array(self.home_q, dtype=wp.float32, device=ik_model.device)
+        self._pregrasp_q_wp = wp.array(self.pregrasp_q, dtype=wp.float32, device=ik_model.device)
         self._pickup_q_wp = wp.array(self.pickup_q, dtype=wp.float32, device=ik_model.device)
+        self._drop_q_wp = wp.array(self.drop_q, dtype=wp.float32, device=ik_model.device)
         self._finger_bodies_wp = wp.array(self.robot_finger_bodies, dtype=wp.int32, device=ik_model.device)
         self._proxy_bodies_wp = wp.array(self.gripper_proxy_bodies, dtype=wp.int32, device=ik_model.device)
         self.graph = None
@@ -327,19 +388,6 @@ class Example:
     @staticmethod
     def _device_from_args(args):
         return wp.get_device(args.device) if args.device else None
-
-    def _cable_layout_positions(self) -> list[np.ndarray]:
-        # A straight round rod on a flat table has a free rolling mode (no
-        # rolling resistance in VBD); a gentle bow locks it geometrically,
-        # like a real cable that never rests perfectly straight.
-        bow = 0.02
-        normal = np.array([-self.cable_direction[1], self.cable_direction[0], 0.0], dtype=np.float32)
-        positions = []
-        for i in range(self.cable_node_count):
-            s = i / (self.cable_node_count - 1)
-            p = self.cable_start_pos + self.cable_direction * self.cable_segment_length * i
-            positions.append((p + normal * bow * math.sin(math.pi * s)).astype(np.float32))
-        return positions
 
     def _build_robot_builder(self) -> newton.ModelBuilder:
         builder = newton.ModelBuilder()
@@ -416,20 +464,28 @@ class Example:
             label="table",
         )
 
-        self.cube_body = builder.add_body(
-            xform=wp.transform(wp.vec3(*self.cube_start_pos), wp.quat_identity()),
-            mass=0.2,
-            label="cube",
-        )
-        object_cfg = newton.ModelBuilder.ShapeConfig(density=250.0, margin=0.0, ke=5.0e4, kd=1.0e2, mu=0.6)
-        builder.add_shape_box(
-            body=self.cube_body,
-            hx=self.cube_half,
-            hy=self.cube_half,
-            hz=self.cube_half,
-            cfg=object_cfg,
-            color=wp.vec3(0.18, 0.42, 0.95),
-            label="cube_shape",
+        # Soft FEM block, centered at soft_start_pos on the table.
+        builder.default_particle_radius = self.soft_particle_radius
+        builder.particle_max_velocity = 50.0
+        dim_x, dim_y, dim_z = self.soft_grid_dims
+        builder.add_soft_grid(
+            pos=wp.vec3(
+                float(self.soft_start_pos[0] - 0.5 * dim_x * self.soft_grid_cell),
+                float(self.soft_start_pos[1] - 0.5 * dim_y * self.soft_grid_cell),
+                float(self.soft_start_pos[2]),
+            ),
+            rot=wp.quat_identity(),
+            vel=wp.vec3(0.0, 0.0, 0.0),
+            dim_x=dim_x,
+            dim_y=dim_y,
+            dim_z=dim_z,
+            cell_x=self.soft_grid_cell,
+            cell_y=self.soft_grid_cell,
+            cell_z=self.soft_grid_cell,
+            density=100.0,
+            k_mu=self.soft_k_mu,
+            k_lambda=self.soft_k_lambda,
+            k_damp=1.0,
         )
 
         proxy_cfg = newton.ModelBuilder.ShapeConfig(
@@ -465,31 +521,39 @@ class Example:
                 label_prefix=label,
             )
 
-        positions = [wp.vec3(*p) for p in self.cable_node_positions]
-
-        self.cable_body_start = builder.body_count
-        cable_cfg = newton.ModelBuilder.ShapeConfig(
-            # Realistic jacketed-cable density; the previous 80 kg/m^3 made the
-            # 0.6 g segments so light that pinch-contact residuals during arm
-            # motion converted into multi-m/s ejection kicks.
-            density=1200.0,
-            margin=self.cable_contact_margin,
-            ke=2.0e4,
-            kd=20.0,
-            mu=self.cable_friction,
+        # Compound metal sheet: a broad thin plate with a small top handle. Its
+        # density is computed so the combined rigid body is exactly twice the
+        # mass of the old 5 cm steel cube.
+        self.sheet_body = builder.add_body(
+            xform=wp.transform(wp.vec3(*self.sheet_start_pos), wp.quat_identity()),
+            label="compression_sheet",
         )
-        self.cable_bodies, self.cable_joints = builder.add_rod(
-            positions=positions,
-            radius=self.cable_radius,
-            cfg=cable_cfg,
-            stretch_stiffness=2.5e4,
-            stretch_damping=0.05,
-            bend_stiffness=1.5e1,
-            bend_damping=0.02,
-            label="vbd_cable",
-            wrap_in_articulation=True,
+        sheet_cfg = newton.ModelBuilder.ShapeConfig(
+            density=self.sheet_density,
+            margin=self.sheet_contact_margin,
+            ke=5.0e4,
+            kd=1.0e2,
+            mu=0.8,
         )
-        self.cable_body_count = len(self.cable_bodies)
+        builder.add_shape_box(
+            body=self.sheet_body,
+            hx=float(self.sheet_half[0]),
+            hy=float(self.sheet_half[1]),
+            hz=float(self.sheet_half[2]),
+            cfg=sheet_cfg,
+            color=wp.vec3(0.62, 0.65, 0.68),
+            label="metal_sheet",
+        )
+        builder.add_shape_box(
+            body=self.sheet_body,
+            xform=wp.transform(wp.vec3(*self.handle_local_pos), wp.quat_identity()),
+            hx=float(self.handle_half[0]),
+            hy=float(self.handle_half[1]),
+            hz=float(self.handle_half[2]),
+            cfg=sheet_cfg,
+            color=wp.vec3(0.40, 0.42, 0.45),
+            label="grasp_handle",
+        )
 
         return builder
 
@@ -540,13 +604,20 @@ class Example:
         self.object_model.shape_material_ke.assign(ke)
         self.object_model.shape_material_kd.assign(kd)
 
-    def _restore_cable_materials(self) -> None:
-        body_set = set(self.cable_bodies)
+    def _restore_sheet_materials(self) -> None:
+        # Keep the sheet-block pair firm enough that the rigid sheet compresses
+        # the pillow-like soft body instead of sinking through its contact skin.
         mu = self.object_model.shape_material_mu.numpy()
+        ke = self.object_model.shape_material_ke.numpy()
+        kd = self.object_model.shape_material_kd.numpy()
         for shape, body in enumerate(self.object_model.shape_body.numpy()):
-            if int(body) in body_set:
-                mu[shape] = self.cable_friction
+            if int(body) == self.sheet_body:
+                mu[shape] = 0.8
+                ke[shape] = 1.0e5
+                kd[shape] = 1.0e-4
         self.object_model.shape_material_mu.assign(mu)
+        self.object_model.shape_material_ke.assign(ke)
+        self.object_model.shape_material_kd.assign(kd)
 
     def _body_offset_position(self, state, body: int, offset: np.ndarray) -> np.ndarray:
         body_q = state.body_q.numpy()[body]
@@ -598,7 +669,9 @@ class Example:
                 substep,
                 self.sim_dt,
                 self._home_q_wp,
+                self._pregrasp_q_wp,
                 self._pickup_q_wp,
+                self._drop_q_wp,
                 self.gripper_open,
                 self.gripper_closed,
             ],
@@ -630,6 +703,12 @@ class Example:
 
         self.viz_state.body_q.assign(body_q)
         self.viz_state.body_qd.assign(body_qd)
+
+        # The soft body's particles are part of the viz model too; without this
+        # copy the viewer draws the block frozen at its rest shape and rigid
+        # objects appear to penetrate it.
+        wp.copy(self.viz_state.particle_q, self.object_state_0.particle_q)
+        wp.copy(self.viz_state.particle_qd, self.object_state_0.particle_qd)
 
     def simulate(self) -> None:
         for substep in range(self.sim_substeps):
@@ -692,36 +771,37 @@ class Example:
 
     def test_final(self) -> None:
         body_q = self.object_state_0.body_q.numpy()
-        cable_q = body_q[self.cable_body_start : self.cable_body_start + self.cable_body_count]
-        if not np.all(np.isfinite(body_q)) or not np.all(np.isfinite(cable_q)):
+        if not np.all(np.isfinite(body_q)):
             raise ValueError("Non-finite body transform detected.")
 
-        cube = body_q[self.cube_body, :3]
-        if cube[2] - self.cube_half > self.table_top_z + 0.03:
-            raise ValueError("The cube is still floating above the table.")
-        if cube[2] < self.table_top_z:
-            raise ValueError("The cube fell through the table.")
+        particle_q = self.object_state_0.particle_q.numpy()
+        if particle_q.size and not np.all(np.isfinite(particle_q)):
+            raise ValueError("Non-finite soft-body particle position detected.")
+        if particle_q.size and np.min(particle_q[:, 2]) < self.table_top_z - 0.03:
+            raise ValueError("The soft body fell through the table.")
 
-        # After the lift completes the cable must still be grasped: its nearest
-        # node should track the gripper, well above the table.
-        if self.sim_time >= 7.0:
-            ee = self._end_effector_position()
-            d = np.linalg.norm(cable_q[:, :3] - ee[None, :], axis=1)
-            if d.min() > 0.05:
-                raise ValueError("The cable is no longer grasped by the gripper.")
-            if cable_q[d.argmin(), 2] < self.table_top_z + 0.05:
-                raise ValueError("The grasped cable node is not lifted above the table.")
+        sheet = body_q[self.sheet_body, :3]
+        if sheet[2] < self.table_top_z - float(self.sheet_half[2]):
+            raise ValueError("The metal sheet fell through the table.")
+
+        # After the release the sheet must have dropped out of the gripper and
+        # landed near the soft block (on it, or bounced off next to it).
+        if self.sim_time >= 10.0:
+            if sheet[2] > self.table_top_z + 0.15:
+                raise ValueError("The metal sheet did not drop after the gripper opened.")
+            if np.linalg.norm(sheet[:2] - self.soft_start_pos[:2]) > 0.25:
+                raise ValueError("The metal sheet did not land near the soft block.")
 
     @staticmethod
     def create_parser():
         parser = examples.create_parser()
-        parser.set_defaults(output_path=str(Path("outputs") / "cable_rigidCube_franka.usd"), num_frames=720)
-        parser.add_argument("--substeps", type=int, default=8, help="Simulation substeps per rendered frame.")
-        parser.add_argument("--vbd-iterations", type=int, default=12, help="VBD iterations for the cable.")
+        parser.set_defaults(output_path=str(Path("outputs") / "soft_compression_franka.usd"), num_frames=720)
+        parser.add_argument("--substeps", type=int, default=16, help="Simulation substeps per rendered frame.")
+        parser.add_argument("--vbd-iterations", type=int, default=12, help="VBD iterations for the objects.")
         return parser
 
 
 if __name__ == "__main__":
     parser = Example.create_parser()
-    viewer, args = examples.init(parser, example_name="cable_rigidCube_franka")
+    viewer, args = examples.init(parser, example_name="soft_compression_franka")
     examples.run(Example(viewer, args), args)

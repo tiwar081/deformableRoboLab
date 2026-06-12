@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(OMNI_KIT_ACCEPT_EULA=YES timeout 240 .venv/bin/python -c ' *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(.venv/bin/python -m py_compile examples/rigidCube_soft_franka.py)",
+      "Bash(.venv/bin/python -m examples --list)",
+      "Bash(.venv/bin/python /tmp/check_cube_drop.py)",
+      "Bash(nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv)",
+      "Bash(.venv/bin/python /tmp/bench.py cable_rigidCube_franka 60)",
+      "Bash(.venv/bin/python /tmp/bench.py rigidCube_soft_franka 30)",
+      "Bash(.venv/bin/python -m py_compile examples/cable_rigidCube_franka.py)",
+      "Bash(.venv/bin/python /tmp/bench.py cable_rigidCube_franka 120)",
+      "Bash(.venv/bin/python -m py_compile examples/cable_rigidCube_franka.py examples/cable_soft_franka.py examples/rigidCube_soft_franka.py)",
+      "Bash(.venv/bin/python /tmp/bench.py cable_soft_franka 60)",
+      "Bash(.venv/bin/python /tmp/bench.py rigidCube_soft_franka 60)",
+      "Bash(.venv/bin/python -m py_compile examples/*.py)",
+      "Bash(sed -i 's/# ke to 5e4 and stiffen the averaged cable-duck contact pair/# ke to 5e4 and stiffen the averaged cable-block contact pair/' examples/cable_soft_franka.py)",
+      "Bash(sed -i 's/# The flat cube face pressing into the duck produces ~650 particle/# The flat cube face pressing into the soft block produces hundreds of/' examples/rigidCube_soft_franka.py)",
+      "Bash(sed -i 's/# squashes the duck. The mass also keeps the two-way cube-duck contact/# squashes the soft block. The mass also keeps the two-way contact/' examples/rigidCube_soft_franka.py)",
+      "Bash(sed -i 's/# landed near the duck \\(on it, or bounced off next to it\\)./# landed near the soft block \\(on it, or bounced off next to it\\)./' examples/rigidCube_soft_franka.py)",
+      "Bash(sed -i 's/raise ValueError\\(\"The cube did not land near the soft duck.\"\\)/raise ValueError\\(\"The cube did not land near the soft block.\"\\)/' examples/rigidCube_soft_franka.py)",
+      "Bash(cat /tmp/claude-0/-mnt-data-aditya-RoboLab-VBD/c62c7a19-99ec-43e4-b36b-1fdcddc85820/tasks/bcy28q9pg.output; sed -i 's/`cable_rigidCube` 74.8 -> 11.6 ms\\\\/frame, `cable_soft` ~306 -> 55.5 ms\\\\/frame\\\\n\\(tile solve re-enabled\\), `rigidCube_soft` 306 -> 45.9 ms\\\\/frame./X/' /dev/null)",
+      "Bash(.venv/bin/python /tmp/check_sheet_drop.py)"
+    ],
+    "additionalDirectories": [
+      "/dev"
+    ]
+  }
+}

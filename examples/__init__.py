@@ -18,7 +18,12 @@ def get_examples() -> dict[str, str]:
     for path in sorted(examples_dir.glob("example_*.py")):
         example_name = path.stem.removeprefix("example_")
         example_map[example_name] = f"examples.{path.stem}"
-    for example_name in ("cable_rigidCube_franka", "cable_soft_franka"):
+    for example_name in (
+        "cable_rigidCube_franka",
+        "cable_soft_franka",
+        "rigidCube_soft_franka",
+        "soft_compression_franka",
+    ):
         if (examples_dir / f"{example_name}.py").exists():
             example_map[example_name] = f"examples.{example_name}"
     return example_map

@@ -6,7 +6,6 @@ from pathlib import Path
 import sys
 
 import numpy as np
-from pxr import Usd
 
 os.environ.setdefault("WARP_CACHE_PATH", "/tmp/warp-cache")
 
@@ -76,6 +75,80 @@ def _quat_to_vec4(q) -> wp.vec4:
     return wp.vec4(q[0], q[1], q[2], q[3])
 
 
+@wp.func
+def _wp_smoothstep(x: float) -> float:
+    x = wp.clamp(x, 0.0, 1.0)
+    return x * x * (3.0 - 2.0 * x)
+
+
+@wp.kernel
+def _set_robot_targets_kernel(
+    t_frame: wp.array(dtype=float),
+    substep: int,
+    sim_dt: float,
+    home_q: wp.array(dtype=float),
+    pickup_q: wp.array(dtype=float),
+    gripper_open: float,
+    gripper_closed: float,
+    joint_target_q: wp.array(dtype=float),
+):
+    # Device-side mirror of the keyframe schedule so the substep loop is free
+    # of host round-trips and can be captured into a CUDA graph.
+    i = wp.tid()
+    t = t_frame[0] + float(substep) * sim_dt
+
+    close_start = 2.8
+    hold_start = 4.0
+    lift_start = 4.8
+    sweep_start = 6.8
+
+    if t < close_start:
+        alpha = _wp_smoothstep(t / close_start)
+        q = (1.0 - alpha) * home_q[i] + alpha * pickup_q[i]
+    elif t < lift_start:
+        q = pickup_q[i]
+    elif t < sweep_start:
+        alpha = _wp_smoothstep((t - lift_start) / (sweep_start - lift_start))
+        q = (1.0 - alpha) * pickup_q[i] + alpha * home_q[i]
+    else:
+        q = home_q[i]
+        phase = 2.0 * 3.141592653589793 * 0.18 * (t - sweep_start)
+        # Ramp the sweep in so the commanded velocity is continuous at onset;
+        # a step in target velocity kicks the pinched cable out of the grasp.
+        ramp = _wp_smoothstep((t - sweep_start) / 1.5)
+        if i == 0:
+            q += 0.55 * ramp * wp.sin(phase)
+        elif i == 3:
+            q += 0.18 * ramp * wp.sin(phase + 0.35)
+        elif i == 5:
+            q -= 0.20 * ramp * wp.sin(phase)
+
+    if i >= 7:
+        if t < close_start:
+            q = gripper_open
+        elif t < hold_start:
+            alpha = _wp_smoothstep((t - close_start) / (hold_start - close_start))
+            q = (1.0 - alpha) * gripper_open + alpha * gripper_closed
+        else:
+            q = gripper_closed
+
+    joint_target_q[i] = q
+
+
+@wp.kernel
+def _sync_gripper_proxies_kernel(
+    robot_body_q: wp.array(dtype=wp.transform),
+    finger_bodies: wp.array(dtype=wp.int32),
+    proxy_bodies: wp.array(dtype=wp.int32),
+    object_body_q_0: wp.array(dtype=wp.transform),
+    object_body_q_1: wp.array(dtype=wp.transform),
+):
+    i = wp.tid()
+    tf = robot_body_q[finger_bodies[i]]
+    object_body_q_0[proxy_bodies[i]] = tf
+    object_body_q_1[proxy_bodies[i]] = tf
+
+
 class Example:
     def __init__(self, viewer, args):
         newton.use_coord_layout_targets = True
@@ -96,17 +169,28 @@ class Example:
         self.cable_contact_margin = 0.001
         self.gripper_proxy_margin = 0.001
         self.gripper_proxy_gap = self.cable_radius
+        # Soft body: the FEM block from Newton's rigid_soft_contact example
+        # (the only upstream two-way VBD rigid+soft scene), scaled to the
+        # table. Material, contact values, and particle sizing follow that
+        # example; soft_start_pos is the block center on the table.
         self.soft_start_pos = np.array(
-            [0.28, -0.30, self.table_top_z + 0.03],
+            [0.28, -0.30, self.table_top_z],
             dtype=np.float32,
         )
-        self.soft_particle_radius = 0.005
+        # Same size as the rigid cube in the companion example (5 cm sides).
+        self.soft_grid_dims = (4, 4, 4)
+        self.soft_grid_cell = 0.0125
+        # Contact boundary sits one particle radius above the rendered surface;
+        # 3.5 mm keeps it visually tight while leaving >2 substeps of contact
+        # engagement at the fastest approach speeds.
+        self.soft_particle_radius = 0.0035
         self.soft_body_contact_margin = 0.01
         self.particle_self_contact_radius = 0.003
         self.particle_self_contact_margin = 0.005
-        self.soft_contact_ke = 2.0e6
-        self.soft_contact_kd = 1.0e-7
-        self.soft_contact_mu = 0.5
+        self.soft_contact_ke = 1.0e5
+        self.soft_contact_kd = 1.0e-4
+        self.soft_contact_kf = 1.0e3
+        self.soft_contact_mu = 0.3
         self.cable_direction = np.array([1.0, 0.05, 0.0], dtype=np.float32)
         self.cable_direction /= np.linalg.norm(self.cable_direction)
         self.cable_segment_length = 0.035
@@ -195,12 +279,13 @@ class Example:
             use_mujoco_contacts=False,
         )
 
-        object_builder = self._build_object_builder(self.cable_start_pos, robot_builder)
+        object_builder = self._build_object_builder(robot_builder)
         object_builder.color(balance_colors=False)
 
         self.object_model = object_builder.finalize(device=ik_model.device)
         self.object_model.soft_contact_ke = self.soft_contact_ke
         self.object_model.soft_contact_kd = self.soft_contact_kd
+        self.object_model.soft_contact_kf = self.soft_contact_kf
         self.object_model.soft_contact_mu = self.soft_contact_mu
         self.object_model.shape_material_ke.fill_(5.0e4)
         self.object_model.shape_material_kd.fill_(1.0e2)
@@ -224,6 +309,7 @@ class Example:
             self.object_model,
             iterations=args.vbd_iterations,
             rigid_body_contact_buffer_size=512,
+            rigid_body_particle_contact_buffer_size=512,
             rigid_contact_history=True,
             # Keep hard contacts (penalty-only friction loses the lifted cable),
             # but disable sticky contact-point replay and resolve penetration
@@ -236,10 +322,26 @@ class Example:
             particle_self_contact_radius=self.particle_self_contact_radius,
             particle_self_contact_margin=self.particle_self_contact_margin,
             particle_enable_self_contact=False,
+            particle_enable_tile_solve=False,
             particle_vertex_contact_buffer_size=32,
             particle_edge_contact_buffer_size=64,
             particle_collision_detection_interval=-1,
         )
+
+        # Device-side trajectory/sync state so the substep loop has no host
+        # round-trips and can be captured into a CUDA graph (one graph launch
+        # per frame instead of hundreds of individual kernel launches).
+        self._t_frame = wp.zeros(1, dtype=wp.float32, device=ik_model.device)
+        self._home_q_wp = wp.array(self.home_q, dtype=wp.float32, device=ik_model.device)
+        self._pickup_q_wp = wp.array(self.pickup_q, dtype=wp.float32, device=ik_model.device)
+        self._finger_bodies_wp = wp.array(self.robot_finger_bodies, dtype=wp.int32, device=ik_model.device)
+        self._proxy_bodies_wp = wp.array(self.gripper_proxy_bodies, dtype=wp.int32, device=ik_model.device)
+        self.graph = None
+        self._frames_simulated = 0
+        # Capture needs an even substep count so the state buffer swap returns
+        # to its starting binding at the end of each captured frame.
+        self._capture_enabled = wp.get_device(str(ik_model.device)).is_cuda and self.sim_substeps % 2 == 0
+
         self._sync_gripper_proxies()
 
         viz_builder = newton.ModelBuilder()
@@ -329,7 +431,7 @@ class Example:
 
         return builder
 
-    def _build_object_builder(self, cable_start_pos: np.ndarray, robot_builder: newton.ModelBuilder) -> newton.ModelBuilder:
+    def _build_object_builder(self, robot_builder: newton.ModelBuilder) -> newton.ModelBuilder:
         builder = newton.ModelBuilder()
         builder.default_shape_cfg.ke = 2.0e4
         builder.default_shape_cfg.kd = 20.0
@@ -347,22 +449,29 @@ class Example:
             label="table",
         )
 
-        duck_path = newton.utils.download_asset("manipulation_objects/rubber_duck")
-        usd_stage = Usd.Stage.Open(str(duck_path / "model.usda"))
-        prim = usd_stage.GetPrimAtPath("/root/Model/TetMesh")
-        tetmesh = newton.TetMesh.create_from_usd(prim)
-        builder.add_soft_mesh(
-            pos=wp.vec3(*self.soft_start_pos),
+        # Soft FEM block with the material from Newton's rigid_soft_contact
+        # example, centered at soft_start_pos on the table.
+        builder.default_particle_radius = self.soft_particle_radius
+        builder.particle_max_velocity = 50.0
+        dim_x, dim_y, dim_z = self.soft_grid_dims
+        builder.add_soft_grid(
+            pos=wp.vec3(
+                float(self.soft_start_pos[0] - 0.5 * dim_x * self.soft_grid_cell),
+                float(self.soft_start_pos[1] - 0.5 * dim_y * self.soft_grid_cell),
+                float(self.soft_start_pos[2]),
+            ),
             rot=wp.quat_identity(),
-            scale=1.0,
             vel=wp.vec3(0.0, 0.0, 0.0),
-            mesh=tetmesh,
+            dim_x=dim_x,
+            dim_y=dim_y,
+            dim_z=dim_z,
+            cell_x=self.soft_grid_cell,
+            cell_y=self.soft_grid_cell,
+            cell_z=self.soft_grid_cell,
             density=100.0,
-            k_mu=1.0e6,
-            k_lambda=1.0e6,
-            k_damp=1.0e-6,
-            particle_radius=self.soft_particle_radius,
-            label="soft_duck",
+            k_mu=1.0e4,
+            k_lambda=5.0e4,
+            k_damp=1.0,
         )
 
         proxy_cfg = newton.ModelBuilder.ShapeConfig(
@@ -476,10 +585,18 @@ class Example:
     def _restore_cable_materials(self) -> None:
         body_set = set(self.cable_bodies)
         mu = self.object_model.shape_material_mu.numpy()
+        ke = self.object_model.shape_material_ke.numpy()
+        kd = self.object_model.shape_material_kd.numpy()
         for shape, body in enumerate(self.object_model.shape_body.numpy()):
             if int(body) in body_set:
                 mu[shape] = self.cable_friction
+                # authored cable_cfg values; the blanket fill above would raise
+                # ke to 5e4 and stiffen the averaged cable-block contact pair
+                ke[shape] = 2.0e4
+                kd[shape] = 20.0
         self.object_model.shape_material_mu.assign(mu)
+        self.object_model.shape_material_ke.assign(ke)
+        self.object_model.shape_material_kd.assign(kd)
 
     def _body_offset_position(self, state, body: int, offset: np.ndarray) -> np.ndarray:
         body_q = state.body_q.numpy()[body]
@@ -522,59 +639,31 @@ class Example:
         q[7:9] = self.gripper_open
         return q
 
-    def _set_robot_targets(self, t: float) -> None:
-        lower_start = 0.0
-        close_start = 2.8
-        hold_start = 4.0
-        lift_start = 4.8
-        sweep_start = 6.8
-
-        home_open = self.home_q.copy()
-        pickup_open = self.pickup_q.copy()
-        pickup_closed = self.pickup_q.copy()
-        home_closed = self.home_q.copy()
-        pickup_open[7:9] = self.gripper_open
-        pickup_closed[7:9] = self.gripper_closed
-        home_closed[7:9] = self.gripper_closed
-
-        if t < lower_start:
-            q = home_open
-        elif t < close_start:
-            alpha = _smoothstep((t - lower_start) / (close_start - lower_start))
-            q = (1.0 - alpha) * home_open + alpha * pickup_open
-        elif t < hold_start:
-            alpha = _smoothstep((t - close_start) / (hold_start - close_start))
-            q = (1.0 - alpha) * pickup_open + alpha * pickup_closed
-        elif t < lift_start:
-            q = pickup_closed
-        elif t < sweep_start:
-            alpha = _smoothstep((t - lift_start) / (sweep_start - lift_start))
-            q = (1.0 - alpha) * pickup_closed + alpha * home_closed
-        else:
-            phase = 2.0 * math.pi * 0.18 * (t - sweep_start)
-            # Ramp the sweep in so the commanded velocity is continuous at onset;
-            # a step in target velocity kicks the pinched cable out of the grasp.
-            ramp = _smoothstep((t - sweep_start) / 1.5)
-            q = home_closed.copy()
-            q[0] += 0.55 * ramp * math.sin(phase)
-            q[3] += 0.18 * ramp * math.sin(phase + 0.35)
-            q[5] -= 0.20 * ramp * math.sin(phase)
-
-        target = self.robot_control.joint_target_q.numpy()
-        target[:9] = q
-        self.robot_control.joint_target_q.assign(target)
+    def _set_robot_targets(self, substep: int) -> None:
+        wp.launch(
+            _set_robot_targets_kernel,
+            dim=9,
+            inputs=[
+                self._t_frame,
+                substep,
+                self.sim_dt,
+                self._home_q_wp,
+                self._pickup_q_wp,
+                self.gripper_open,
+                self.gripper_closed,
+            ],
+            outputs=[self.robot_control.joint_target_q],
+            device=self.robot_control.joint_target_q.device,
+        )
 
     def _sync_gripper_proxies(self) -> None:
-        robot_q = self.robot_state_0.body_q.numpy()
-        object_q0 = self.object_state_0.body_q.numpy()
-        object_q1 = self.object_state_1.body_q.numpy()
-
-        for proxy_body, finger_body in zip(self.gripper_proxy_bodies, self.robot_finger_bodies, strict=True):
-            object_q0[proxy_body] = robot_q[finger_body]
-            object_q1[proxy_body] = robot_q[finger_body]
-
-        self.object_state_0.body_q.assign(object_q0)
-        self.object_state_1.body_q.assign(object_q1)
+        wp.launch(
+            _sync_gripper_proxies_kernel,
+            dim=2,
+            inputs=[self.robot_state_0.body_q, self._finger_bodies_wp, self._proxy_bodies_wp],
+            outputs=[self.object_state_0.body_q, self.object_state_1.body_q],
+            device=self.object_state_0.body_q.device,
+        )
 
     def _sync_viz_state(self) -> None:
         body_q = self.viz_state.body_q.numpy()
@@ -592,10 +681,15 @@ class Example:
         self.viz_state.body_q.assign(body_q)
         self.viz_state.body_qd.assign(body_qd)
 
+        # The soft body's particles are part of the viz model too; without this
+        # copy the viewer draws the block frozen at its rest shape and rigid
+        # objects appear to penetrate it.
+        wp.copy(self.viz_state.particle_q, self.object_state_0.particle_q)
+        wp.copy(self.viz_state.particle_qd, self.object_state_0.particle_qd)
+
     def simulate(self) -> None:
         for substep in range(self.sim_substeps):
-            t = self.sim_time + substep * self.sim_dt
-            self._set_robot_targets(t)
+            self._set_robot_targets(substep)
 
             self.robot_state_0.clear_forces()
             self.robot_state_1.clear_forces()
@@ -623,7 +717,27 @@ class Example:
             self.object_state_0, self.object_state_1 = self.object_state_1, self.object_state_0
 
     def step(self) -> None:
-        self.simulate()
+        self._t_frame.assign(np.array([self.sim_time], dtype=np.float32))
+
+        # Capture after one uncaptured warm-up frame so all lazy solver/pipeline
+        # allocations have happened (allocation inside capture raises).
+        if self.graph is None and self._capture_enabled and self._frames_simulated >= 1:
+            saved_states = (self.robot_state_0, self.robot_state_1, self.object_state_0, self.object_state_1)
+            try:
+                with wp.ScopedCapture() as capture:
+                    self.simulate()
+                self.graph = capture.graph
+            except Exception as exc:
+                self.robot_state_0, self.robot_state_1, self.object_state_0, self.object_state_1 = saved_states
+                print(f"CUDA graph capture failed ({exc}); continuing without capture.")
+                self._capture_enabled = False
+
+        if self.graph is not None:
+            wp.capture_launch(self.graph)
+        else:
+            self.simulate()
+
+        self._frames_simulated += 1
         self.sim_time += self.frame_dt
 
     def render(self) -> None:
@@ -658,7 +772,7 @@ class Example:
     def create_parser():
         parser = examples.create_parser()
         parser.set_defaults(output_path=str(Path("outputs") / "cable_soft_franka.usd"), num_frames=720)
-        parser.add_argument("--substeps", type=int, default=8, help="Simulation substeps per rendered frame.")
+        parser.add_argument("--substeps", type=int, default=16, help="Simulation substeps per rendered frame.")
         parser.add_argument("--vbd-iterations", type=int, default=12, help="VBD iterations for the cable.")
         return parser
 
