@@ -18,9 +18,9 @@ def get_examples() -> dict[str, str]:
     for path in sorted(examples_dir.glob("example_*.py")):
         example_name = path.stem.removeprefix("example_")
         example_map[example_name] = f"examples.{path.stem}"
-    minimal_cable_franka = examples_dir / "minimal_cable_franka.py"
-    if minimal_cable_franka.exists():
-        example_map["minimal_cable_franka"] = "examples.minimal_cable_franka"
+    for example_name in ("cable_rigidCube_franka", "cable_soft_franka"):
+        if (examples_dir / f"{example_name}.py").exists():
+            example_map[example_name] = f"examples.{example_name}"
     return example_map
 
 
@@ -115,7 +115,7 @@ def main() -> None:
         _print_examples(examples)
         sys.exit(0)
 
-    example_name = sys.argv[1] if len(sys.argv) >= 2 else "minimal_cable_franka"
+    example_name = sys.argv[1] if len(sys.argv) >= 2 else "cable_rigidCube_franka"
     if example_name not in examples:
         print(f"Error: Unknown example '{example_name}'\n")
         _print_examples(examples)

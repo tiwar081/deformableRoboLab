@@ -65,14 +65,15 @@ reading and accepting the EULA, run Isaac commands with:
 OMNI_KIT_ACCEPT_EULA=yes python -c "import isaaclab; print('isaaclab ok')"
 ```
 
-### 3. Run The Local Example
+### 3. Run The Cable Examples
 
 ```bash
-python -m examples minimal_cable_franka --viewer usd --device cuda:0
+python -m examples cable_rigidCube_franka --viewer usd --device cuda:0
+python -m examples cable_soft_franka --viewer usd --device cuda:0
 ```
 
-For a CPU smoke test that writes a USD file:
+For a CPU smoke test of the rigid-cube cable example that writes a USD file:
 
 ```bash
-python -m examples minimal_cable_franka --viewer usd --device cpu --num-frames 1 --output-path /tmp/robolab_vbd_smoke.usd --quiet
+python -m examples cable_rigidCube_franka --viewer usd --device cpu --num-frames 1 --output-path /tmp/robolab_vbd_smoke.usd --quiet
 ```
