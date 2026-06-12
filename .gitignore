@@ -1,2 +1,5 @@
 _external/
 outputs/
+.venv/
+__pycache__/
+*.py[cod]

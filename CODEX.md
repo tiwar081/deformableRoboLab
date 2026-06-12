@@ -1,5 +1,15 @@
 # SolverVBD Example Inventory
 
+## Project Physics Rules
+
+This codebase should favor physically faithful simulation over visual shortcuts.
+
+- Do not make objects self-attach, auto-grasp, or teleport into a grasp.
+- Do not give passive scene objects guided, fully scripted, or kinematically driven motion to fake interaction.
+- Do not make interacting objects collision-free to avoid solver/contact problems.
+- Robot motion may be commanded through actuators or targets, but object pickup, dragging, settling, and contact response must come from modeled contacts, constraints, gravity, and solver dynamics.
+- If a demo cannot yet perform a task physically, leave the failure visible and improve the model, contacts, solver integration, or controller instead of hiding it with scripted object motion.
+
 Repository inspected: `_external/newton`
 
 Scope: source examples under `_external/newton/newton/examples` that directly instantiate
@@ -38,6 +48,56 @@ Test harness cross-check:
   `multiphysics.example_rigid_soft_contact` with `--solver vbd`.
 - `_external/newton/newton/tests/test_rigid_friction_ramp.py` has VBD visual/debug solver
   cases using `SolverVBD(model, iterations=40, rigid_contact_k_start=1.0e5)`.
+
+## Solver Integration In `examples/example_minimal_cable_franka.py`
+
+This project script uses one unified Newton model and one `SolverVBD` instance for the
+robot, rigid object, table, and rod cable. It does not split the robot into Featherstone
+or MuJoCo while using VBD only for the cable.
+
+- Model construction: `Example._build_model()` creates one `newton.ModelBuilder`, imports
+  the Franka URDF, adds a static table, adds a dynamic box labeled `non_touching_object`,
+  and creates the cable with `builder.add_rod(..., wrap_in_articulation=True)`. The rod
+  cable is therefore represented as rigid capsule bodies connected by rod/cable joints,
+  not as a particle soft body.
+- Finalization and state setup: the builder is finalized once, `newton.eval_fk()` initializes
+  body poses from joint coordinates, one `model.control()` buffer is created, and
+  `control.joint_target_q` is initialized from `model.joint_q`.
+- Solver: the script constructs exactly one solver:
+  `newton.solvers.SolverVBD(self.model, iterations=args.vbd_iterations,
+  particle_enable_self_contact=False, particle_enable_tile_solve=False,
+  rigid_contact_hard=True, rigid_body_contact_buffer_size=512,
+  rigid_body_particle_contact_buffer_size=512)`.
+- Contacts: it uses `self.contacts = self.model.contacts()` and calls
+  `self.model.collide(self.state_0, self.contacts)` every substep before the VBD step.
+  There is no explicit `CollisionPipeline` and no contact refresh throttling in this script.
+- Robot control: `_set_robot_targets()` writes a time-varying target joint configuration into
+  `self.control.joint_target_q`. VBD then consumes that control buffer in the same
+  `self.solver.step(self.state_0, self.state_1, self.control, self.contacts, self.sim_dt)`
+  call that advances the cable, object, table contacts, and robot articulation.
+- Practical implication: this is the "single VBD owns everything" pattern. It is simpler
+  than the Franka cloth/softbody examples, but robot articulation quality and contact
+  behavior are whatever `SolverVBD` provides for this mixed rigid/rod scene.
+
+Useful comparison examples:
+
+- `_external/newton/newton/examples/multiphysics/example_rigid_soft_contact.py` is also a
+  single-solver mixed scene. It adds both a rigid sphere and a soft grid to one model, then
+  selects exactly one solver (`SolverSemiImplicit`, `SolverXPBD`, or `SolverVBD`) and calls
+  `model.collide()` followed by that solver's `step()` every substep.
+- `_external/newton/newton/examples/softbody/example_softbody_franka.py` is the main
+  two-solver Franka pattern. It uses `SolverFeatherstone` for the robot and `SolverVBD`
+  for the soft body with `integrate_with_external_rigid_solver=True`. In the simulation
+  loop it temporarily disables particles, advances the robot, restores particles/gravity,
+  collides with a `CollisionPipeline`, then steps VBD for the soft body.
+- `_external/newton/newton/examples/cloth/example_cloth_franka.py` uses the same two-solver
+  integration idea for cloth: `SolverFeatherstone` updates the robot, then `SolverVBD`
+  with `integrate_with_external_rigid_solver=True` advances cloth and cloth-body contacts.
+- `_external/newton/newton/examples/cable/example_cable_cross_slide_table.py` is a useful
+  VBD cable/rod reference. It also uses one `SolverVBD` for rigid bodies, pulleys, joints,
+  and cable rods, but adds an explicit `CollisionPipeline(broad_phase="explicit",
+  contact_matching="latest")`, `rigid_contact_history=True`, and direct kinematic body
+  driving for input pulleys.
 
 ## Per-Example Notes
 
@@ -436,3 +496,190 @@ File: `_external/newton/newton/examples/softbody/example_softbody_franka.py`
   `solver.set_rigid_history_update(refresh_contacts)`.
 - Robot/deformable examples use `integrate_with_external_rigid_solver=True` and split the
   frame into a Featherstone robot step followed by VBD particle/deformable contact solve.
+
+# All Newton Example Solver Survey
+
+Repository inspected: `_external/newton`
+
+Scope: runnable Python examples under `_external/newton/newton/examples`, discovered the
+same way the example runner does, by scanning `example_*.py` files in the category
+subdirectories. This section treats `newton.solvers.*` classes as physics solvers.
+`newton.ik.IKSolver` is listed separately as an auxiliary kinematic optimizer when it is
+used to generate robot joint targets, because it does not integrate physics state by
+itself.
+
+Reference solver capabilities from `_external/newton/newton/solvers.py`:
+
+- `SolverMuJoCo`: rigid bodies and generalized-coordinate articulations; can use MuJoCo
+  contacts internally, or consume Newton contacts when `use_mujoco_contacts=False`.
+- `SolverFeatherstone`: rigid bodies and generalized-coordinate articulations; used in
+  examples as a robot/rigid kinematic or dynamics integrator before a deformable solve.
+- `SolverKamino`: rigid bodies and articulations in maximal coordinates; has optional
+  internal collision detector and FK solver.
+- `SolverVBD`: implicit solver for rigid bodies, particles, cloth, soft bodies, and a
+  limited set of joints; examples often use it for cloth, soft bodies, cable rods, and
+  mixed native scenes.
+- `SolverXPBD`: implicit native solver for rigid bodies, maximal-coordinate
+  articulations, particles, cloth, and experimental soft bodies.
+- `SolverSemiImplicit`: semi-implicit native solver for rigid bodies, maximal-coordinate
+  articulations, particles, cloth without self-collision, and soft bodies.
+- `SolverStyle3D`: implicit cloth/particle solver; no rigid-body or joint solve.
+- `SolverImplicitMPM`: implicit MPM particle/material solver; no rigid-body solve.
+
+## Per-Example Solver Inventory
+
+| Example | Physics solver(s) | Integration notes |
+| --- | --- | --- |
+| `basic.basic_conveyor` | `SolverXPBD` by default, or `SolverVBD` with `--solver vbd` | One native solver owns the rigid bags, rails, belt, and contacts. The belt is kinematically driven with FK before `model.collide()`, then the selected solver steps. |
+| `basic.basic_heightfield` | `SolverXPBD` by default, or `SolverMuJoCo` with `--solver mujoco` | XPBD path uses Newton `model.collide()`. MuJoCo path lets MuJoCo own contacts and then calls `solver.update_contacts()` for visualization/reporting. |
+| `basic.basic_joints` | `SolverXPBD` by default, or `SolverVBD` with `--solver vbd` | One native solver handles the rigid joint examples. VBD uses the finalized body poses as structural rest pose; contacts come from `model.collide()`. |
+| `basic.basic_pendulum` | `SolverXPBD` | Single native rigid/articulation solver with Newton contacts. |
+| `basic.basic_plotting` | `SolverMuJoCo` | Single MuJoCo articulation solver for a humanoid MJCF scene. The loop also calls Newton `model.collide()` and passes that contact buffer, but the solver is constructed with MuJoCo defaults rather than an explicit Newton-contact configuration. |
+| `basic.basic_shapes` | `SolverXPBD` by default, or `SolverVBD` with `--solver vbd` | Single native solver for primitive/mesh rigid shapes. Contacts come from `model.collide()`. |
+| `basic.basic_urdf` | `SolverXPBD` by default, or `SolverVBD` with `--solver vbd` | Single native solver for replicated quadruped URDF worlds. Contact refresh can be throttled; VBD synchronizes contact history with `set_rigid_history_update()`. |
+| `basic.basic_viewer` | None | Viewer-only visualization of logged shapes and lines; no Newton model integration. |
+| `basic.recording` | `SolverMuJoCo` | Single MuJoCo solver for a humanoid recording. It steps without an explicit `Contacts` object and logs states to `ViewerFile`. |
+| `basic.replay_viewer` | None | Replay UI loads recorded model/state frames; no physics solver is stepped. |
+| `cable.cable_bundle_hysteresis` | `SolverVBD` | Single VBD solver for cable rods plus kinematic obstacle bodies. Optional Dahl friction is enabled through VBD custom attributes; contacts are refreshed on a cadence with VBD history updates. |
+| `cable.cable_cross_slide_table` | `SolverVBD` | Single VBD solver for guided pulleys, table/slide rigid bodies, and rod cable. Uses explicit `CollisionPipeline` contact matching and direct kinematic body driving. |
+| `cable.cable_pile` | `SolverVBD` | Single VBD solver for rod cables and ground. Uses `CollisionPipeline(contact_matching="latest")` and rigid contact history. |
+| `cable.cable_twist` | `SolverVBD` | Single VBD solver for twisted rod cables. Kinematic rod endpoints are driven before contact refresh and VBD stepping. |
+| `cable.cable_y_junction` | `SolverVBD` | Single VBD solver for a rod graph represented as rigid capsule bodies and cable joints. |
+| `cloth.cloth_bending` | `SolverVBD` | Single VBD cloth solver. Uses a `CollisionPipeline` and VBD BVH handling for cloth contacts. |
+| `cloth.cloth_franka` | `SolverFeatherstone` plus `SolverVBD` | Featherstone advances the Franka/rigid bodies with particles temporarily disabled. A Newton `CollisionPipeline` then builds cloth-body contacts, and VBD steps the cloth with `integrate_with_external_rigid_solver=True`. |
+| `cloth.cloth_h1` | `SolverStyle3D`; auxiliary `IKSolver` | IK computes H1 kinematic poses. The example interpolates robot body transforms for collision processing, calls `model.collide()`, then Style3D advances the cloth. There is no separate rigid dynamics solver. |
+| `cloth.cloth_hanging` | `SolverVBD` by default; optional `SolverSemiImplicit`, `SolverStyle3D`, or `SolverXPBD` | One selected cloth solver owns the cloth. Style3D uses Style3D-specific cloth construction and attributes; other paths use native cloth grid construction and Newton contacts. |
+| `cloth.cloth_poker_cards` | `SolverVBD` | Single VBD solver for cloth cards interacting with rigid cube/sphere bodies. Uses `CollisionPipeline` and VBD self-contact. |
+| `cloth.cloth_rollers` | `SolverVBD` | Single VBD solver for cloth interacting with kinematic roller meshes. Roller motion is authored directly, then VBD solves cloth/contact. |
+| `cloth.cloth_style3d` | `SolverStyle3D` | Single Style3D cloth solver. Cloth is authored through Style3D helpers; Newton collision data is passed into the solver. |
+| `cloth.cloth_twist` | `SolverVBD` | Single VBD solver for cloth twist/self-contact. It rebuilds or refits the VBD BVH before stepping. |
+| `contacts.brick_stacking` | `SolverMuJoCo`; auxiliary `IKSolver` | IK generates Franka targets for a brick-stacking task. MuJoCo integrates robot and rigid bricks, but contacts come from a Newton `CollisionPipeline` because `use_mujoco_contacts=False`. |
+| `contacts.contacts_rj45_plug` | `SolverVBD` | Single VBD solver for a plug/latch/cable contact scene. Uses VBD custom attributes and Newton contacts. |
+| `contacts.nut_bolt_hydro` | `SolverMuJoCo` by default, or `SolverXPBD` with `--solver xpbd` | Both paths use a Newton `CollisionPipeline` with hydroelastic-style geometry/contact setup. MuJoCo is configured with `use_mujoco_contacts=False`, so Newton contacts feed the MuJoCo step. |
+| `contacts.nut_bolt_sdf` | `SolverMuJoCo` by default, or `SolverXPBD` with `--solver xpbd` | Same integration pattern as `nut_bolt_hydro`, but with SDF collision geometry: Newton collision pipeline first, then selected solver. |
+| `contacts.pyramid` | `SolverXPBD` | Single XPBD rigid contact stack. Uses an explicit Newton `CollisionPipeline` and passes its contacts to XPBD. |
+| `diffsim.diffsim_ball` | `SolverSemiImplicit` | Single differentiable semi-implicit particle solver, with a Newton collision pipeline for the ball/ground contact. |
+| `diffsim.diffsim_bear` | `SolverSemiImplicit` | Single differentiable semi-implicit soft-body solver for a tetrahedral bear; triangle contacts are disabled in the solver and collision is handled through the configured pipeline. |
+| `diffsim.diffsim_cloth` | `SolverSemiImplicit` | Single differentiable semi-implicit cloth solver. |
+| `diffsim.diffsim_drone` | Two `SolverSemiImplicit` instances | One solver advances batched rollout worlds for optimization and another advances the displayed drone. They are separate models/solves, not a coupled multiphysics exchange. |
+| `diffsim.diffsim_soft_body` | `SolverSemiImplicit` | Single differentiable semi-implicit soft-body solver with a Newton collision pipeline. |
+| `diffsim.diffsim_spring_cage` | `SolverSemiImplicit` | Single differentiable semi-implicit particle/spring solver. |
+| `ik.ik_cube_stacking` | `SolverMuJoCo`; auxiliary `IKSolver` | IK generates Franka targets. MuJoCo integrates the robot, cubes, and table. Contacts use either MuJoCo contacts when `--use-mujoco-contacts` is enabled or Newton `model.collide()` otherwise. |
+| `ik.ik_custom` | Auxiliary `IKSolver` only | Demonstrates custom IK objectives and FK visualization. No physics solver advances dynamics. |
+| `ik.ik_franka` | Auxiliary `IKSolver` only | Solves Franka IK and visualizes FK; no physics solver. |
+| `ik.ik_h1` | Auxiliary `IKSolver` only | Solves H1 IK and visualizes FK; no physics solver. |
+| `kamino.kamino_basic_dr_testmech` | `SolverKamino` | Single Kamino maximal-coordinate solver. Collision detector and FK solver are explicitly disabled. |
+| `kamino.kamino_basic_fourbar` | `SolverKamino` | Single Kamino solver with internal collision detector and FK solver enabled. Contacts are updated from Kamino after the step for visualization/reporting. |
+| `kamino.kamino_basic_heterogeneous` | `SolverKamino` | Single Kamino solver for heterogeneous replicated assets, with Kamino collision detector and FK solver enabled. |
+| `kamino.kamino_robot_anymal_d` | `SolverKamino` | Single Kamino robot solver. With Kamino contacts enabled it passes contacts into Kamino; otherwise it can use an external Newton `CollisionPipeline`. Contacts are updated after stepping. |
+| `kamino.kamino_robot_dr_legs` | `SolverKamino` | Same Kamino robot pattern as ANYmal D, with optional internal Kamino contacts or external Newton collision pipeline. |
+| `mpm.mpm_anymal` | `SolverMuJoCo` plus `SolverImplicitMPM` | MuJoCo advances ANYmal. Implicit MPM advances sand in the same Newton model, using robot bodies as kinematic colliders via `setup_collider()`. The steps alternate robot substeps and a sand step rather than one monolithic solver. |
+| `mpm.mpm_beam_twist` | `SolverImplicitMPM` | Single implicit MPM solver for particle material deformation. The `--solver` option chooses the MPM linear/rheology solve sequence inside `SolverImplicitMPM`, not a different Newton solver class. |
+| `mpm.mpm_grain_rendering` | `SolverImplicitMPM` | Single implicit MPM solver for granular particles; rendering-focused. |
+| `mpm.mpm_granular` | `SolverImplicitMPM` | Single implicit MPM solver for granular flow with optional static/kinematic colliders. |
+| `mpm.mpm_multi_material` | `SolverImplicitMPM` | Single implicit MPM solver for mixed material particles. |
+| `mpm.mpm_snow_ball` | `SolverImplicitMPM` | Single implicit MPM solver for snow/plastic material. The `--solver` sequence configures MPM internal solves. |
+| `mpm.mpm_twoway_coupling` | `SolverMuJoCo` plus `SolverImplicitMPM` | MuJoCo advances rigid objects. MPM advances sand in a separate sand model while reading rigid colliders from the rigid model. MPM collider impulses are collected and applied back to rigid body velocities before the next rigid step, giving explicit two-way coupling. |
+| `mpm.mpm_viscous` | `SolverImplicitMPM` | Single implicit MPM solver for viscous material. Internal MPM solver settings are controlled by command-line options. |
+| `multiphysics.rigid_soft_contact` | `SolverXPBD` by default; optional `SolverSemiImplicit` or `SolverVBD` | Single selected native solver owns both the rigid sphere and soft grid. This is not split into a rigid solver plus deformable solver. |
+| `multiphysics.softbody_dropping_to_cloth` | `SolverVBD` | Single VBD solver for a soft grid dropping onto cloth. |
+| `multiphysics.softbody_gift` | `SolverVBD` | Single VBD solver for soft blocks plus cloth straps. |
+| `robot.robot_allegro_hand` | `SolverMuJoCo` | Single MuJoCo solver for Allegro hand articulation. Contacts are Newton-generated because `use_mujoco_contacts=False`. |
+| `robot.robot_anymal_c_walk` | `SolverMuJoCo` | Single MuJoCo solver for ANYmal C with policy/control logic. Contacts can be MuJoCo-owned or Newton-generated depending on `--use-mujoco-contacts`. |
+| `robot.robot_anymal_d` | `SolverMuJoCo` | Single MuJoCo solver for ANYmal D. Contacts can be MuJoCo-owned or Newton-generated depending on `--use-mujoco-contacts`. |
+| `robot.robot_cartpole` | `SolverMuJoCo` | Single MuJoCo solver for cartpole. Commented alternatives show SemiImplicit/Featherstone, but runtime uses MuJoCo. |
+| `robot.robot_g1` | `SolverMuJoCo` | Single MuJoCo solver for G1 humanoid. Contacts can be MuJoCo-owned or Newton-generated depending on `--use-mujoco-contacts`. |
+| `robot.robot_h1` | `SolverMuJoCo` | Single MuJoCo solver for H1 humanoid. Contacts can be MuJoCo-owned or Newton-generated depending on `--use-mujoco-contacts`. |
+| `robot.robot_panda_hydro` | `SolverMuJoCo`; auxiliary `IKSolver` | IK generates Panda targets. MuJoCo integrates robot and rigid objects; hydroelastic/contact data comes from a Newton `CollisionPipeline` because `use_mujoco_contacts=False`. |
+| `robot.robot_policy` | `SolverMuJoCo` | Single MuJoCo solver for a policy-controlled robot. Policy output writes controls; MuJoCo integrates the articulation. |
+| `robot.robot_ur10` | `SolverMuJoCo` | Single MuJoCo solver for UR10 articulation with contacts disabled. |
+| `selection.selection_articulations` | `SolverMuJoCo` | Single MuJoCo solver for selection/filtering demonstrations. The generic selection code has a non-MuJoCo collision path, but this example constructs MuJoCo. |
+| `selection.selection_cartpole` | `SolverMuJoCo` | Single MuJoCo solver with contacts disabled for cartpole selection. |
+| `selection.selection_materials` | `SolverMuJoCo` | Single MuJoCo solver for material/selection demonstration. |
+| `selection.selection_multiple` | `SolverMuJoCo` | Single MuJoCo solver for multiple selected assets. |
+| `sensors.sensor_contact` | `SolverMuJoCo` | Single MuJoCo solver. The example calls `update_contacts()` to feed the contact sensor output from MuJoCo-resolved contacts. |
+| `sensors.sensor_imu` | `SolverMuJoCo` | Single MuJoCo solver for moving rigid bodies with IMU sensors; contact data is updated from the solver. |
+| `sensors.sensor_tiled_camera` | None | Builds a static scene and renders tiled camera outputs from a fixed state; no physics solver step. |
+| `softbody.softbody_franka` | `SolverFeatherstone` plus `SolverVBD`; auxiliary `IKSolver` | IK generates Franka targets. Featherstone advances the robot with particles disabled so body velocities are available. A Newton `CollisionPipeline` then computes soft-body contacts, and VBD steps the tetrahedral soft body with `integrate_with_external_rigid_solver=True`. |
+| `softbody.softbody_hanging` | `SolverVBD` | Single VBD soft-body solver for hanging volumetric grids. |
+
+## Multi-Solver Integration Patterns
+
+- `SolverFeatherstone` plus `SolverVBD` appears in `cloth.cloth_franka` and
+  `softbody.softbody_franka`. The pattern is: solve or author robot joint targets,
+  advance the robot/rigid state with Featherstone while temporarily disabling particles,
+  restore particle counts/gravity, run a Newton `CollisionPipeline`, then step VBD with
+  `integrate_with_external_rigid_solver=True`. VBD owns the deformable solve and uses the
+  externally advanced rigid state for contacts/friction.
+- `SolverMuJoCo` plus `SolverImplicitMPM` appears in `mpm.mpm_anymal` and
+  `mpm.mpm_twoway_coupling`. `mpm_anymal` is mostly one-way from robot to sand: MuJoCo
+  advances the robot and MPM treats robot bodies as kinematic colliders. `mpm_twoway_coupling`
+  is explicit two-way coupling: MPM reads rigid colliders, collects collider impulses, and a
+  kernel applies those impulses back to the rigid-body velocities before the next MuJoCo step.
+- `SolverMuJoCo` plus Newton collision is common but is not two physics solvers. Examples
+  such as `contacts.brick_stacking`, `robot.robot_panda_hydro`, `robot.robot_allegro_hand`,
+  and the nut/bolt examples set `use_mujoco_contacts=False`, run Newton collision/contact
+  generation, and pass those contacts into the MuJoCo dynamics step.
+- `IKSolver` plus a physics solver is target generation, not coupled dynamics. IK examples
+  without a physics solver only solve joint coordinates and visualize FK. Robot manipulation
+  examples use IK to write `control.joint_target_q` or state velocities, then a physics
+  solver integrates the scene.
+- `SolverKamino` examples are single-solver scenes, but Kamino can choose whether contacts
+  come from its internal detector or from an external Newton `CollisionPipeline`.
+- Solver choice exposed as `--solver` is usually mutually exclusive, not simultaneous:
+  examples select exactly one of XPBD, VBD, SemiImplicit, Style3D, MuJoCo, or an internal
+  MPM linear/rheology solve mode for the whole scene.
+
+## Final Summary
+
+### Solver types used for robots
+
+- Main robot dynamics solver: `SolverMuJoCo`. This is the dominant choice for articulated
+  robots in `robot.*`, manipulation examples, sensors tied to articulated bodies, and IK
+  demos that continue into dynamics. It is used because it supports generalized-coordinate
+  articulations, joint targets, armature, actuator-like settings, and robot contact workflows.
+- Robot/deformable coupling solver: `SolverFeatherstone` for the robot plus `SolverVBD`
+  for cloth or soft bodies. This appears when the deformable must be handled by VBD, while
+  the robot still needs a generalized-coordinate rigid/articulation update and useful body
+  velocities for friction/contact.
+- Alternative robot solver: `SolverKamino` in the `kamino.*` examples. These examples are
+  specifically about Kamino's maximal-coordinate robot/articulation path and optional
+  internal collision detector.
+- Native rigid-articulation examples sometimes use `SolverXPBD` or `SolverVBD` for simple
+  joints or URDF replication, but that is not the main pattern for full robot examples.
+- `IKSolver` is frequently paired with robot examples, but only to compute target joint
+  configurations; it is not the physics integrator.
+
+### Solver types used for rigid objects
+
+- `SolverMuJoCo` is used for rigid objects when they share a scene with robots or when the
+  example is focused on MuJoCo contacts/integration. Rigid contacts may be MuJoCo-internal
+  or Newton-generated and passed in.
+- `SolverXPBD` is the common default native rigid/contact solver for simple rigid examples:
+  pendulum, shapes, conveyor, heightfield, pyramid, nut/bolt optional paths, and mixed
+  rigid-soft demos.
+- `SolverVBD` is used for rigid objects when they are part of a VBD-centric scene: cable
+  rods, cloth/soft-body contact bodies, or optional VBD versions of basic rigid scenes.
+- `SolverSemiImplicit` appears mostly in differentiable examples and a few optional
+  multiphysics/cloth paths.
+- `SolverKamino` handles rigid objects and articulations only inside Kamino-specific
+  examples.
+- Static or kinematic rigid colliders in MPM-only examples are not integrated by a rigid
+  solver; they serve as collision geometry for `SolverImplicitMPM`.
+
+### Solver types used for deformable objects
+
+- Cloth: `SolverVBD` is the dominant cloth solver for self-contact, cloth-rigid contact,
+  and richer cloth scenes. `SolverStyle3D` is used for Style3D-specific cloth workflows and
+  H1 clothing. `SolverXPBD` and `SolverSemiImplicit` appear as simpler optional cloth paths,
+  especially in `cloth_hanging` and differentiable cloth examples.
+- Soft bodies: `SolverVBD` is the main non-differentiable soft-body solver, including
+  soft grids, tet meshes, and mixed softbody/cloth scenes. `SolverSemiImplicit` is used in
+  differentiable soft-body examples. `SolverXPBD` appears as an experimental/native option
+  in mixed rigid-soft contact.
+- MPM/granular/snow/viscous materials: `SolverImplicitMPM` owns these scenes. When robots
+  or rigid objects are present, coupling is explicit: MuJoCo integrates rigid/articulated
+  bodies and MPM reads collider state, optionally feeding impulses back.
+- Cable examples in this checkout are modeled as rigid rod bodies and cable joints, not as
+  particle deformables. They consistently use `SolverVBD`, which supports the required
+  cable-joint path and contact history features.

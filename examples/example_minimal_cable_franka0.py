@@ -51,6 +51,11 @@ class Example:
         self.table_pos = wp.vec3(0.12, -0.45, 0.035)
         self.table_half = wp.vec3(0.45, 0.35, 0.035)
         self.table_top_z = float(self.table_pos[2] + self.table_half[2])
+        self.cube_half = 0.035
+        self.cube_start_pos = np.array(
+            [0.28, -0.30, self.table_top_z + self.cube_half],
+            dtype=np.float32,
+        )
         self.home_q = np.array(
             [
                 -0.0036802115,
@@ -95,19 +100,13 @@ class Example:
             rigid_contact_history=False,
         )
 
-        self.handle_body = int(self.cable_bodies[0])
-        self.handle_quat = self.cable_state_0.body_q.numpy()[self.handle_body, 3:7].copy()
-        self.handle_prev_pos = handle_pos.copy()
-        self.handle_min = handle_pos.copy()
-        self.handle_max = handle_pos.copy()
-
         self.rigid_solver = newton.solvers.SolverMuJoCo(
             self.rigid_model,
             solver="newton",
             integrator="implicitfast",
             iterations=12,
             ls_iterations=50,
-            disable_contacts=True,
+            disable_contacts=False,
             use_mujoco_cpu=False,
         )
 
@@ -146,8 +145,8 @@ class Example:
         builder.joint_q[:9] = self.home_q.tolist()
         builder.joint_target_q[:9] = self.home_q.tolist()
         for dof in range(9):
-            builder.joint_target_ke[dof] = 420.0 if dof < 7 else 80.0
-            builder.joint_target_kd[dof] = 42.0 if dof < 7 else 8.0
+            builder.joint_target_ke[dof] = 420.0 if dof < 7 else 300.0
+            builder.joint_target_kd[dof] = 42.0 if dof < 7 else 30.0
             builder.joint_target_mode[dof] = int(JointTargetMode.POSITION)
             builder.joint_effort_limit[dof] = 87.0 if dof < 7 else 20.0
             builder.joint_armature[dof] = 0.1
@@ -174,18 +173,17 @@ class Example:
             label="table",
         )
 
-        object_body = builder.add_body(
-            xform=wp.transform((0.36, -0.12, 0.28), wp.quat_identity()),
+        self.cube_body = builder.add_body(
+            xform=wp.transform(wp.vec3(*self.cube_start_pos), wp.quat_identity()),
             mass=0.2,
-            is_kinematic=True,
             label="non_touching_object",
         )
         object_cfg = newton.ModelBuilder.ShapeConfig(density=250.0, margin=0.0, ke=5.0e4, kd=1.0e2, mu=0.6)
         builder.add_shape_box(
-            body=object_body,
-            hx=0.035,
-            hy=0.035,
-            hz=0.035,
+            body=self.cube_body,
+            hx=self.cube_half,
+            hy=self.cube_half,
+            hz=self.cube_half,
             cfg=object_cfg,
             color=wp.vec3(0.18, 0.42, 0.95),
             label="non_touching_object_shape",
@@ -237,12 +235,6 @@ class Example:
             wrap_in_articulation=True,
         )
 
-        pinned = int(self.cable_bodies[0])
-        builder.body_mass[pinned] = 0.0
-        builder.body_inv_mass[pinned] = 0.0
-        builder.body_inertia[pinned] = wp.mat33(0.0)
-        builder.body_inv_inertia[pinned] = wp.mat33(0.0)
-
         builder.color(balance_colors=False)
         return builder
 
@@ -258,25 +250,12 @@ class Example:
         q[0] += 0.55 * math.sin(phase)
         q[3] += 0.18 * math.sin(phase + 0.35)
         q[5] -= 0.20 * math.sin(phase)
-        q[7] = 0.012
-        q[8] = 0.012
+        q[7] = 0.0
+        q[8] = 0.0
 
         target = self.rigid_control.joint_target_q.numpy()
         target[:9] = q
         self.rigid_control.joint_target_q.assign(target)
-
-    def _set_cable_handle(self, handle_pos: np.ndarray, dt: float) -> None:
-        q = self.cable_state_0.body_q.numpy()
-        qd = self.cable_state_0.body_qd.numpy()
-        q[self.handle_body, :3] = handle_pos
-        q[self.handle_body, 3:7] = self.handle_quat
-        qd[self.handle_body, :3] = (handle_pos - self.handle_prev_pos) / max(dt, 1.0e-8)
-        qd[self.handle_body, 3:6] = 0.0
-        self.cable_state_0.body_q.assign(q)
-        self.cable_state_0.body_qd.assign(qd)
-        self.handle_prev_pos = handle_pos.copy()
-        self.handle_min = np.minimum(self.handle_min, handle_pos)
-        self.handle_max = np.maximum(self.handle_max, handle_pos)
 
     def _sync_viz_state(self) -> None:
         body_q = self.viz_state.body_q.numpy()
@@ -299,8 +278,6 @@ class Example:
             self.rigid_solver.step(self.rigid_state_0, self.rigid_state_1, self.rigid_control, None, self.sim_dt)
             self.rigid_state_0, self.rigid_state_1 = self.rigid_state_1, self.rigid_state_0
 
-            handle_pos = self._end_effector_position()
-            self._set_cable_handle(handle_pos, self.sim_dt)
             self.cable_state_0.clear_forces()
             self.cable_model.collide(self.cable_state_0, self.cable_contacts)
             self.cable_solver.step(
@@ -311,7 +288,6 @@ class Example:
                 self.sim_dt,
             )
             self.cable_state_0, self.cable_state_1 = self.cable_state_1, self.cable_state_0
-            self._set_cable_handle(handle_pos, self.sim_dt)
 
     def step(self) -> None:
         self.simulate()
@@ -324,19 +300,17 @@ class Example:
         self.viewer.end_frame()
 
     def test_final(self) -> None:
-        span = np.linalg.norm(self.handle_max - self.handle_min)
-        if span < 0.15:
-            raise ValueError(f"Cable handle only moved {span:.3f} m; expected at least 0.15 m.")
-
         body_q = self.rigid_state_0.body_q.numpy()
         cable_q = self.cable_state_0.body_q.numpy()
         if not np.all(np.isfinite(body_q)) or not np.all(np.isfinite(cable_q)):
             raise ValueError("Non-finite body transform detected.")
 
-        obj = body_q[_find_body(list(self.rigid_model.body_label), "non_touching_object"), :3]
-        if obj[2] - 0.035 <= self.table_top_z + 0.05:
-            raise ValueError("The rigid object is too close to the table.")
-        if np.min(np.linalg.norm(cable_q[:, :3] - obj[None, :], axis=1)) < 0.12:
+        cube = body_q[self.cube_body, :3]
+        if cube[2] - self.cube_half > self.table_top_z + 0.03:
+            raise ValueError("The cube is still floating above the table.")
+        if cube[2] < self.table_top_z:
+            raise ValueError("The cube fell through the table.")
+        if np.min(np.linalg.norm(cable_q[:, :3] - cube[None, :], axis=1)) < 0.12:
             raise ValueError("The non-touching rigid object came too close to the cable.")
 
     @staticmethod

@@ -18,6 +18,9 @@ def get_examples() -> dict[str, str]:
     for path in sorted(examples_dir.glob("example_*.py")):
         example_name = path.stem.removeprefix("example_")
         example_map[example_name] = f"examples.{path.stem}"
+    minimal_cable_franka = examples_dir / "minimal_cable_franka.py"
+    if minimal_cable_franka.exists():
+        example_map["minimal_cable_franka"] = "examples.minimal_cable_franka"
     return example_map
 
 
