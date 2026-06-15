@@ -47,7 +47,7 @@ import examples
 import newton.utils
 from examples.cable_soft_franka import Example as CableSoftPhysicsExample
 from robolab_viz import droid_scene_config
-from robolab_viz.config import fixture_world_bbox
+from robolab_viz.config import available_tables, fixture_world_bbox
 from robolab_viz.raycast import RaycastPreviewRenderer
 from robolab_viz.robot_fk import RobotVisualFK
 from robolab_viz.robot_usd import ensure_robot_usd
@@ -87,7 +87,12 @@ class Example(CableSoftPhysicsExample):
             float(self.table_pos[0] + sim_to_viz[0]),
             float(self.table_pos[1] + sim_to_viz[1]),
         )
-        scene = droid_scene_config(table_top_z=table_top_viz, table_center_xy=table_center_viz)
+        scene = droid_scene_config(
+            table_top_z=table_top_viz,
+            table_center_xy=table_center_viz,
+            table=args.table,
+            background=args.background,
+        )
         scene.robot_usd = robot_usd
         scene.fps = self.fps
         scene.sim_to_viz_translation = sim_to_viz
@@ -248,6 +253,11 @@ class Example(CableSoftPhysicsExample):
     def create_parser():
         parser = CableSoftPhysicsExample.create_parser()
         parser.set_defaults(output_path=str(Path("outputs") / "cable_soft_franka_robolab.usd"), viewer="null")
+        parser.add_argument("--table", default="maple", choices=available_tables(),
+                            help="Vendored work-table texture (default: maple).")
+        parser.add_argument("--background", default="home_office",
+                            help="Vendored dome background by name (e.g. home_office, garage_2k, "
+                                 "machine_shop_01_2k; see robolab_viz.config.available_backgrounds).")
         parser.add_argument("--usd", type=_str2bool, nargs="?", const=True, default=False,
                             help="Write the full time-sampled USD scene (default: off).")
         parser.add_argument("--npz", type=_str2bool, nargs="?", const=True, default=False,

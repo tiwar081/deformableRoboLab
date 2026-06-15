@@ -1,0 +1,162 @@
+[
+  {
+    "name": "rubiks_cube",
+    "usd_path": "assets/objects/hot3d/rubiks_cube.usd",
+    "prim_path": "/rubiks_cube",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "quat_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "payload": [],
+    "rigid_body": true,
+    "static_body": false,
+    "class": "toy",
+    "description": "The object is a colorful 3D puzzle consisting of smaller cubes that can be rotated on each axis. Its faces feature a combination of colors, typically including red, green, blue, yellow, orange, and white.",
+    "dims": [
+      0.058285847306251526,
+      0.057770855724811554,
+      0.05796363018453121
+    ],
+    "mass": 0.20000000298023224,
+    "density": 0.0,
+    "dynamic_friction": 2.0,
+    "static_friction": 2.0,
+    "restitution": 0.10000000149011612,
+    "dataset": "hot3d"
+  },
+  {
+    "name": "apple_01",
+    "usd_path": "assets/objects/objaverse/apple_01.usd",
+    "prim_path": "/apple_01",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "quat_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "payload": [],
+    "rigid_body": true,
+    "static_body": false,
+    "class": "",
+    "description": "",
+    "dims": [
+      0.06805419769762011,
+      0.06592432828416686,
+      0.06768400040975212
+    ],
+    "mass": 0.0,
+    "density": 980.0,
+    "dynamic_friction": 0.800000011920929,
+    "static_friction": 0.800000011920929,
+    "restitution": 0.0,
+    "dataset": "objaverse"
+  },
+  {
+    "name": "banana",
+    "usd_path": "assets/objects/ycb/banana.usd",
+    "prim_path": "/banana",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "quat_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "payload": [],
+    "rigid_body": true,
+    "static_body": false,
+    "class": "fruit",
+    "description": "These bananas are long and curved, with a smooth yellow skin and slightly green tips. They are commonly known for their sweet taste and are often eaten raw or used in various dishes.",
+    "dims": [
+      0.10888800024986267,
+      0.17841200530529022,
+      0.03666999936103821
+    ],
+    "mass": 0.11999999731779099,
+    "density": 0.0,
+    "dynamic_friction": 2.0,
+    "static_friction": 2.0,
+    "restitution": 0.10000000149011612,
+    "dataset": "ycb"
+  },
+  {
+    "name": "bowl",
+    "usd_path": "assets/objects/ycb/bowl.usd",
+    "prim_path": "/bowl",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "quat_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "payload": [],
+    "rigid_body": true,
+    "static_body": false,
+    "class": "kitchenware",
+    "description": "The bowls are round with a smooth, glossy surface and a vibrant red color. They feature a speckled design and a slightly raised rim, adding a decorative touch.",
+    "dims": [
+      0.16144399344921112,
+      0.16111300885677338,
+      0.05496999993920326
+    ],
+    "mass": 0.5,
+    "density": 0.0,
+    "dynamic_friction": 2.0,
+    "static_friction": 2.0,
+    "restitution": 0.10000000149011612,
+    "dataset": "ycb"
+  },
+  {
+    "name": "mug",
+    "usd_path": "assets/objects/ycb/mug.usd",
+    "prim_path": "/mug",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "quat_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "payload": [],
+    "rigid_body": true,
+    "static_body": false,
+    "class": "kitchenware",
+    "description": "The object is a pair of red ceramic mugs with a glossy finish. They feature a curved handle and have subtle vertical stripes along the body.",
+    "dims": [
+      0.11696600168943405,
+      0.09307499974966049,
+      0.08138400316238403
+    ],
+    "mass": 0.30000001192092896,
+    "density": 0.0,
+    "dynamic_friction": 2.0,
+    "static_friction": 2.0,
+    "restitution": 0.10000000149011612,
+    "dataset": "ycb"
+  }
+]

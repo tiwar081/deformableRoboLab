@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import warp as wp
 
-from .config import droid_scene_config
+from .config import background_dome, droid_scene_config
 from .raycast import RaycastPreviewRenderer
 
 
@@ -49,6 +49,10 @@ def main() -> None:
     scene = droid_scene_config()
     scene.sim_to_viz_translation = tuple(geom["sim_to_viz_translation"])
     scene.fps = float(data["fps"])
+    # Reproduce the run's dome background (the table texture rides along in the
+    # pickled instances; the background is sampled from scene.dome_light).
+    if geom.get("dome_texture"):
+        scene.dome_light = background_dome(geom["dome_texture"])
     if args.wrist_eye is not None:
         scene.wrist_camera.eye = tuple(args.wrist_eye)
     if args.wrist_target is not None:

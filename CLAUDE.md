@@ -217,10 +217,15 @@ vendored into `assets/` (provenance in `assets/ATTRIBUTION.md`); removing
   `cable_soft_franka.Example`, reuses its physics verbatim, and swaps only the
   visualization (forces `--viewer null`):
   `python -m examples cable_soft_franka_robolab --device cuda:0`.
-- Customization surface: `robolab_viz/config.py`. `droid_scene_config()` returns
-  RoboLab's DROID values as overridable dataclasses (fixtures, lights, cameras,
-  object styles) — this is where future demos swap table / lights / cameras /
-  styling.
+- Customization surface: `robolab_viz/config.py`. `droid_scene_config(table=,
+  background=)` returns RoboLab's DROID values as overridable dataclasses
+  (fixtures, lights, cameras, object styles) — this is where future demos swap
+  table / lights / cameras / styling.
+- Configurable look: `--table {maple,oak,bamboo,black}` and `--background <name>`
+  (e.g. `home_office`, `garage_2k`, `machine_shop_01_2k`). `available_tables()` /
+  `available_backgrounds()` / `available_objects()` enumerate the vendored sets;
+  `resolve_background` accepts the `_2k`-less stem too. The choices are visible in
+  the raycast preview, not just the RTX path (see below).
 - Outputs in `outputs/robolab_preview/`: `combined.mp4` (the only kept video) +
   per-camera PNG frames (`--png-every`, default 60) + `wrist_coverage.json`.
   Opt-in: `--usd` writes the time-sampled scene USD; `--npz` writes the state
@@ -245,6 +250,24 @@ Architecture:
 - Visual table placed by `config.table_fixture_from_footprint(top_z, center_xy)`
   from the physics `table_pos/table_half`, so the visible surface coincides with
   the contact plane and covers the footprint (asserted in `test_final`).
+- The raycast preview reproduces the table material and dome backdrop (not just
+  the RTX path): each `FixtureConfig.texture_file` (an sRGB base-color PNG) is
+  planar/triplanar-projected onto the fixture box in world meters
+  (`texture_uv_scale` = m per tile), and on a ray miss the dome HDR/EXR is
+  tone-mapped (auto-exposed Reinhard + sRGB) and sampled as an equirectangular
+  (latlong, Z-up) backdrop. The four tables share one geometry and differ only
+  in the top-slab material, so the preview maps the wood base-color while the
+  USD/RTX path uses each table's MDL; `black` is matte paint (no texture, flat
+  color). `geometry.pkl` carries the table texture (in the instances) and the
+  dome path so `rerender` reproduces the same look.
+- Vendored asset library (`assets/`, provenance in `assets/ATTRIBUTION.md`):
+  `backgrounds/{default,indoors}/*.hdr|exr` (curated; **no outdoor env maps exist
+  in RoboLab's set** — only PNG previews, so indoor/default only),
+  `fixtures/table_{maple,oak,bamboo,black}.usda` (offline MDL refs), and
+  `objects/{objaverse,ycb,hot3d}/*.usd` + `textures/` (apple, banana,
+  rubiks_cube, bowl, mug) with a trimmed `objects/object_catalog.json`
+  (dims/class) exposed via `config.object_asset(name)`. **Hard rule: nothing in
+  the repo reads `_external/` at runtime — assume that checkout can be deleted.**
 
 Gotchas (fixed, would recur):
 

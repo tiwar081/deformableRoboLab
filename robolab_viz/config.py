@@ -149,6 +149,12 @@ class FixtureConfig:
     # Approximate the fixture with its bounding box in the raycast preview.
     preview: bool = True
     preview_color: tuple[float, float, float] = (0.55, 0.42, 0.30)
+    # Optional base-color image (sRGB PNG/JPG) the raycast preview planar-maps
+    # onto the fixture's bounding box (top + sides), reproducing the wood-grain
+    # look of the RTX MDL material. When None the flat ``preview_color`` is used.
+    # ``texture_uv_scale`` is world meters per texture tile (smaller = more tiles).
+    texture_file: Path | None = None
+    texture_uv_scale: float = 0.5
 
 
 def _asset_world_extents(
@@ -213,6 +219,150 @@ def table_fixture_from_footprint(
     )
 
 
+# ---------------------------------------------------------------- asset registries
+#
+# Every asset below resolves only from the vendored ``assets/`` tree — nothing
+# in this package reads ``_external/`` (assume that checkout can be deleted).
+
+# Vendored work tables (RoboLab fixtures): name -> (fixture usd, top-surface
+# base-color image relative to ``assets/``, flat fallback color). The four
+# tables share identical geometry and differ only in the top-slab material; the
+# raycast preview planar-maps the base-color image onto the table block while
+# the RTX/USD path uses the table's own MDL material. ``black`` is a flat matte
+# paint (no wood texture).
+TABLE_TEXTURES: dict[str, tuple[str, str | None, tuple[float, float, float]]] = {
+    "maple": ("table_maple.usda", "materials/Base/Wood/Walnut_Planks/Walnut_Planks_BaseColor.png", (0.45, 0.31, 0.19)),
+    "oak": ("table_oak.usda", "materials/Base/Wood/Oak/Oak_BaseColor.png", (0.62, 0.46, 0.29)),
+    "bamboo": ("table_bamboo.usda", "materials/Base/Wood/Bamboo/Bamboo_BaseColor.png", (0.74, 0.60, 0.36)),
+    "black": ("table_black.usda", None, (0.05, 0.05, 0.06)),
+}
+
+
+def available_tables() -> list[str]:
+    """Names of the vendored work-table textures (``--table`` choices)."""
+    return [name for name in TABLE_TEXTURES if (ASSETS_DIR / "fixtures" / TABLE_TEXTURES[name][0]).exists()]
+
+
+def work_table_fixture(
+    table: str,
+    *,
+    top_z: float,
+    center_xy: tuple[float, float],
+    rotate_z_deg: float = 90.0,
+) -> FixtureConfig:
+    """Build the ``work_table`` fixture for a named vendored table, placed from
+    the physics footprint (see ``table_fixture_from_footprint``)."""
+    if table not in TABLE_TEXTURES:
+        raise ValueError(f"Unknown table {table!r}; available: {available_tables()}")
+    usd_name, tex_rel, color = TABLE_TEXTURES[table]
+    fix = table_fixture_from_footprint(
+        name="work_table",
+        usd_path=ASSETS_DIR / "fixtures" / usd_name,
+        top_z=top_z,
+        center_xy=center_xy,
+        rotate_z_deg=rotate_z_deg,
+        preview_color=color,
+    )
+    if tex_rel is not None:
+        fix.texture_file = ASSETS_DIR / tex_rel
+    return fix
+
+
+def available_backgrounds() -> dict[str, Path]:
+    """Map background name (filename stem) -> vendored ``.hdr``/``.exr`` path,
+    searched recursively under ``assets/backgrounds`` (``--background`` choices)."""
+    out: dict[str, Path] = {}
+    bg_dir = ASSETS_DIR / "backgrounds"
+    if bg_dir.exists():
+        for p in sorted(bg_dir.rglob("*")):
+            if p.suffix.lower() in (".hdr", ".exr"):
+                out.setdefault(p.stem, p)
+    return out
+
+
+def resolve_background(name_or_path: str | Path) -> Path:
+    """Resolve a background by stem (``home_office``, ``garage_2k``, or the
+    ``_2k``-less ``garage``) or by direct path. Vendored assets only."""
+    p = Path(name_or_path)
+    if p.suffix.lower() in (".hdr", ".exr") and p.exists():
+        return p
+    name = str(name_or_path)
+    bgs = available_backgrounds()
+    for key in (name, f"{name}_2k"):
+        if key in bgs:
+            return bgs[key]
+    matches = [v for k, v in bgs.items() if name in k]
+    if len(matches) == 1:
+        return matches[0]
+    raise ValueError(
+        f"Unknown background {name_or_path!r}; available: {sorted(bgs)}"
+        + (f" (ambiguous: {[m.stem for m in matches]})" if matches else "")
+    )
+
+
+def background_dome(name_or_path: str | Path = "home_office", intensity: float = 500.0) -> DomeLightConfig:
+    """RoboLab-style dome light from a vendored background (the equirectangular
+    HDR is both the image-based light and the visible backdrop)."""
+    return DomeLightConfig(
+        texture_file=resolve_background(name_or_path),
+        intensity=intensity,
+        texture_format="latlong",
+        visible_in_primary_ray=True,
+    )
+
+
+@dataclass
+class ObjectAsset:
+    """A vendored RoboLab object USD (textured mesh) with catalog metadata.
+
+    These are scene props (apple, banana, rubiks_cube, bowl, mug) brought into
+    the repo for future demos; ``usd_path`` is self-contained (mesh + local
+    ``textures/``). ``dims`` is the asset's axis-aligned size in meters.
+    """
+
+    name: str
+    usd_path: Path
+    dims: tuple[float, float, float]
+    object_class: str = ""
+    description: str = ""
+
+
+def _object_catalog() -> dict[str, ObjectAsset]:
+    import json
+
+    catalog_path = ASSETS_DIR / "objects" / "object_catalog.json"
+    if not catalog_path.exists():
+        return {}
+    repo_root = ASSETS_DIR.parent
+    out: dict[str, ObjectAsset] = {}
+    for entry in json.loads(catalog_path.read_text()):
+        usd = repo_root / entry["usd_path"]
+        if not usd.exists():
+            continue
+        dims = tuple(float(d) for d in entry.get("dims") or (0.0, 0.0, 0.0))
+        out[entry["name"]] = ObjectAsset(
+            name=entry["name"],
+            usd_path=usd,
+            dims=dims,  # type: ignore[arg-type]
+            object_class=entry.get("class", ""),
+            description=entry.get("description", ""),
+        )
+    return out
+
+
+def available_objects() -> list[str]:
+    """Names of the vendored RoboLab object assets (see ``object_asset``)."""
+    return sorted(_object_catalog())
+
+
+def object_asset(name: str) -> ObjectAsset:
+    """Look up a vendored RoboLab object by catalog name."""
+    catalog = _object_catalog()
+    if name not in catalog:
+        raise ValueError(f"Unknown object {name!r}; available: {sorted(catalog)}")
+    return catalog[name]
+
+
 @dataclass
 class DomeLightConfig:
     texture_file: Path | None = None
@@ -272,11 +422,19 @@ class RoboLabSceneConfig:
 def droid_scene_config(
     table_top_z: float = 0.0,
     table_center_xy: tuple[float, float] = (0.57, 0.0),
+    table: str = "maple",
+    background: str = "home_office",
 ) -> RoboLabSceneConfig:
-    """RoboLab ``run_recorded.py`` scene: DROID cameras, home-office dome, maple table.
+    """RoboLab ``run_recorded.py`` scene: DROID cameras, dome background, work table.
 
     Values are copied from RoboLab's ``robolab/variations/{camera,lighting,
     backgrounds}.py`` and ``assets/scenes/*.usda``.
+
+    ``table`` selects a vendored work-table texture (``maple``/``oak``/``bamboo``/
+    ``black`` — see ``available_tables``); ``background`` selects a vendored dome
+    HDR/EXR (``home_office``, ``garage_2k``, ... — see ``available_backgrounds``).
+    Both also drive the raycast preview (wood-grain table, equirectangular
+    backdrop) so the choice is visible without an RTX renderer.
 
     The work table is placed by ``table_fixture_from_footprint`` so its visible
     top surface sits at ``table_top_z`` and its footprint is centered on
@@ -284,8 +442,8 @@ def droid_scene_config(
     table's top height and footprint center here, which is what keeps the
     rendered table consistent with the invisible contact table it replaces
     (objects rest exactly on the visible surface, and the table spans the whole
-    contact region). The maple top (0.7 x 1.0 m) is yawed 90 deg so its 1.0 m
-    edge runs along +X, covering this repo's 0.9 x 0.7 m physics footprint.
+    contact region). The top (0.7 x 1.0 m) is yawed 90 deg so its 1.0 m edge
+    runs along +X, covering this repo's 0.9 x 0.7 m physics footprint.
     """
     return RoboLabSceneConfig(
         fixtures=[
@@ -296,21 +454,14 @@ def droid_scene_config(
                 rotate_z_deg=180.0,
                 preview_color=(0.35, 0.35, 0.38),
             ),
-            table_fixture_from_footprint(
-                name="work_table",
-                usd_path=ASSETS_DIR / "fixtures" / "table_maple.usda",
+            work_table_fixture(
+                table,
                 top_z=table_top_z,
                 center_xy=table_center_xy,
                 rotate_z_deg=90.0,
-                preview_color=(0.55, 0.42, 0.30),
             ),
         ],
-        dome_light=DomeLightConfig(
-            texture_file=ASSETS_DIR / "backgrounds" / "home_office.exr",
-            intensity=500.0,
-            texture_format="latlong",
-            visible_in_primary_ray=True,
-        ),
+        dome_light=background_dome(background, intensity=500.0),
         sphere_lights=[
             SphereLightConfig(name="sphere_light", position=(0.0, -0.6, 0.7), intensity=5000.0, radius=0.5),
         ],

@@ -19,6 +19,7 @@ camera so occlusion is a number, not a vibe.
 from __future__ import annotations
 
 import json
+import os
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,7 +34,51 @@ from newton import Mesh as NewtonMesh
 
 from .config import CameraConfig, RoboLabSceneConfig, WristCameraConfig
 
+# Required for cv2 to decode the .exr dome backgrounds (e.g. home_office.exr).
+os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
+
 CATEGORIES = ("background", "robot", "objects", "soft", "fixture")
+
+# Square tile every fixture texture is resized to before stacking into the GPU
+# atlas, and the equirectangular size the (tone-mapped) dome HDR is sampled at.
+_TEX_TILE = 1024
+_BG_H, _BG_W = 1024, 2048
+
+
+def _load_texture(path: Path | str) -> np.ndarray:
+    """Load an sRGB base-color image as an ``(H, W, 3)`` uint8 RGB array."""
+    import cv2
+
+    bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    if bgr is None:
+        raise FileNotFoundError(f"Could not read texture {path}")
+    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    return cv2.resize(rgb, (_TEX_TILE, _TEX_TILE), interpolation=cv2.INTER_AREA)
+
+
+def _load_background(path: Path | str) -> np.ndarray:
+    """Tone-map an HDR/EXR equirectangular environment map to an ``(H, W, 3)``
+    uint8 sRGB image for use as the raycast preview backdrop.
+
+    The dome HDR is linear and high-dynamic-range (bright windows/lamps reach
+    thousands); we auto-expose so mean scene luminance lands at mid-gray, then
+    apply Reinhard tonemapping + an sRGB gamma so the backdrop reads naturally
+    without a single light source blowing out the frame."""
+    import cv2
+
+    raw = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    if raw is None:
+        raise FileNotFoundError(f"Could not read background {path}")
+    lin = cv2.cvtColor(raw[:, :, :3].astype(np.float32), cv2.COLOR_BGR2RGB)
+    lin = np.clip(lin, 0.0, None)
+    lum = 0.2126 * lin[..., 0] + 0.7152 * lin[..., 1] + 0.0722 * lin[..., 2]
+    mean_lum = float(np.mean(lum))
+    gain = 0.45 / mean_lum if mean_lum > 1e-6 else 1.0
+    mapped = lin * gain
+    ldr = mapped / (1.0 + mapped)  # Reinhard
+    srgb = np.power(np.clip(ldr, 0.0, 1.0), 1.0 / 2.2)
+    u8 = (srgb * 255.0).astype(np.uint8)
+    return cv2.resize(u8, (_BG_W, _BG_H), interpolation=cv2.INTER_AREA)
 
 
 @dataclass
@@ -45,6 +90,10 @@ class _Instance:
     verts: np.ndarray  # (n,3) local-frame vertices (soft: placeholder)
     tris: np.ndarray  # (m,3)
     color: tuple[float, float, float]
+    # Optional base-color texture (H,W,3 uint8 sRGB), planar-mapped onto this
+    # instance in the kernel. ``uv_scale`` is world meters per texture tile.
+    texture: np.ndarray | None = None
+    uv_scale: float = 0.5
 
 
 def _quat_rotate_np(q_xyzw: np.ndarray, v: np.ndarray) -> np.ndarray:
@@ -136,6 +185,20 @@ def _transform_verts_kernel(
         out[i] = wp.transform_point(inst_tf[vert_inst[i]], rest[i])
 
 
+@wp.func
+def _sample(tex: wp.array(dtype=wp.uint8, ndim=4), ti: int, u: float, v: float, h: int, w: int) -> wp.vec3:
+    # tile-wrap then nearest-sample the (sRGB uint8) texture at atlas index ``ti``.
+    uu = u - wp.floor(u)
+    vv = v - wp.floor(v)
+    px = wp.clamp(int(uu * float(w)), 0, w - 1)
+    py = wp.clamp(int(vv * float(h)), 0, h - 1)
+    return wp.vec3(
+        float(tex[ti, py, px, 0]) / 255.0,
+        float(tex[ti, py, px, 1]) / 255.0,
+        float(tex[ti, py, px, 2]) / 255.0,
+    )
+
+
 @wp.kernel
 def _render_kernel(
     mesh_id: wp.uint64,
@@ -147,6 +210,15 @@ def _render_kernel(
     height: int,
     face_category: wp.array(dtype=wp.int32),
     face_color: wp.array(dtype=wp.vec3),
+    face_tex: wp.array(dtype=wp.int32),
+    face_uv: wp.array(dtype=wp.float32),
+    tex_atlas: wp.array(dtype=wp.uint8, ndim=4),
+    tex_h: int,
+    tex_w: int,
+    bg: wp.array(dtype=wp.uint8, ndim=3),
+    bg_h: int,
+    bg_w: int,
+    has_bg: int,
     img: wp.array(dtype=wp.uint8, ndim=3),
     category_buf: wp.array(dtype=wp.int32, ndim=2),
 ):
@@ -163,12 +235,39 @@ def _render_kernel(
             n = -n
         key_light = wp.normalize(wp.vec3(0.35, -0.45, -0.82))
         shade = 0.42 + 0.43 * wp.max(wp.dot(n, -key_light), 0.0) + 0.15 * wp.max(wp.dot(n, -d), 0.0)
-        c = face_color[query.face] * shade
+        base = face_color[query.face]
+        ti = face_tex[query.face]
+        if ti >= 0:
+            # planar (triplanar) projection by dominant normal axis, in world m.
+            hit = cam_pos + d * query.t
+            sc = face_uv[query.face]
+            ax = wp.abs(n[0])
+            ay = wp.abs(n[1])
+            az = wp.abs(n[2])
+            if az >= ax and az >= ay:
+                base = _sample(tex_atlas, ti, hit[0] / sc, hit[1] / sc, tex_h, tex_w)
+            elif ax >= ay:
+                base = _sample(tex_atlas, ti, hit[1] / sc, hit[2] / sc, tex_h, tex_w)
+            else:
+                base = _sample(tex_atlas, ti, hit[0] / sc, hit[2] / sc, tex_h, tex_w)
+        c = base * shade
         category_buf[py, px] = face_category[query.face]
     else:
-        # simple sky/floor gradient background
-        g = 0.55 + 0.25 * wp.max(d[2], 0.0)
-        c = wp.vec3(g * 0.92, g * 0.94, g)
+        if has_bg == 1:
+            # equirectangular latlong lookup (Z up), matching the dome light.
+            lon = wp.atan2(d[1], d[0]) * (0.5 / 3.14159265) + 0.5
+            lat = wp.acos(wp.clamp(d[2], -1.0, 1.0)) * (1.0 / 3.14159265)
+            bx = wp.clamp(int(lon * float(bg_w)), 0, bg_w - 1)
+            by = wp.clamp(int(lat * float(bg_h)), 0, bg_h - 1)
+            c = wp.vec3(
+                float(bg[by, bx, 0]) / 255.0,
+                float(bg[by, bx, 1]) / 255.0,
+                float(bg[by, bx, 2]) / 255.0,
+            )
+        else:
+            # simple sky/floor gradient background
+            g = 0.55 + 0.25 * wp.max(d[2], 0.0)
+            c = wp.vec3(g * 0.92, g * 0.94, g)
         category_buf[py, px] = 0
 
     img[py, px, 0] = wp.uint8(wp.clamp(c[0], 0.0, 1.0) * 255.0)
@@ -344,6 +443,9 @@ class RaycastPreviewRenderer:
             mn, mx = np.array(rng.GetMin()), np.array(rng.GetMax())
             verts, tris = _box_mesh(mn, mx)
             verts = (verts.astype(np.float64) - off).astype(np.float32)  # viz -> sim frame
+            texture = None
+            if fix.texture_file is not None and Path(fix.texture_file).exists():
+                texture = _load_texture(fix.texture_file)
             self.instances.append(
                 _Instance(
                     name=fix.name,
@@ -353,12 +455,15 @@ class RaycastPreviewRenderer:
                     verts=verts,
                     tris=tris,
                     color=fix.preview_color,
+                    texture=texture,
+                    uv_scale=fix.texture_uv_scale,
                 )
             )
 
     def _upload(self) -> None:
         all_verts, all_tris, vert_inst = [], [], []
-        face_cat, face_color = [], []
+        face_cat, face_color, face_tex, face_uv = [], [], [], []
+        atlas: list[np.ndarray] = []  # distinct textures, index -> face_tex value
         offset = 0
         self._inst_index: dict[int, int] = {}
         for i, inst in enumerate(self.instances):
@@ -370,10 +475,32 @@ class RaycastPreviewRenderer:
             vert_inst.append(np.full(len(inst.verts), i, dtype=np.int32))
             face_cat.append(np.full(len(inst.tris), inst.category, dtype=np.int32))
             face_color.append(np.tile(np.asarray(inst.color, dtype=np.float32), (len(inst.tris), 1)))
+            if inst.texture is not None:
+                tex_idx = len(atlas)
+                atlas.append(inst.texture)
+            else:
+                tex_idx = -1
+            face_tex.append(np.full(len(inst.tris), tex_idx, dtype=np.int32))
+            face_uv.append(np.full(len(inst.tris), inst.uv_scale, dtype=np.float32))
             offset += len(inst.verts)
 
         verts = np.concatenate(all_verts).astype(np.float32)
         tris = np.concatenate(all_tris).astype(np.int32)
+        # Texture atlas: (N, tile, tile, 3) uint8; a 1x1x1 dummy when untextured
+        # (warp needs a concrete array even if every face_tex is -1).
+        atlas_np = np.stack(atlas).astype(np.uint8) if atlas else np.zeros((1, 1, 1, 3), dtype=np.uint8)
+        self._tex_h, self._tex_w = atlas_np.shape[1], atlas_np.shape[2]
+
+        # Dome background: tone-mapped equirectangular image sampled on ray miss.
+        bg_np = None
+        dome = self.scene.dome_light
+        if dome is not None and dome.texture_file is not None and Path(dome.texture_file).exists():
+            bg_np = _load_background(dome.texture_file)
+        self._has_bg = bg_np is not None
+        if bg_np is None:
+            bg_np = np.zeros((1, 1, 3), dtype=np.uint8)
+        self._bg_h, self._bg_w = bg_np.shape[0], bg_np.shape[1]
+
         with wp.ScopedDevice(self.device):
             self._rest = wp.array(verts, dtype=wp.vec3)
             self._vert_inst = wp.array(np.concatenate(vert_inst), dtype=wp.int32)
@@ -381,6 +508,10 @@ class RaycastPreviewRenderer:
             self._points = wp.zeros(len(verts), dtype=wp.vec3)
             self._face_cat = wp.array(np.concatenate(face_cat), dtype=wp.int32)
             self._face_color = wp.array(np.concatenate(face_color), dtype=wp.vec3)
+            self._face_tex = wp.array(np.concatenate(face_tex), dtype=wp.int32)
+            self._face_uv = wp.array(np.concatenate(face_uv), dtype=wp.float32)
+            self._tex_atlas = wp.array(atlas_np, dtype=wp.uint8)
+            self._bg = wp.array(bg_np, dtype=wp.uint8)
             self._tri_array = wp.array(tris.flatten(), dtype=wp.int32)
             # Built lazily on the first frame: building the BVH on the rest
             # positions (zeros for the soft body) gives a degenerate tree that
@@ -465,6 +596,15 @@ class RaycastPreviewRenderer:
                     cfg.height,
                     self._face_cat,
                     self._face_color,
+                    self._face_tex,
+                    self._face_uv,
+                    self._tex_atlas,
+                    self._tex_h,
+                    self._tex_w,
+                    self._bg,
+                    self._bg_h,
+                    self._bg_w,
+                    int(self._has_bg),
                 ],
                 outputs=[self._imgs[name], self._cats[name]],
                 device=self.device,
@@ -508,9 +648,15 @@ class RaycastPreviewRenderer:
         cameras from a state cache without rebuilding the Newton model."""
         import pickle
 
+        dome = self.scene.dome_light
         with open(path, "wb") as f:
             pickle.dump(
-                {"instances": self.instances, "sim_to_viz_translation": self.scene.sim_to_viz_translation}, f
+                {
+                    "instances": self.instances,
+                    "sim_to_viz_translation": self.scene.sim_to_viz_translation,
+                    "dome_texture": str(dome.texture_file) if dome and dome.texture_file else None,
+                },
+                f,
             )
 
     def close(self) -> dict:
