@@ -1,8 +1,12 @@
-"""``cable_soft_franka`` with RoboLab's graphics instead of the Newton viewer.
+"""``rigidCube_soft_franka`` with RoboLab's graphics instead of the Newton viewer.
 
-The physics is *identical* to ``examples.cable_soft_franka`` — this module
+The physics is *identical* to ``examples.rigidCube_soft_franka`` — this module
 subclasses its ``Example`` and only swaps the visualization layer for the
-RoboLab (NVIDIA DROID rig) look reproduced by ``robolab_viz``:
+RoboLab (NVIDIA DROID rig) look reproduced by ``robolab_viz``. Unlike the cable
+demo, the Franka here grasps a heavy steel-density cube (~1 kg), carries it over
+a pillow-soft FEM block (``k_mu=5e2, k_lambda=2.5e3``), and drops it half-offset
+onto the block so the cube visibly squashes the block edge and rolls off — the
+deformation reads clearly even in the flat-shaded preview.
 
 - the scene from RoboLab's ``run_recorded.py``: home-office dome background,
   sphere key light, maple work table, Franka pedestal, robot base at the
@@ -23,7 +27,7 @@ Outputs per run (in ``outputs/robolab_preview/``):
 
 Opt-in outputs (off by default):
 
-- ``--usd`` writes ``outputs/cable_soft_franka_robolab.usd`` — the full
+- ``--usd`` writes ``outputs/rigidCube_soft_franka_robolab.usd`` — the full
   RoboLab-styled scene with one time sample per frame. Open it in
   usdview/Omniverse, or RTX-render with ``python -m robolab_viz.isaac_render``
   on an RTX-capable GPU (H100/H200 have no RT cores and cannot RTX-render).
@@ -33,7 +37,7 @@ Opt-in outputs (off by default):
 
 Run:
 
-    python -m examples cable_soft_franka_robolab --viewer null --device cuda:0
+    python -m examples rigidCube_soft_franka_robolab --viewer null --device cuda:0
 """
 
 from __future__ import annotations
@@ -45,7 +49,7 @@ import warp as wp
 
 import examples
 import newton.utils
-from examples.cable_soft_franka import Example as CableSoftPhysicsExample
+from examples.rigidCube_soft_franka import Example as RigidCubeSoftPhysicsExample
 from robolab_viz import droid_scene_config
 from robolab_viz.config import CameraConfig, available_tables, fixture_world_bbox, look_at_quat_wxyz
 from robolab_viz.raycast import RaycastPreviewRenderer
@@ -58,11 +62,11 @@ def _str2bool(value: str) -> bool:
     return str(value).strip().lower() in ("1", "true", "yes", "y", "t", "on")
 
 
-class Example(CableSoftPhysicsExample):
+class Example(RigidCubeSoftPhysicsExample):
     def __init__(self, viewer, args):
         if args.viewer != "null":
             raise SystemExit(
-                "cable_soft_franka_robolab renders through robolab_viz (USD + raycast preview); "
+                "rigidCube_soft_franka_robolab renders through robolab_viz (USD + raycast preview); "
                 "run it with --viewer null."
             )
         super().__init__(viewer, args)
@@ -272,8 +276,8 @@ class Example(CableSoftPhysicsExample):
 
     @staticmethod
     def create_parser():
-        parser = CableSoftPhysicsExample.create_parser()
-        parser.set_defaults(output_path=str(Path("outputs") / "cable_soft_franka_robolab.usd"), viewer="null")
+        parser = RigidCubeSoftPhysicsExample.create_parser()
+        parser.set_defaults(output_path=str(Path("outputs") / "rigidCube_soft_franka_robolab.usd"), viewer="null")
         parser.add_argument("--table", default="maple", choices=available_tables(),
                             help="Vendored work-table texture (default: maple).")
         parser.add_argument("--background", default="home_office",
@@ -303,5 +307,5 @@ class Example(CableSoftPhysicsExample):
 
 if __name__ == "__main__":
     parser = Example.create_parser()
-    viewer, args = examples.init(parser, example_name="cable_soft_franka_robolab")
+    viewer, args = examples.init(parser, example_name="rigidCube_soft_franka_robolab")
     examples.run(Example(viewer, args), args)

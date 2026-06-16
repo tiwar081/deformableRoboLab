@@ -627,19 +627,25 @@ class RaycastPreviewRenderer:
 
         # The only video kept (RoboLab-style combined observation video):
         # cameras concatenated horizontally at half scale, or the single camera
-        # full-frame when only one is previewed.
-        imgs = list(frame_rgbs.values())
-        if len(imgs) == 1:
-            combined = imgs[0]
-        else:
-            halves = [
-                cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2), interpolation=cv2.INTER_AREA) for img in imgs
-            ]
-            target_h = min(h.shape[0] for h in halves)
-            combined = np.concatenate([h[:target_h] for h in halves], axis=1)
-        if "combined" not in self._writers:
-            self._writers["combined"] = VideoWriter(str(self.output_dir / "combined.mp4"), self.video_fps)
-        self._writers["combined"].write(combined)
+        # full-frame when only one is previewed. Cameras flagged
+        # in_combined_video=False (e.g. an object-inspection still view) are
+        # rendered + dumped as PNGs above but kept out of this video.
+        imgs = [
+            rgb for name, rgb in frame_rgbs.items() if getattr(self.cameras[name], "in_combined_video", True)
+        ]
+        if imgs:
+            if len(imgs) == 1:
+                combined = imgs[0]
+            else:
+                halves = [
+                    cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2), interpolation=cv2.INTER_AREA)
+                    for img in imgs
+                ]
+                target_h = min(h.shape[0] for h in halves)
+                combined = np.concatenate([h[:target_h] for h in halves], axis=1)
+            if "combined" not in self._writers:
+                self._writers["combined"] = VideoWriter(str(self.output_dir / "combined.mp4"), self.video_fps)
+            self._writers["combined"].write(combined)
 
         self._frame_idx += 1
 

@@ -83,6 +83,10 @@ class CameraConfig:
     vertical_aperture: float = 3.024
     focus_distance: float = 28.0
     clipping: tuple[float, float] = (0.01, 1.0e4)
+    # When False the camera is still rendered (and dumped as PNG frames) but is
+    # left out of the side-by-side combined.mp4 — e.g. an extra object-inspection
+    # still view that should not change the kept observation video.
+    in_combined_video: bool = True
 
 
 @dataclass

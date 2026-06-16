@@ -1,8 +1,35 @@
 # RoboLab VBD
 
-Franka manipulation demos built on Newton physics (`_external/newton`), using one
-uniform split-solver framework: `SolverMuJoCo` for the robot, `SolverVBD` for the
-objects it interacts with.
+Franka manipulation demos built on Newton physics (`_external/newton`). The
+solver framework is chosen by scene contents (see **Solver Framework Selection**):
+the split `SolverMuJoCo` (robot) + `SolverVBD` (objects) framework whenever any
+deformable/soft object is present, and a single `SolverMuJoCo` (robot + objects)
+for rigid-only scenes.
+
+## Solver Framework Selection
+
+Two-way contact only happens *inside one solver*; the MuJoCo↔VBD bridge is
+unavoidably one-way (objects can't push the arm; grasp width is commanded/latched).
+So the rule, driven by scene contents:
+
+- **Any deformable or soft object present** (cable/rod, cloth, FEM block) → use the
+  **split `SolverMuJoCo` (robot) + `SolverVBD` (all objects)** framework with the
+  kinematic gripper-proxy bridge. VBD is the only Newton solver that hosts
+  rigid+cable+soft+their mutual two-way contact in one world, so every object that
+  must touch a deformable lives in the VBD object model. This covers
+  `cable_rigidCube_franka`, `cable_soft_franka`, `rigidCube_soft_franka`,
+  `soft_compression_franka`, `soft_pickplace_franka`, and any future
+  deformable+soft+rigid scene.
+- **Rigid bodies only** → use a **single `SolverMuJoCo`** for the robot *and* the
+  objects (the Newton `brick_stacking` / `panda_hydro` / RoboLab pattern). This gives
+  a true two-way frictional grasp (no proxy bridge, no commanded width / force latch),
+  MuJoCo's mature convex/SDF/hydroelastic mesh contact, and drops all of SOLVERS.md
+  §4's VBD-rigid-mesh fragility. Preferred for any new rigid-only demo.
+
+Caveat: `pickplace_ycb_franka` is rigid-only but is *deliberately kept on the VBD
+object framework* as the proof that VBD can host arbitrary rigid mesh shapes (so the
+same scene could later gain a soft object without re-architecting). See **Light-body
+contact stability** for the instability this exposes and the general fix.
 
 ## Project Objectives
 
@@ -32,6 +59,7 @@ Favor physically faithful simulation over visual shortcuts:
   contact bridge: they mirror the real Franka finger poses so objects collide against
   the imported finger collision geometry. They must not directly move, attach, or
   constrain objects.
+- Don't touch ANYTHING in _external/. Build the codebase to be independent of it (to use files from _external/, either import them or copy them over: otherwise assume that this folder can be removed at ANY time and the codebase is still expected to run as intended).
 
 ## Current Examples
 
@@ -46,11 +74,18 @@ All in `examples/`, registered in `examples/__init__.py`
 - `rigidCube_soft_franka.py` — Franka grasps a heavy rigid cube (steel density, ~1 kg)
   via a pre-grasp waypoint, carries it, and drops it half-offset onto a pillow-soft
   block (`k_mu=5e2, k_lambda=2.5e3`); the cube squashes the block edge and rolls off.
-  16 substeps.
+  16 substeps. Gripper is force-limited (`--grip-force-control`, default on): it
+  closes until the contact reaction reaches a threshold, then latches — for the rigid
+  cube this halts it at the surface. See **Force-Limited Gripper**.
 - `soft_compression_franka.py` — Franka grasps a heavy metal sheet (2x the cube's
   mass; 18x12x0.8 cm plate + grasp handle) by its handle and drops it half-offset onto
   the soft block; the sheet settles tilted on the block edge holding ~1 cm sustained
   compression. 16 substeps.
+- `soft_pickplace_franka.py` — Franka picks up a small graspable soft FEM block
+  (~33 mm, `k_mu=2e3`), carries it across the table, and places it at a target. The
+  force-limited gripper compresses the block *gradually* until the squeeze reaction
+  reaches the threshold, then latches — the soft counterpart to the rigid stop-at-
+  contact. 16 substeps. See **Force-Limited Gripper**.
 
 Run commands:
 
@@ -59,6 +94,7 @@ python -m examples cable_rigidCube_franka --viewer usd --device cuda:0
 python -m examples cable_soft_franka --viewer usd --device cuda:0
 python -m examples rigidCube_soft_franka --viewer usd --device cuda:0
 python -m examples soft_compression_franka --viewer usd --device cuda:0
+python -m examples soft_pickplace_franka --viewer usd --device cuda:0
 ```
 
 CPU smoke test:
@@ -145,6 +181,90 @@ Visualization (IMPORTANT):
 - Pre-grasp waypoint straight above wide objects is required: the joint-space path
   from home arcs sideways and the open pads (80 mm gap) clip a 50 mm object before the
   grasp.
+
+## Force-Limited Gripper (`rigidCube_soft_franka`, `soft_pickplace_franka`)
+
+The gripper closes to a FORCE THRESHOLD instead of a hand-tuned width, so it cannot
+crush/penetrate the grasped object. The arm is deliberately NOT loaded by the object
+(a real arm has the payload capacity to carry task objects); only the gripper DOFs are
+governed by the contact.
+
+- Threshold: `grip_force_threshold` (per finger). Grounded in the assets — Newton's
+  Franka examples cap the gripper effort at 20 N and RoboLab sets the finger
+  `effort_limit=200 N` (a saturation cap, not a grasp force); default here is 15 N
+  (rigid) / 8 N (soft), `--grip-threshold` to override.
+- Mechanism — a **force-triggered latch**, NOT continuous force feedback. The gripper
+  is position-controlled (stable) and creeps closed at `grip_close_rate` (0.02 m/s);
+  each substep a device kernel (`_update_grip_target_kernel`) reads the contact
+  reaction and, the moment it reaches the threshold, latches the current width and
+  holds it. No stiff in-loop force feedback, so the grasp cannot eject.
+  - **Why not continuous feedback:** feeding the object reaction back into the gripper
+    DOF (or the arm) across one substep of lag is unstable against the stiff penalty
+    contact (`k·dt²/m > 1`) — it chatters to hundreds of N and ejects the object.
+    Tried and rejected; the latch sidesteps it (position control once latched).
+- **Rigid** (`rigidCube_soft_franka`): the reaction is read from the PUBLIC
+  `SolverVBD.collect_rigid_contact_forces`, projected onto the closing axis. A rigid
+  contact is a near-step (0 → large within one substep of closing), so the latch fires
+  at first contact — the gripper halts at the cube surface, undeformed; the held force
+  reads high (stiff-contact response) but the cube is not penetrated (carried cleanly).
+- **Soft** (`soft_pickplace_franka`): Newton exposes no soft-contact force readback, so
+  the reaction is recomputed from the PUBLIC soft-contact geometry
+  (`soft_contact_particle/shape/body_pos/normal` + `particle_q` + `particle_radius` +
+  `soft_contact_ke`) as `ke·penetration` summed per proxy — VBD's own penalty law. The
+  soft reaction ramps gradually with compression, so the latch fires after the block
+  has been squeezed to the threshold. The proxies set `has_particle_collision=True` so
+  the pads contact the soft block (the drop examples keep it `False`).
+- Both stay on PUBLIC Newton API (`collect_rigid_contact_forces`, `Contacts.soft_*`,
+  `particle_q`); nothing in `_external` is modified or imported from `newton._src`.
+- Verified on cuda:0 (A100): rigid latches at the cube surface, carries and drops near
+  the soft block (`test_final` PASS, deterministic); soft compresses gradually
+  (reaction 0→~6 N), lifts the block to 0.25 m, carries it across the table, and places
+  it within 5 mm of the target (`test_final` PASS, deterministic).
+
+## Obstacle (table) non-penetration
+
+The robot-side hidden table collider (`robot_contact_table`, in the robot MuJoCo model)
+keeps the gripper from passing through the table — verified by driving the EE 8 cm
+below the table top: it halts exactly at the surface. Any fixed obstacle the gripper
+must not pass through should be added as a static collider in the robot model the same
+way (it does not need to be in the VBD object model unless objects also collide with it).
+
+## Light-body contact stability (`pickplace_ycb_franka`)
+
+VBD's rigid contact is a penalty/ALM force `≈ ke·penetration` whose magnitude is
+**mass-independent**, so a contact's stability is set by the dimensionless stiffness
+`η = ke·dt²/m_reduced` of the *pair* (`m_reduced = m0·m1/(m0+m1)`). The object model
+blanket-fills one stiffness (`shape_material_ke = 5e4`), which is fine for `η < 1` but
+explodes once a light body pushes the pair past `η = 1`: with `alpha=0` (full
+per-step penetration correction, required for the grasp — see SOLVERS.md §3) the
+over-correction converts penetration into a velocity `∝ 1/m` too large to resolve, and
+the lighter-coupled member is ejected at multi-m/s.
+
+Measured (substeps=16 → `dt = 1/(60·16) = 1.04e-3 s`, `ke = 5e4`):
+
+- bowl `0.5 kg`: `η = 0.11` → clean (cube knocks it, all rest at z≈0.078).
+- bowl `0.05 kg`: `η = 1.09`; cube↔bowl pair `m_reduced = 0.04 kg` → `η_pair = 1.36` → the
+  **cube** (not the bowl) is flung to z≈−11 m or (42, 0, 29) m, the bowl to y≈−21 m.
+  Chaotic/non-deterministic: which body ejects varies run-to-run, but it is always the
+  ≥1-member that shares the unstable pair. This is why "the cube also flies away."
+
+**General fix — per-substep rigid-body velocity clamp** (`_clamp_body_velocity_kernel`,
+`--max-body-speed`, default 3.0 m/s linear / 50 rad/s angular). Run on the object state's
+`body_qd` after every VBD substep (and captured in the CUDA graph), it bounds any spike
+before it feeds the next substep's inertial prediction, breaking the escalation loop. It
+is the rigid analog of Newton's `particle_max_velocity` (which the soft examples already
+rely on) and a **pure safety net**: the highest legitimate speed here is a free-fall drop
+(~1.1 m/s) ≪ the clamp, so it never touches normal motion. Verified: with the clamp the
+`0.05 kg` bowl behaves identically to the clean `0.5 kg` baseline (cube/bowl peak
+1.09/0.79 m/s, both settle on the table; `test_final` PASS) — and the peaks stay *below*
+the clamp because arresting the runaway early stops it ever escalating.
+
+Why not retune stiffness instead: contact `ke` is *averaged* across the pair, so a light
+body touching a stiff (`ke=5e4`) heavy one still sees `avg_ke ≥ 2.5e4` → `η_pair` can't be
+brought under ~0.5 by softening the light body alone. More substeps (`η ∝ dt²`) also work
+but cost speed and don't help geometric wedging (SOLVERS.md §4). The velocity clamp is the
+cheap, mass/geometry/stiffness-agnostic net — `body_qd` is public API; nothing in
+`_external` is touched.
 
 ## Cable
 
@@ -288,72 +408,3 @@ Gotchas (fixed, would recur):
   rest buffer (soft-body verts = 0 give a degenerate BVH `refit()` cannot repair
   -> every ray scans all faces, ~3.6 s/frame).
 
-# Newton Example Reference
-
-Solvers (from `newton/solvers.py`):
-
-- `SolverMuJoCo` — rigid bodies + generalized-coordinate articulations; contacts from
-  MuJoCo or from Newton (`use_mujoco_contacts=False`).
-- `SolverFeatherstone` — rigid/articulations; often a kinematic integrator ahead of a
-  deformable solve.
-- `SolverVBD` — implicit; rigid bodies, particles, cloth, soft bodies, cable/rod
-  joints; `integrate_with_external_rigid_solver=True` gives one-way rigid->deformable
-  coupling.
-- `SolverXPBD` — native rigid/articulation/particle/cloth solver (common default).
-- `SolverSemiImplicit` — native semi-implicit; used in differentiable examples.
-- `SolverKamino` — maximal-coordinate rigid/articulations.
-- `SolverStyle3D` — cloth only. `SolverImplicitMPM` — MPM materials only.
-- `newton.ik.IKSolver` — joint-target generation only, not a physics integrator.
-
-Example inventory (solver(s); objects involved):
-
-- basic: `shapes`, `joints`, `urdf`, `conveyor` — XPBD default / VBD option; rigid
-  primitives, articulations, quadruped URDF, kinematic belt + bags. `heightfield` —
-  XPBD/MuJoCo; rigid. `pendulum` — XPBD. `plotting`, `recording` — MuJoCo; humanoid.
-  `viewer`, `replay_viewer` — no solver.
-- cable: `y_junction`, `twist`, `pile`, `bundle_hysteresis`, `cross_slide_table` — all
-  single SolverVBD; rod cables (rigid capsules + cable joints) with pinned/kinematic
-  ends, obstacles, or pulleys. `twist`/`bundle`/`cross_slide` kinematically drive
-  bodies in persistent cable contact.
-- cloth: `bending`, `hanging`, `twist`, `poker_cards`, `rollers` — SolverVBD; cloth
-  meshes/grids, some with kinematic rigid strikers/rollers. `franka` — Featherstone +
-  VBD (one-way); robot + shirt. `h1` — Style3D + IK; robot kinematics + garment.
-  `style3d` — Style3D.
-- contacts: `rj45_plug` — SolverVBD; socket/plug/latch meshes + rod cable with
-  kinematic anchors. `nut_bolt_hydro`/`nut_bolt_sdf` — MuJoCo default / XPBD; rigid
-  with Newton contact pipelines. `pyramid` — XPBD; rigid stack. `brick_stacking` —
-  MuJoCo + IK; Franka + bricks.
-- diffsim: all SolverSemiImplicit (differentiable); ball, tet bear, cloth, drone,
-  soft body, spring cage.
-- ik: `franka`, `h1`, `custom` — IKSolver only. `cube_stacking` — MuJoCo + IK; Franka
-  + cubes.
-- kamino: all SolverKamino; mechanisms and legged robots.
-- mpm: all SolverImplicitMPM; sand/snow/viscous materials. `anymal` adds MuJoCo
-  (robot as one-way collider); `twoway_coupling` adds MuJoCo with impulses fed back
-  to the rigid bodies.
-- multiphysics: `rigid_soft_contact` — XPBD default / SemiImplicit / VBD; rigid sphere
-  + soft FEM grid in ONE solver (the reference for our two-way rigid+soft scenes).
-  `softbody_dropping_to_cloth`, `softbody_gift` — SolverVBD; soft grids/meshes +
-  cloth.
-- robot, selection, sensors: SolverMuJoCo (sensor_tiled_camera has no solver);
-  articulated robots, optionally with Newton contacts.
-- softbody: `franka` — Featherstone + VBD + IK (one-way); Franka + tetrahedral soft
-  mesh on a table (the convention source for our Franka import/EE offset). `hanging`
-  — SolverVBD; soft grids.
-
-Integration patterns worth knowing:
-
-- Featherstone + VBD (`cloth_franka`, `softbody_franka`): advance the robot with
-  particles disabled, run a `CollisionPipeline`, then VBD with
-  `integrate_with_external_rigid_solver=True`. One-way coupling.
-- MuJoCo + Newton contacts (`use_mujoco_contacts=False`) is one solver, not two: a
-  Newton `CollisionPipeline` feeds contacts into the MuJoCo step. This repo's robot
-  side uses exactly this.
-- True two-way rigid<->deformable in one solver: `rigid_soft_contact` with VBD — the
-  template for this repo's object side.
-- `mpm_twoway_coupling`: explicit impulse feedback from deformable solver to rigid
-  solver — the upstream pattern to follow if this repo ever adds object->robot force
-  feedback.
-- VBD examples call `builder.color()` before `finalize()`; kinematic driving writes
-  `body_q` directly and refreshes contacts (`set_rigid_history_update`) when not
-  colliding every substep.

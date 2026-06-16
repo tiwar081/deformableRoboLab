@@ -1,5 +1,13 @@
+"""Franka grasps a heavy rigid cube (~1 kg) via a pre-grasp waypoint, carries it,
+and drops it half-offset onto a pillow-soft FEM block; the cube squashes the
+block edge and rolls off. Force-limited gripper (--grip-force-control, default
+on): closes until the contact reaction reaches a threshold, then latches. 16 substeps.
+
+Run: python -m examples rigidCube_soft_franka --viewer usd --device cuda:0
+"""
 from __future__ import annotations
 
+import argparse
 import os
 from pathlib import Path
 import sys
@@ -91,6 +99,8 @@ def _set_robot_targets_kernel(
     drop_q: wp.array(dtype=float),
     gripper_open: float,
     gripper_closed: float,
+    force_control: int,
+    grip_target: wp.array(dtype=float),
     joint_target_q: wp.array(dtype=float),
 ):
     # Device-side mirror of the keyframe schedule so the substep loop is free
@@ -124,20 +134,62 @@ def _set_robot_targets_kernel(
         q = (1.0 - alpha) * drop_q[i] + alpha * home_q[i]
 
     if i >= 7:
-        if t < close_start:
-            q = gripper_open
-        elif t < hold_start:
-            alpha = _wp_smoothstep((t - close_start) / (hold_start - close_start))
-            q = (1.0 - alpha) * gripper_open + alpha * gripper_closed
-        elif t < release_start:
-            q = gripper_closed
-        elif t < retreat_start:
-            alpha = _wp_smoothstep((t - release_start) / (retreat_start - release_start))
-            q = (1.0 - alpha) * gripper_closed + alpha * gripper_open
+        if force_control == 1:
+            # Closing position is governed by the force-triggered latch controller
+            # (_update_grip_target_kernel); here we just read its output.
+            q = grip_target[0]
         else:
-            q = gripper_open
+            if t < close_start:
+                q = gripper_open
+            elif t < hold_start:
+                alpha = _wp_smoothstep((t - close_start) / (hold_start - close_start))
+                q = (1.0 - alpha) * gripper_open + alpha * gripper_closed
+            elif t < release_start:
+                q = gripper_closed
+            elif t < retreat_start:
+                alpha = _wp_smoothstep((t - release_start) / (retreat_start - release_start))
+                q = (1.0 - alpha) * gripper_closed + alpha * gripper_open
+            else:
+                q = gripper_open
 
     joint_target_q[i] = q
+
+
+@wp.kernel
+def _update_grip_target_kernel(
+    t_frame: wp.array(dtype=float),
+    substep: int,
+    sim_dt: float,
+    reaction: wp.array(dtype=float),
+    threshold: float,
+    close_rate: float,
+    gripper_open: float,
+    grip_target: wp.array(dtype=float),
+    latched: wp.array(dtype=wp.int32),
+):
+    # Force-triggered latch: while in the grasp window, creep the gripper closed
+    # at close_rate; the moment the (per-substep) contact reaction reaches the
+    # threshold, latch the current target and hold it. Position control then holds
+    # that width — no stiff in-loop force feedback, so the grasp cannot eject.
+    # Rigid objects (stiff contact) cross the threshold within ~one substep of
+    # contact; soft objects keep yielding until their reaction reaches it.
+    t = t_frame[0] + float(substep) * sim_dt
+    close_start = 3.2
+    release_start = 8.0
+
+    if t < close_start:
+        grip_target[0] = gripper_open
+        latched[0] = 0
+    elif t < release_start:
+        if latched[0] == 0:
+            r = wp.max(reaction[0], reaction[1])
+            if r >= threshold:
+                latched[0] = 1
+            else:
+                grip_target[0] = wp.max(grip_target[0] - close_rate * sim_dt, 0.0)
+    else:
+        grip_target[0] = gripper_open
+        latched[0] = 0
 
 
 @wp.kernel
@@ -152,6 +204,62 @@ def _sync_gripper_proxies_kernel(
     tf = robot_body_q[finger_bodies[i]]
     object_body_q_0[proxy_bodies[i]] = tf
     object_body_q_1[proxy_bodies[i]] = tf
+
+
+@wp.kernel
+def _grip_reaction_kernel(
+    contact_count: wp.array(dtype=wp.int32),
+    body0: wp.array(dtype=wp.int32),
+    body1: wp.array(dtype=wp.int32),
+    force_on_body1: wp.array(dtype=wp.vec3),
+    object_body_q: wp.array(dtype=wp.transform),
+    left_proxy: int,
+    right_proxy: int,
+    grip_reaction: wp.array(dtype=float),
+):
+    # Reduce the per-contact reaction the grasped object applies to each kinematic
+    # gripper proxy into a scalar OPENING generalized force per finger (the
+    # component that pushes the finger off the object along the closing axis).
+    # Fed to the finger DOF, it opposes the commanded close so the gripper settles
+    # where the squeeze reaction equals the actuator's force cap (the threshold) —
+    # force control on the gripper without loading the arm.
+    i = wp.tid()
+    if i >= contact_count[0]:
+        return
+
+    pl = wp.transform_get_translation(object_body_q[left_proxy])
+    pr = wp.transform_get_translation(object_body_q[right_proxy])
+    axis = wp.normalize(pr - pl)  # left -> right closing axis
+
+    b0 = body0[i]
+    b1 = body1[i]
+    if b1 == left_proxy:
+        r = wp.dot(force_on_body1[i], -axis)
+        if r > 0.0:
+            wp.atomic_add(grip_reaction, 0, r)
+    elif b1 == right_proxy:
+        r = wp.dot(force_on_body1[i], axis)
+        if r > 0.0:
+            wp.atomic_add(grip_reaction, 1, r)
+    elif b0 == left_proxy:
+        r = wp.dot(-force_on_body1[i], -axis)
+        if r > 0.0:
+            wp.atomic_add(grip_reaction, 0, r)
+    elif b0 == right_proxy:
+        r = wp.dot(-force_on_body1[i], axis)
+        if r > 0.0:
+            wp.atomic_add(grip_reaction, 1, r)
+
+
+@wp.kernel
+def _blend_grip_kernel(
+    raw: wp.array(dtype=float),
+    beta: float,
+    filtered: wp.array(dtype=float),
+):
+    # EMA under-relaxation of the (one-substep-lagged) grip reaction.
+    i = wp.tid()
+    filtered[i] = beta * filtered[i] + (1.0 - beta) * raw[i]
 
 
 class Example:
@@ -195,8 +303,8 @@ class Example:
         )
         # Very soft FEM response: about 5% of the upstream stiffness, so the
         # cube visibly sinks into the block like a small pillow.
-        self.soft_k_mu = 5.0e2
-        self.soft_k_lambda = 2.5e3
+        self.soft_k_mu = 1.25e2  # 4x softened (Newton 1.4 re-tune): more visible compression
+        self.soft_k_lambda = 6.25e2
         # Contact boundary sits one particle radius above the rendered surface;
         # 3.5 mm keeps it visually tight while leaving >2 substeps of contact
         # engagement at the impact speed (~1.5 mm/substep).
@@ -211,14 +319,21 @@ class Example:
         self.grasp_tcp_height = self.table_top_z + self.cube_half
         self.drop_tcp_height = self.table_top_z + 0.19
         self.gripper_open = 0.04
-        # The cube exists only in the VBD object model, so no contact force can
-        # stop the fingers in the robot model. The close target must itself stop
-        # at the cube: pad face at cube half-width plus the summed contact
-        # margins, minus a small interference whose contact stiffness sets the
-        # grip force.
-        grasp_interference = 0.001
-        self.gripper_closed = (
-            self.cube_half + self.cube_contact_margin + self.gripper_proxy_margin - grasp_interference
+
+        # Force-controlled gripper. The cube exists only in the VBD object model,
+        # so nothing stops the fingers in the robot model. Instead of commanding a
+        # hand-tuned stop width, we command the fingers to drive fully closed but
+        # cap the actuator force at `grip_force_threshold`; the object's contact
+        # reaction (read from the object solver and fed back to the finger DOFs)
+        # opposes the close, so the gripper settles where reaction == threshold.
+        # A rigid object (stiff contact) halts it at the surface immediately; a
+        # soft object keeps yielding until its reaction reaches the threshold.
+        self.force_control = bool(getattr(args, "grip_force_control", True))
+        self.grip_force_threshold = float(getattr(args, "grip_threshold", 15.0))
+        self.grip_filter = 0.5  # EMA retention on the (lagged) reaction feedback
+        # Drive target = fully closed; the force cap + feedback determine the stop.
+        self.gripper_closed = 0.0 if self.force_control else (
+            self.cube_half + self.cube_contact_margin + self.gripper_proxy_margin - 0.001
         )
         self.home_q = np.array(
             [
@@ -358,6 +473,18 @@ class Example:
         # to its starting binding at the end of each captured frame.
         self._capture_enabled = wp.get_device(str(ik_model.device)).is_cuda and self.sim_substeps % 2 == 0
 
+        # Gripper force-controlled-latch state.
+        device = self.object_state_0.body_q.device
+        self.left_proxy, self.right_proxy = (int(b) for b in self.gripper_proxy_bodies)
+        self.grip_close_rate = 0.02  # m/s creep while seeking the grasp force
+        # Per-substep contact reaction the object applies to each proxy (the latch
+        # trigger), the shared gripper target the latch controls, and the latch flag.
+        self._grip_reaction_raw = wp.zeros(2, dtype=wp.float32, device=device)
+        self._grip_reaction = wp.zeros(2, dtype=wp.float32, device=device)
+        self._grip_target = wp.array([self.gripper_open], dtype=wp.float32, device=device)
+        self._grip_latched = wp.zeros(1, dtype=wp.int32, device=device)
+        self._obj_body_q_prev = wp.zeros(self.object_model.body_count, dtype=wp.transform, device=device)
+
         self._sync_gripper_proxies()
 
         viz_builder = newton.ModelBuilder()
@@ -395,6 +522,9 @@ class Example:
 
         builder.joint_q[:9] = self.home_q.tolist()
         builder.joint_target_q[:9] = self.home_q.tolist()
+        # Gripper: high position gain so the PD saturates against the effort cap
+        # (= grip_force_threshold), giving a near-constant closing force that the
+        # fed-back contact reaction balances. Arm gains unchanged.
         for dof in range(9):
             builder.joint_target_ke[dof] = 420.0 if dof < 7 else 300.0
             builder.joint_target_kd[dof] = 42.0 if dof < 7 else 30.0
@@ -653,9 +783,29 @@ class Example:
                 self._drop_q_wp,
                 self.gripper_open,
                 self.gripper_closed,
+                int(self.force_control),
+                self._grip_target,
             ],
             outputs=[self.robot_control.joint_target_q],
             device=self.robot_control.joint_target_q.device,
+        )
+
+    def _update_grip_target(self, substep: int) -> None:
+        # Force-triggered latch from the previous substep's reaction.
+        wp.launch(
+            _update_grip_target_kernel,
+            dim=1,
+            inputs=[
+                self._t_frame,
+                substep,
+                self.sim_dt,
+                self._grip_reaction,
+                self.grip_force_threshold,
+                self.grip_close_rate,
+                self.gripper_open,
+            ],
+            outputs=[self._grip_target, self._grip_latched],
+            device=self._grip_target.device,
         )
 
     def _sync_gripper_proxies(self) -> None:
@@ -666,6 +816,43 @@ class Example:
             outputs=[self.object_state_0.body_q, self.object_state_1.body_q],
             device=self.object_state_0.body_q.device,
         )
+
+    def _snapshot_object_body_q(self) -> None:
+        wp.copy(self._obj_body_q_prev, self.object_state_0.body_q)
+
+    def _update_grip_reaction(self) -> None:
+        body0, body1, _p0, _p1, force_on_body1, contact_count = (
+            self.object_solver.collect_rigid_contact_forces(
+                self.object_state_0.body_q, self._obj_body_q_prev, self.object_contacts, self.sim_dt
+            )
+        )
+        self._grip_reaction_raw.zero_()
+        wp.launch(
+            _grip_reaction_kernel,
+            dim=body0.shape[0],
+            inputs=[
+                contact_count,
+                body0,
+                body1,
+                force_on_body1,
+                self.object_state_0.body_q,
+                self.left_proxy,
+                self.right_proxy,
+            ],
+            outputs=[self._grip_reaction_raw],
+            device=self._grip_reaction_raw.device,
+        )
+        wp.launch(
+            _blend_grip_kernel,
+            dim=2,
+            inputs=[self._grip_reaction_raw, self.grip_filter],
+            outputs=[self._grip_reaction],
+            device=self._grip_reaction.device,
+        )
+
+    def grip_reaction_norms(self) -> tuple[float, float]:
+        r = self._grip_reaction.numpy()
+        return float(r[0]), float(r[1])
 
     def _sync_viz_state(self) -> None:
         body_q = self.viz_state.body_q.numpy()
@@ -691,6 +878,10 @@ class Example:
 
     def simulate(self) -> None:
         for substep in range(self.sim_substeps):
+            # Update the force-triggered latch from the previous substep's reaction,
+            # then read it into the gripper target.
+            if self.force_control:
+                self._update_grip_target(substep)
             self._set_robot_targets(substep)
 
             self.robot_state_0.clear_forces()
@@ -707,6 +898,8 @@ class Example:
 
             self._sync_gripper_proxies()
 
+            if self.force_control:
+                self._snapshot_object_body_q()
             self.object_state_0.clear_forces()
             self.object_model.collide(self.object_state_0, self.object_contacts)
             self.object_solver.step(
@@ -717,6 +910,10 @@ class Example:
                 self.sim_dt,
             )
             self.object_state_0, self.object_state_1 = self.object_state_1, self.object_state_0
+
+            # Recover the object->proxy reaction for the next substep's feedback.
+            if self.force_control:
+                self._update_grip_reaction()
 
     def step(self) -> None:
         self._t_frame.assign(np.array([self.sim_time], dtype=np.float32))
@@ -777,6 +974,15 @@ class Example:
         parser.set_defaults(output_path=str(Path("outputs") / "rigidCube_soft_franka.usd"), num_frames=720)
         parser.add_argument("--substeps", type=int, default=16, help="Simulation substeps per rendered frame.")
         parser.add_argument("--vbd-iterations", type=int, default=12, help="VBD iterations for the objects.")
+        parser.add_argument(
+            "--grip-force-control",
+            default=True,
+            action=argparse.BooleanOptionalAction,
+            help="Force-control the gripper (close to a force threshold) instead of a commanded width.",
+        )
+        parser.add_argument(
+            "--grip-threshold", type=float, default=15.0, help="Gripper stop force per finger [N]."
+        )
         return parser
 
 

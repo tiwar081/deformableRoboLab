@@ -1,3 +1,9 @@
+"""Franka descends to a cable lying on the table, closes the gripper to the
+commanded grasp width, lifts the cable, and sweeps it side to side; a rigid cube
+sits on the table nearby. 8 substeps.
+
+Run: python -m examples cable_rigidCube_franka --viewer usd --device cuda:0
+"""
 from __future__ import annotations
 
 import math

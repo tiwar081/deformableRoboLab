@@ -1,3 +1,9 @@
+"""Franka grasps a cable off the table, lifts it, and sweeps it side to side over
+a soft FEM block; the swept cable dents and nudges the block. (Same cable motion
+as cable_rigidCube_franka, with a soft block instead of a rigid cube.) 16 substeps.
+
+Run: python -m examples cable_soft_franka --viewer usd --device cuda:0
+"""
 from __future__ import annotations
 
 import math
@@ -469,9 +475,15 @@ class Example:
             cell_y=self.soft_grid_cell,
             cell_z=self.soft_grid_cell,
             density=100.0,
-            k_mu=1.0e4,
-            k_lambda=5.0e4,
-            k_damp=1.0,
+            k_mu=2.5e3,  # 4x softened (Newton 1.4 re-tune): more visible deformation
+            k_lambda=1.25e4,
+            # Newton 1.4 reformulated tet damping into an objective C=FᵀF strain-rate
+            # metric that no longer damps rigid rotation. Re-tuned (not a rescale): a
+            # k_damp sweep showed the true cable dent is ~5 mm and k_damp-insensitive;
+            # k_damp instead sets whether the cable can *roll* the block. Below ~1e4 the
+            # block tumbles (tilt 80-180°, drift >50 mm) or destabilizes; 1e4 is the
+            # lowest value that stays clean (9° tilt, 5 mm drift, 5.3 mm dent).
+            k_damp=1.0e4,
         )
 
         proxy_cfg = newton.ModelBuilder.ShapeConfig(
@@ -525,9 +537,9 @@ class Example:
             radius=self.cable_radius,
             cfg=cable_cfg,
             stretch_stiffness=2.5e4,
-            stretch_damping=0.05,
+            stretch_damping=1.25e3,  # Newton 1.4 absolute VBD damping: 0.05·stretch_stiffness(2.5e4)
             bend_stiffness=1.5e1,
-            bend_damping=0.02,
+            bend_damping=0.3,  # Newton 1.4 absolute VBD damping: 0.02·bend_stiffness(1.5e1)
             label="vbd_cable",
             wrap_in_articulation=True,
         )
@@ -577,7 +589,7 @@ class Example:
         for shape in self.gripper_proxy_shapes:
             mu[shape] = 1.0
             ke[shape] = 5.0e4
-            kd[shape] = 1.0e2
+            kd[shape] = 5.0e6  # Newton 1.4 absolute VBD damping: 1e2·ke(5e4)
         self.object_model.shape_material_mu.assign(mu)
         self.object_model.shape_material_ke.assign(ke)
         self.object_model.shape_material_kd.assign(kd)
@@ -593,7 +605,7 @@ class Example:
                 # authored cable_cfg values; the blanket fill above would raise
                 # ke to 5e4 and stiffen the averaged cable-block contact pair
                 ke[shape] = 2.0e4
-                kd[shape] = 20.0
+                kd[shape] = 4.0e5  # Newton 1.4 absolute VBD damping: 20·ke(2e4)
         self.object_model.shape_material_mu.assign(mu)
         self.object_model.shape_material_ke.assign(ke)
         self.object_model.shape_material_kd.assign(kd)

@@ -1,3 +1,9 @@
+"""Example runner for the RoboLab-VBD Franka demos (registry + run loop, not a
+demo itself). Each example script in this package opens with its motion summary
+and run command.
+
+Run: python -m examples <name> --device cuda:0   (list: python -m examples --list)
+"""
 from __future__ import annotations
 
 import argparse
@@ -23,6 +29,8 @@ def get_examples() -> dict[str, str]:
         "cable_soft_franka",
         "rigidCube_soft_franka",
         "soft_compression_franka",
+        "soft_pickplace_franka",
+        "pickplace_ycb_franka",
     ):
         if (examples_dir / f"{example_name}.py").exists():
             example_map[example_name] = f"examples.{example_name}"

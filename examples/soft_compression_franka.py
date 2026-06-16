@@ -1,3 +1,10 @@
+"""Franka grasps a heavy metal sheet (~2x the cube's mass; an 18x12x0.8 cm plate
+with a grasp handle) by its handle and drops it half-offset onto a soft FEM block;
+the sheet settles tilted on the block edge, holding ~1 cm of sustained compression.
+16 substeps.
+
+Run: python -m examples soft_compression_franka --viewer usd --device cuda:0
+"""
 from __future__ import annotations
 
 import os
@@ -207,8 +214,8 @@ class Example:
         )
         # Very soft FEM response: about 5% of the upstream stiffness, so the
         # sheet visibly sinks into the block like a small pillow.
-        self.soft_k_mu = 1.0e4
-        self.soft_k_lambda = 5.0e4
+        self.soft_k_mu = 2.5e3  # 4x softened (Newton 1.4 re-tune): more visible compression
+        self.soft_k_lambda = 1.25e4
         # Contact boundary sits one particle radius above the rendered surface;
         # 3.5 mm keeps it visually tight while leaving >2 substeps of contact
         # engagement at the impact speed (~1.5 mm/substep).

@@ -18,7 +18,7 @@ for this repo:
 - Newton's full `importers` extra is intentionally excluded because it requires
   `trimesh>=4.6.8`, while IsaacSim 5.0 pins `trimesh==4.5.1`.
 
-### 1. Populate External Sources
+### 1. Populate External Sources (FOR DEVELOPERS)
 
 If `_external/newton` and `_external/RoboLab` are not already present, clone
 them first:
@@ -63,19 +63,4 @@ reading and accepting the EULA, run Isaac commands with:
 
 ```bash
 OMNI_KIT_ACCEPT_EULA=yes python -c "import isaaclab; print('isaaclab ok')"
-```
-
-### 3. Run The Examples
-
-```bash
-python -m examples cable_rigidCube_franka --viewer usd --device cuda:0
-python -m examples cable_soft_franka --viewer usd --device cuda:0
-python -m examples rigidCube_soft_franka --viewer usd --device cuda:0
-python -m examples soft_compression_franka --viewer usd --device cuda:0
-```
-
-For a CPU smoke test of the rigid-cube cable example that writes a USD file:
-
-```bash
-python -m examples cable_rigidCube_franka --viewer usd --device cpu --num-frames 1 --output-path /tmp/robolab_vbd_smoke.usd --quiet
 ```
