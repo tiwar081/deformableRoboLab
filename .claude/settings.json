@@ -54,10 +54,15 @@
       "Bash(git mv *)",
       "Bash(python -c \"import examples; print\\(examples.get_examples\\(\\)\\)\")",
       "Bash(timeout 320 python -m examples cable_soft_franka --viewer usd --device cpu --num-frames 1 --output-path /tmp/base_smoke.usd --quiet)",
-      "Bash(time timeout 560 python -m examples cable_soft_franka_robolab --device cuda:0 --test --quiet --preview-png-every 120)"
+      "Bash(time timeout 560 python -m examples cable_soft_franka_robolab --device cuda:0 --test --quiet --preview-png-every 120)",
+      "Bash(timeout 600 .venv/bin/python /tmp/verify_grip_ramp.py)",
+      "Bash(grep -vE \"Warp|Module|Compiling|^\\\\[|cuda:0 .*MiB|^$\")",
+      "Bash(grep -vE \"Warp|Module|Compiling|^\\\\[|MiB|^$\")",
+      "Bash(PYTHONPATH=. timeout 600 .venv/bin/python /tmp/verify_grip_ramp.py)"
     ],
     "additionalDirectories": [
-      "/dev"
+      "/dev",
+      "/tmp"
     ]
   }
 }

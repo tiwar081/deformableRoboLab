@@ -1,9 +1,9 @@
 """``pickplace_ycb_franka`` rendered through robolab_viz (RoboLab DROID look).
 
-Same physics as ``pickplace_ycb_franka``: Franka grasps a rubik's cube and drops
-it off-center onto the bowl rim (knocking the dynamic bowl), then grasps the
-banana — rendered to ``outputs/.../robolab_preview/combined.mp4`` via the
-warp-raycast preview. ``--bowl-mass`` tunes the bowl mass for the impact.
+Same physics as ``pickplace_ycb_franka`` (Franka picks a rubik's cube and a banana
+and drops them into a box tray, force-limited gripper), rendered to
+``outputs/robolab_preview/combined.mp4`` via the warp-raycast preview (forces
+``--viewer null``).
 
 Run: python -m examples pickplace_ycb_robolab --device cuda:0
 """
@@ -99,7 +99,6 @@ class Example(PickPlacePhysicsExample):
         parser.add_argument("--background", default="home_office")
         parser.add_argument("--preview-cameras", nargs="+", default=["over_shoulder_left_camera"])
         parser.add_argument("--png-every", type=int, default=60)
-        # --bowl-mass is defined by the physics parent (PickPlacePhysicsExample).
         return parser
 
 

@@ -1,22 +1,19 @@
-"""Franka picks a rubik's cube and a banana; the cube is dropped off-center on the
-bowl rim (an off-center-impact physics demo).
+"""Franka picks a rubik's cube and a banana and drops them into a box tray.
 
-Modeled on RoboLab's RubiksCubeAndBananaTask
+Friction test modeled on RoboLab's RubiksCubeAndBananaTask
 (`_external/RoboLab/examples/run_recorded.py`): the same objects (rubik's cube,
 YCB banana, bowl) at the demo's recorded start positions. The recorded
 Panda+Robotiq trajectory does not transfer to our FR3+Franka-Hand (different
 mount/gripper/kinematics), so we reuse the demo's grasp/release LOCATIONS (the
 recorded object and bowl positions) and re-plan the arm with IK + our
-force-limited gripper. The gripper holds objects by FRICTION (a Coulomb body-body
-contact between the object and the kinematic gripper pads in the VBD object model).
+force-limited gripper. The point is to watch whether the gripper holds each
+object by FRICTION (a Coulomb body-body contact between the object and the
+kinematic gripper pads in the VBD object model) through the carry.
 
-Physically accurate parameters (YCB masses cube 0.2 / banana 0.12 / bowl 0.5 kg,
-friction mu=2.0). Collision is chosen for STABILITY: the cube is a box (rendered as
-a 3x3 colored rubik's cube); the banana is its decimated mesh (convex-enough to
-grasp); the dynamic bowl is a CONVEX DECOMPOSITION (coacd) — a raw concave-mesh
-contact gives contradictory normals where an object wedges, a single-substep
-penalty spike that ejects the whole solve. Public Newton API only; nothing in
-`_external` is modified or imported privately.
+Objects are real meshes loaded from the vendored USD (`Mesh.create_from_usd`),
+decimated for stable collision: the banana and bowl collide as their meshes, the
+cube as a box (it is one) rendered as a 3x3 colored rubik's cube. Public Newton
+API only; nothing in `_external` is modified or imported privately.
 
 Run: python -m examples pickplace_ycb_franka --viewer usd --device cuda:0
 """
@@ -106,33 +103,6 @@ def _load_usd_mesh(path: Path) -> Mesh:
     stage = Usd.Stage.Open(str(path))
     prim = next(p for p in stage.Traverse() if p.IsA(UsdGeom.Mesh))
     return Mesh.create_from_usd(prim)
-
-
-def _convex_pieces(mesh: Mesh, max_parts: int = 12, part_faces: int = 48) -> list[Mesh]:
-    """Convex decomposition (coacd) -> low-poly convex Newton meshes for ROBUST
-    collision of a concave object (e.g. the bowl). Colliding a box against a raw
-    concave/non-watertight mesh gives contradictory contact normals where the box
-    wedges, producing a single-substep penalty spike that ejects every object in
-    the solve. Convex pieces have consistent outward normals -> stable contacts,
-    and (unlike a single convex hull) preserve the cavity, so this generalizes to
-    any concave object that other demos need to grasp/fill.
-    """
-    import coacd
-    import contextlib
-    import io
-    import trimesh
-
-    v = np.asarray(mesh.vertices, dtype=np.float64)
-    f = np.asarray(mesh.indices, dtype=np.int32).reshape(-1, 3)
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        parts = coacd.run_coacd(coacd.Mesh(v, f), threshold=0.06, max_convex_hull=max_parts, preprocess_mode="auto")
-    # Use each part's exact convex HULL — do NOT decimate it: quadric decimation
-    # does not preserve convexity, which reintroduces the bad-normal contact spike.
-    out: list[Mesh] = []
-    for pv, pf in parts:
-        h = trimesh.Trimesh(vertices=np.asarray(pv), faces=np.asarray(pf)).convex_hull
-        out.append(Mesh(h.vertices.astype(np.float32), h.faces.flatten().astype(np.int32)))
-    return out
 
 
 def _decimate_mesh(mesh: Mesh, target_faces: int) -> Mesh:
@@ -303,34 +273,6 @@ def _blend_grip_kernel(raw: wp.array(dtype=float), beta: float, filtered: wp.arr
     filtered[i] = beta * filtered[i] + (1.0 - beta) * raw[i]
 
 
-@wp.kernel
-def _clamp_body_velocity_kernel(
-    body_inv_mass: wp.array(dtype=float),
-    v_max: float,
-    w_max: float,
-    body_qd: wp.array(dtype=wp.spatial_vector),
-):
-    # Bound any contact-spike velocity to a physical tabletop speed so a light body
-    # in a stiff contact pair (dimensionless stiffness eta = ke*dt^2/m_reduced > 1)
-    # cannot be ejected. The rigid-body analog of Newton's particle_max_velocity:
-    # a pure safety net that never triggers in normal motion here (the highest
-    # legitimate speed is a free-fall drop, ~1.8 m/s << v_max). VBD writes
-    # body_qd = [linear, angular] (compute_body_velocity: spatial_vector(v, omega)).
-    i = wp.tid()
-    if body_inv_mass[i] <= 0.0:  # skip kinematic proxies / static bodies
-        return
-    qd = body_qd[i]
-    v = wp.spatial_top(qd)
-    w = wp.spatial_bottom(qd)
-    vn = wp.length(v)
-    if vn > v_max:
-        v = v * (v_max / vn)
-    wn = wp.length(w)
-    if wn > w_max:
-        w = w * (w_max / wn)
-    body_qd[i] = wp.spatial_vector(v, w)
-
-
 class Example:
     def __init__(self, viewer, args):
         newton.use_coord_layout_targets = True
@@ -349,15 +291,6 @@ class Example:
         self.grip_force_threshold = float(getattr(args, "grip_threshold", 15.0))
         self.grip_close_rate = 0.02
         self.grip_filter = 0.5
-        # Bowl mass [kg] knob (default = the YCB value). The bowl body is scaled to
-        # exactly this after finalize, so it's independent of the convex-piece volume.
-        self.bowl_mass = float(getattr(args, "bowl_mass", 0.5))
-        # Per-substep velocity clamp on dynamic object bodies — a generalizable
-        # safety net against the light-body penalty-contact ejection (see the
-        # docstring on _clamp_body_velocity_kernel). Generous bounds: nothing in a
-        # tabletop pick-place legitimately exceeds these, so it only catches spikes.
-        self.body_v_max = float(getattr(args, "max_body_speed", 3.0))
-        self.body_w_max = 50.0
 
         self.cube_half = 0.029
         self.cube_pos = np.array([CUBE_XY[0], CUBE_XY[1], self.table_top_z + self.cube_half], dtype=np.float32)
@@ -388,7 +321,7 @@ class Example:
         # Drop the cube off-center, over the bowl's rim, so it strikes the bowl at
         # an angle (not its base center) and knocks the bowl — an off-center impact
         # demo. The bowl is a dynamic body (see _build_object_builder) so it moves.
-        cube_drop_xy = (self.tray_pos[0] + 0.085, self.tray_pos[1])
+        cube_drop_xy = (self.tray_pos[0] + 0.06, self.tray_pos[1])
         self.a_pre, self.a_grasp, self.a_lift, self.a_drop = grasp_set(
             CUBE_XY, self.table_top_z + self.cube_half, drop_xy=cube_drop_xy)
         # Banana: grasp ~a quarter down from one end. The banana is curved, so its
@@ -451,7 +384,6 @@ class Example:
         # NB: do not fill mu here — it would overwrite the per-shape friction
         # (banana/pads are set high so the grip holds). The pair friction between
         # the banana and the kinematic gripper pads is what carries it.
-        self._set_body_mass(self.bowl_body, self.bowl_mass)  # --bowl-mass knob
         self.object_state_0 = self.object_model.state()
         self.object_state_1 = self.object_model.state()
         self.object_control = self.object_model.control()
@@ -500,26 +432,6 @@ class Example:
     def _device_from_args(args):
         return wp.get_device(args.device) if args.device else None
 
-    def _set_body_mass(self, body, mass):
-        """Scale a finalized rigid body to an exact target mass [kg], keeping its
-        shape (inertia scales linearly with mass)."""
-        bm = self.object_model.body_mass.numpy()
-        cur = float(bm[body])
-        if cur <= 0.0 or mass <= 0.0:
-            return
-        s = mass / cur
-        bm[body] = mass
-        self.object_model.body_mass.assign(bm)
-        bim = self.object_model.body_inv_mass.numpy()
-        bim[body] = 1.0 / mass
-        self.object_model.body_inv_mass.assign(bim)
-        bI = self.object_model.body_inertia.numpy()
-        bI[body] *= s
-        self.object_model.body_inertia.assign(bI)
-        bII = self.object_model.body_inv_inertia.numpy()
-        bII[body] /= s
-        self.object_model.body_inv_inertia.assign(bII)
-
     def _build_robot_builder(self):
         b = newton.ModelBuilder()
         b.rigid_gap = 0.005
@@ -565,26 +477,16 @@ class Example:
         # BVH), static (body=-1), as both the collider the objects drop into and
         # the rendered shape. Placed so the bowl bottom rests on the table.
         tx, ty = float(self.tray_pos[0]), float(self.tray_pos[1])
-        bowl_full = _load_usd_mesh(BOWL_USD)
-        bw = np.asarray(bowl_full.vertices)
+        bowl_mesh = _decimate_mesh(_load_usd_mesh(BOWL_USD), 1800)
+        bw = np.asarray(bowl_mesh.vertices)
         bowl_z = self.table_top_z - float(bw[:, 2].min())  # lift so its lowest point sits on the table
         self.bowl_top_z = self.table_top_z + float(bw[:, 2].max() - bw[:, 2].min())
         # Dynamic bowl (a rigid body, not a static collider) so an off-center cube
-        # impact can push/tip it. COLLISION is a convex decomposition of the bowl
-        # (robust — a raw concave-mesh contact ejects the whole solve); the real
-        # mesh is the visual. Density low so the hit visibly moves it.
+        # impact can push/tip it. Light-ish density so the hit visibly moves it.
         self.bowl_body = b.add_body(xform=wp.transform(wp.vec3(tx, ty, bowl_z), wp.quat_identity()), label="bowl")
-        # density -> ~0.5 kg (the YCB catalog mass). The convex decomposition makes
-        # the contact stable regardless of mass, so this is set for accuracy, not to
-        # tune how far the impact moves it.
-        col_cfg = newton.ModelBuilder.ShapeConfig(density=2600.0, ke=5e4, kd=1e2, mu=2.0, is_visible=False)
-        for i, piece in enumerate(_convex_pieces(bowl_full)):
-            b.add_shape(body=self.bowl_body, type=int(newton.GeoType.MESH), xform=wp.transform_identity(),
-                        cfg=col_cfg, scale=(1.0, 1.0, 1.0), src=piece, label=f"bowl_col_{i}")
-        bowl_vis = newton.ModelBuilder.ShapeConfig(density=0.0, has_shape_collision=False, has_particle_collision=False)
+        bowl_cfg = newton.ModelBuilder.ShapeConfig(density=400.0, ke=5e4, kd=1e2, mu=1.0)
         b.add_shape(body=self.bowl_body, type=int(newton.GeoType.MESH), xform=wp.transform_identity(),
-                    cfg=bowl_vis, scale=(1.0, 1.0, 1.0), src=_decimate_mesh(bowl_full, 1800),
-                    color=wp.vec3(0.75, 0.22, 0.18), label="bowl_visual")
+                    cfg=bowl_cfg, scale=(1.0, 1.0, 1.0), src=bowl_mesh, color=wp.vec3(0.75, 0.22, 0.18), label="bowl")
 
         # Gripper proxies (rigid contact only).
         proxy_cfg = newton.ModelBuilder.ShapeConfig(density=0.0, is_visible=False, has_shape_collision=True,
@@ -600,7 +502,7 @@ class Example:
         # Rubik's cube: box collision (it is a cube). Rendered as a black body with
         # six colored face stickers (one per side) to look like a real cube.
         self.cube_body = b.add_body(xform=wp.transform(wp.vec3(*self.cube_pos), wp.quat_identity()), label="rubiks_cube")
-        cube_cfg = newton.ModelBuilder.ShapeConfig(density=1025.0, ke=5e4, kd=1e2, mu=2.0, is_visible=False)  # ~0.2 kg, YCB mu
+        cube_cfg = newton.ModelBuilder.ShapeConfig(density=1025.0, ke=5e4, kd=1e2, mu=1.2, is_visible=False)
         b.add_shape_box(body=self.cube_body, hx=self.cube_half, hy=self.cube_half, hz=self.cube_half,
                         cfg=cube_cfg, label="cube_collision")
         h = self.cube_half
@@ -642,7 +544,7 @@ class Example:
         # Mesh BVH between the object and viz models — fixed by finalizing the viz
         # model first; see __init__.)
         self.banana_mesh = _decimate_mesh(_load_usd_mesh(BANANA_USD), 1200)
-        banana_cfg = newton.ModelBuilder.ShapeConfig(density=780.0, ke=5e4, kd=1e2, mu=2.0)  # ~0.12 kg (YCB)
+        banana_cfg = newton.ModelBuilder.ShapeConfig(density=300.0, ke=5e4, kd=1e2, mu=2.0)
         self.banana_body = b.add_body(xform=wp.transform(wp.vec3(*self.banana_pos), wp.quat_identity()), label="banana")
         b.add_shape(body=self.banana_body, type=int(newton.GeoType.MESH), xform=wp.transform_identity(),
                     cfg=banana_cfg, scale=(1.0, 1.0, 1.0), src=self.banana_mesh, color=wp.vec3(0.93, 0.82, 0.12), label="banana_shape")
@@ -727,11 +629,6 @@ class Example:
     def obj_pos(self, body):
         return self.object_state_0.body_q.numpy()[body][:3]
 
-    def _clamp_object_velocity(self):
-        wp.launch(_clamp_body_velocity_kernel, dim=self.object_model.body_count,
-                  inputs=[self.object_model.body_inv_mass, self.body_v_max, self.body_w_max],
-                  outputs=[self.object_state_0.body_qd], device=self.object_state_0.body_qd.device)
-
     def _sync_viz_state(self):
         bq = self.viz_state.body_q.numpy()
         bqd = self.viz_state.body_qd.numpy()
@@ -760,7 +657,6 @@ class Example:
             self.object_model.collide(self.object_state_0, self.object_contacts)
             self.object_solver.step(self.object_state_0, self.object_state_1, self.object_control, self.object_contacts, self.sim_dt)
             self.object_state_0, self.object_state_1 = self.object_state_1, self.object_state_0
-            self._clamp_object_velocity()
             self._update_grip_reaction()
 
     def step(self):
@@ -803,10 +699,6 @@ class Example:
         parser.add_argument("--substeps", type=int, default=16)
         parser.add_argument("--vbd-iterations", type=int, default=12)
         parser.add_argument("--grip-threshold", type=float, default=15.0)
-        parser.add_argument("--bowl-mass", type=float, default=0.5,
-                            help="Bowl mass [kg]; the body is scaled to this after finalize.")
-        parser.add_argument("--max-body-speed", type=float, default=3.0,
-                            help="Per-substep linear velocity clamp [m/s] on dynamic object bodies.")
         return parser
 
 

@@ -110,6 +110,32 @@ Cleanup / still pending:
 - Verified on both: objectview PNGs every 30 frames, `combined.mp4` stays
   1280×360 (two cameras, objectview excluded).
 
+## REVERTED: pickplace_ycb_franka + robolab variant rolled back (2026-06-16, later)
+
+`examples/pickplace_ycb_franka.py` and `examples/example_pickplace_ycb_robolab.py`
+were **reverted to their previous versions** (commit `f1c3200`, "pickplace ycb
+banana X bowl issues state") at the user's request. The two sections below
+(**Force-limited gripper + YCB pick-place demos** and **Light-body fling fix +
+solver-framework rule**) describe work that is **no longer in these two files** —
+kept here only as a record of what was tried.
+
+What the reverted files NO LONGER contain (back to the earlier state):
+- **Bowl convex decomposition** (`_convex_pieces` / coacd). The bowl is again a
+  single **decimated raw concave mesh** collider with
+  `rigid_body_contact_buffer_size=16384` — i.e. back to the "bowl issues" state
+  where a box wedging into the concave mesh can spike and eject the solve.
+- **Per-substep velocity clamp** (`_clamp_body_velocity_kernel`,
+  `--max-body-speed`) — removed.
+- **`--bowl-mass` knob** + `_set_body_mass` exact mass scaling — removed.
+- **YCB-accurate masses/friction** scaling (cube 0.2 / banana 0.12 / bowl 0.5 kg,
+  the mu=2.0 / density bumps, the wider 0.085 cube-drop offset) — removed; back to
+  the earlier densities/offset.
+- The expanded module docstrings on both files revert to their earlier text.
+
+Anything else from those sections that lives in OTHER files (the force-limited
+gripper itself in `rigidCube_soft_franka`/`soft_pickplace_franka`, the
+`__init__.py` registrations, the CLAUDE.md sections) is untouched by this revert.
+
 ## Force-limited gripper + YCB pick-place demos (2026-06-16)
 
 Net file changes this session:
