@@ -34,7 +34,7 @@ whole grasp/lift/sweep.
 - The old "M2 blocked at t≈4.35 s" / "soften proxy↔cable ke" / "effort-cap as stabilizer" framing is
   obsolete — none of it was the real fix.
 
-### Final design (single path; `cable_soft_franka.py` + `cable_coupling.py`)
+### Final design (single path; `cable_soft_franka.py` + `grip_coupling.py`)
 
 - **DYNAMIC finite-mass proxies** (`proxy_effective_mass=10 kg`) mirroring the fingers, re-pinned
   each substep with the momentum-consistent gravity+lagged-wrench velocity undo (`_sync_proxy_state_kernel`).
@@ -58,17 +58,28 @@ passes (capture on). `CABLE_DIAG=1` prints a per-frame `grip=(left,right)N cable
 `CABLE_NO_CAPTURE=1` runs the uncaptured substep loop (clearer NaN reporting than the captured
 segfault).
 
+## DONE (centralization)
+
+The grip is now **centralized and generalized** across all 5 working examples (cable_soft,
+cable_rigidCube, rigidCube_soft, soft_compression, soft_pickplace) — each passes `test_final`:
+
+- **`assets/params.py`** — single source of truth for robot/grip/object params (`FRANKA`, `GRIP`,
+  `TABLE`, `CABLE`, `SOFT_BLOCK*`, `RIGID_CUBE`/`STEEL_CUBE`). Same robot + grip everywhere.
+- **`examples/franka_common.py`** — shared helpers + `GraspExample` base (the identical substep
+  loop, CUDA-graph capture, viz, robot/IK/proxy builders).
+- **`examples/grip_coupling.py`** — the one `TwoWayProxyCoupling` (dynamic proxy, net-to-EE,
+  **rigid + soft-particle harvest**). `cable_coupling.py` deleted. `grip_force.py`'s post-hoc clamp
+  is retired from these examples.
+- The 4 ex-`grip_force.py` examples now position-control the gripper to a close target
+  (`object_half + margins − grasp_interference`) and let the dynamic proxy provide the physical
+  grip — including **soft_pickplace** (soft-block grip via the recomputed `n·ke·penetration`
+  proxy↔particle harvest, particle-colliding proxies, `soft_contact_ke=` passed to the coupling).
+
 ## Still open / next
 
-- **`cable_rigidCube_franka.py`** shares `cable_coupling.py` and must be migrated to the new
-  `TwoWayProxyCoupling` signature + dynamic proxy + physical `kd` + default contacts (currently
-  out of date with the coupling module).
-- **Generalize** the bounded-physical-grip approach to the rigid/soft examples (`grip_force.py`
-  `GripForceClamp`/`SoftGripWidth` were post-hoc clamps for the OLD runaway; with physical contact
-  damping they may be replaceable by the same honest-contact approach). The new upstream
-  `example_softbody_franka.py` + `SolverVBD(integrate_with_external_rigid_solver=True)` is the
-  reference for robot↔soft-particle grip (no proxy needed there).
-- **Re-derive remaining damping** for other examples if they carry the old absolute-damping `kd`
-  values (same class of bug as cause 2 above).
-- Sub-docs (`gripper.md`, `deformables.md`, `solver-architecture.md`) still describe the old
-  kinematic-proxy / force-cap / alpha=0 design in places — update as touched.
+- **`pickplace_ycb_franka`** is the ONE example still on `grip_force.py` (the legacy clamp). It has
+  a pre-existing object **fly-away** (out of scope per the user); migrating it to the dynamic proxy
+  risks turning fly-away into a divergence, so it was left as-is. Migrate + retire `grip_force.py`
+  once the fly-away is fixed. Confirm whether the fly-away is the bowl/banana mesh contact.
+- Sub-docs `deformables.md` / `solver-architecture.md` still describe the old kinematic-proxy /
+  force-cap / alpha=0 design in places — update as touched (gripper.md + CLAUDE.md are current).

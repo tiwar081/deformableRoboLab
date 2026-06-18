@@ -2,13 +2,16 @@
 
 ## Solver framework selection (the rule)
 
-Two-way contact only happens *inside one solver*; the MuJoCo↔VBD bridge is unavoidably
-one-way (objects can't push the arm; grasp width is commanded/latched).
+Full two-way contact only happens *inside one solver* (VBD); the MuJoCo↔VBD bridge crosses
+solvers via dynamic finite-mass finger proxies that mirror the fingers in the VBD model and feed
+the net object reaction back to the arm/EE (one-step lag) — so the arm DOES feel the object, but
+through the proxy bridge, not a shared contact.
 
 - **Any deformable/soft object present** (cable/rod, cloth, FEM block) → split
-  **`SolverMuJoCo` (robot) + `SolverVBD` (all objects)** with the kinematic gripper-proxy
-  bridge. VBD is the only Newton solver that hosts rigid+cable+soft+their mutual two-way
-  contact in one world, so every object that must touch a deformable lives in the VBD model.
+  **`SolverMuJoCo` (robot) + `SolverVBD` (all objects)** with the **dynamic gripper-proxy
+  bridge** (`examples/grip_coupling.py`). VBD is the only Newton solver that hosts
+  rigid+cable+soft+their mutual two-way contact in one world, so every object that must touch a
+  deformable lives in the VBD model.
 - **Rigid-only** → a **single `SolverMuJoCo`** for robot + objects (Newton
   `brick_stacking`/`panda_hydro` pattern): true two-way frictional grasp, MuJoCo's mature
   convex/SDF/hydroelastic mesh contact, none of the VBD-rigid-mesh fragility. Preferred for
@@ -29,23 +32,20 @@ one-way (objects can't push the arm; grasp width is commanded/latched).
 - IK (`newton.ik.IKSolver`: position + rotation + joint-limit objectives) solves keyframe
   poses once at startup.
 
-## Object side (VBD)
-
-- `SolverVBD`, 12 iterations, `rigid_contact_history=True`, `rigid_contact_stick_motion_eps=0.0`,
-  **`rigid_avbd_contact_alpha=0.0`**, hard body-body contacts.
-  - *Rationale:* penalty-only contacts lose the lifted cable; with the defaults (`alpha=0.95`,
-    sticky replay) penetration accumulating against the moving kinematic pads spikes the
-    contact force and ejects pinched objects with multi-m/s phantom kicks. Newton's
-    `cable_twist` (also kinematically driven, persistent cable contact) uses `alpha=0` too.
-  - **Consequence:** `f_n = ke·penetration + λ` with `λ` *accumulating* each substep while
-    penetration persists. A kinematic proxy (`inv_mass=0`) early-outs in the integrator so a
-    runaway `λ` is computed-but-not-applied (stable, but grip force uncontrolled). A *dynamic*
-    proxy gets it applied → divergence. This is the central cable-coupling difficulty
-    (see ONGOING.md) and the source of the "light-body" ejection (`η = ke·dt²/m_reduced > 1`).
+- `SolverVBD`, 12 iterations, `rigid_contact_stick_motion_eps=0.0`, **NVIDIA default-hard
+  contacts** (`alpha=0.95`, no cross-step history).
+  - *History (now resolved):* the cable path once used `rigid_avbd_contact_alpha=0.0` +
+    `rigid_contact_history=True` to hold the lifted cable with a *kinematic* proxy. That
+    accumulates the ALM multiplier `λ` (`f_n = ke·pen + λ`, unbounded → 1e4–1e6 N grip): a
+    kinematic proxy early-outs so the runaway is computed-but-not-applied (stable, uncontrolled),
+    but a **dynamic** proxy applies it → divergence. The fix was to drop alpha=0+history (default
+    contacts) AND re-derive the overdamped contact `kd` (a second, independent cause); the cable
+    is then held by honest squeeze friction at a bounded force. Full analysis in ONGOING.md.
 - Object contacts: `CollisionPipeline(contact_matching="latest", soft_contact_margin=0.01)`.
 - The object model contains the visible table, manipulated objects, the soft block (where
-  present), and the kinematic gripper proxies.
-- Bridge is **ONE-WAY** (robot → objects), like Newton `cloth_franka`/`softbody_franka`.
+  present), and the **dynamic** gripper proxies.
+- Bridge is **TWO-WAY** via the proxy: robot motion → proxy → object squeeze; object reaction →
+  harvested → net load fed to the arm/EE. See [docs/gripper.md](gripper.md).
 
 ## Runtime (CUDA-graph capture)
 

@@ -28,33 +28,9 @@ import numpy as np
 os.environ.setdefault("WARP_CACHE_PATH", "/tmp/warp-cache")
 
 
-class _TerminalTee:
-    def __init__(self, *streams):
-        self.streams = streams
+from examples.helper import install_terminal_log
 
-    def write(self, text):
-        for s in self.streams:
-            s.write(text)
-        return len(text)
-
-    def flush(self):
-        for s in self.streams:
-            s.flush()
-
-    def isatty(self):
-        return any(getattr(s, "isatty", lambda: False)() for s in self.streams)
-
-
-def _install_terminal_log():
-    out = Path("outputs")
-    out.mkdir(parents=True, exist_ok=True)
-    log = (out / "terminal").open("w", buffering=1)
-    sys.stdout = _TerminalTee(sys.__stdout__, log)
-    sys.stderr = _TerminalTee(sys.__stderr__, log)
-    return log
-
-
-_terminal_log = _install_terminal_log()
+_terminal_log = install_terminal_log()
 
 import warp as wp
 

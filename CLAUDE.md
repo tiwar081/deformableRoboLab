@@ -48,6 +48,27 @@ Details: [docs/solver-architecture.md](docs/solver-architecture.md).
 - **Never read or depend on `_external/` at runtime.** Import or copy what you need; assume
   `_external/` (newton, RoboLab) can be deleted and the codebase must still run.
 
+## Code layout (centralized — change shared behavior in ONE place)
+
+The robot, the grip, and the per-frame loop are shared; only the **object** and the **motion**
+are per-example. Edit the shared bits here, not in the examples:
+
+- **`assets/params.py`** — single source of truth for ALL physics parameters (frozen dataclasses):
+  `FRANKA` (actuators, home_q, MuJoCo solver), `GRIP` (proxy mass/contact, `grasp_interference`,
+  damping), `TABLE`, `CABLE`, `SOFT_BLOCK*`, `RIGID_CUBE`/`STEEL_CUBE`. Same robot/object props
+  across every demo. (`assets/` is an importable package: `from assets.params import …`.)
+- **`examples/franka_common.py`** — shared helpers + the `GraspExample` base (the identical
+  `simulate()` substep loop, CUDA-graph `step()`, viz build/sync): `build_franka_robot`,
+  `make_robot_solver`, `solve_gripper_ik`, `build_gripper_proxies`, `restore_proxy_materials`,
+  `build_viz_model`, and `quat_rotate_xyzw`/`find_body`/`wp_smoothstep`.
+- **`examples/grip_coupling.py`** — `TwoWayProxyCoupling`, the one grip implementation (dynamic
+  finite-mass proxy, net-to-EE feedback, rigid + soft-particle harvest, no cap).
+- An example = `class Example(GraspExample)` that builds its object (`_build_object_builder`),
+  its keyframe motion kernel (`_set_robot_targets`), and `test_final`. 5 of 6 examples use this;
+  `pickplace_ycb` still uses the legacy `grip_force.py` (fly-away, out of scope).
+
+Grip-force tuning lives in [docs/gripper.md](docs/gripper.md) (knobs in `GRIP`/`FRANKA`).
+
 ## Newton version (environment gotcha)
 
 `newton` is editable-installed from `_external/newton`, currently a fresh clone at **`6dfe7303`**
@@ -94,10 +115,11 @@ This repo's own docs:
 - [docs/solver-architecture.md](docs/solver-architecture.md) — solver framework rule, robot &
   VBD object solver config + the `alpha=0`/ALM rationale, CUDA-graph capture rules, the viz
   particle-copy bug, the verification standard.
-- [docs/gripper.md](docs/gripper.md) — gripper proxy bridge + the no-continuous-feedback stability
-  invariant, obstacle non-penetration. **Partly stale**: the cable now uses the dynamic finite-mass
-  proxy + net-to-EE feedback + physical contact damping with NO force cap (see ONGOING.md); the
-  `examples/grip_force.py` 0→15 N clamp still applies to the rigid/soft examples only.
+- [docs/gripper.md](docs/gripper.md) — the **centralized** dynamic finite-mass proxy grip
+  (`grip_coupling.py` + `franka_common.build_gripper_proxies`, params in `assets/params.py`):
+  net-to-EE feedback, rigid + soft-particle harvest, the no-per-finger-feedback stability
+  invariant, and **how the grip force is tuned** (`grasp_interference` / `proxy_ke` /
+  `finger_effort`, ~10–90 N, no cap). `grip_force.py` survives only for `pickplace_ycb`.
 - [docs/deformables.md](docs/deformables.md) — cable (rod) and soft-FEM-block tuned parameters
   + reasons; notes on future cloth/zip-tie deformables.
 - [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.

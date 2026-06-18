@@ -1,54 +1,78 @@
 # Gripper & contact bridge
 
-## One-way bridge fundamentals
+The grip is **centralized**: one implementation (`examples/grip_coupling.py` +
+`examples/franka_common.py`) and one parameter set (`assets/params.py`) are shared by every
+example, so the same robot grips every object the same way. Physical, bounded force; **no force
+cap, no post-hoc clamp**.
 
-Objects exist only in the VBD model, so nothing in the robot model stops the fingers —
-commanding fully closed drives the pads through the object. The contact bridge is the
-**kinematic gripper proxies**: invisible bodies in the VBD object model that mirror the real
-Franka finger poses each substep, so objects collide against the imported finger collision
-geometry. They must not directly move, attach, or constrain objects.
+## Dynamic finite-mass proxy bridge
 
-- Proxies copy the imported finger collision shapes (4 boxes/finger; fingertip pad
-  17.5×15.2×18.5 mm, inner face at the grip center at q=0). Proxy margin 0.001, gap 0.008
-  (broad-phase headroom), friction restored to mu=1.0 after the blanket material fill.
-- Proxy sync (kinematic): write `body_q` on both states each substep; VBD finite-differences
-  against its internal `body_q_prev` for contact friction velocity (matches `cable_twist`).
-- **Pre-grasp waypoint straight above wide objects is required**: the joint-space path from
-  home arcs sideways and the open pads (80 mm gap) clip a 50 mm object before the grasp.
-- `gripper_open = 0.04` (URDF prismatic upper limit).
+Objects live only in the VBD object model, so nothing in the robot (MuJoCo) model stops the
+fingers. The bridge is two **dynamic finite-mass finger proxies** in the object model
+(`franka_common.build_gripper_proxies`): invisible bodies with the imported finger collision
+shapes, mass `GRIP.proxy_mass` (10 kg, ≈ the reflected articulated-chain inertia).
 
-## Force limit — centralized in `examples/grip_force.py`
+Each substep (`grip_coupling.TwoWayProxyCoupling`, NVIDIA's recipe — staggered one-step lag):
 
-Used by the rigid/soft examples (`pickplace_ycb`, `rigidCube_soft`, `soft_compression`,
-`soft_pickplace`). Contact-driven (no baked object dimensions), grasp-window-gated,
-**0→15 N linear ramp over 0.5 s, capped at 15 N**, public Newton API only:
+1. `apply_to_robot` — feed the previous step's harvested object reaction onto the **arm/EE**.
+2. robot solves; swap.
+3. `sync_proxies` — re-pin each proxy to its finger pose+velocity, **subtracting** the velocity
+   gravity + the lagged wrench will impart over `dt` (momentum-consistent undo), so the proxy
+   stays slaved to the finger while still participating as a finite-mass contact body.
+4. object (VBD) solves the squeeze; swap.
+5. `harvest` — collect the object→proxy reaction for next step (rigid via
+   `SolverVBD.collect_rigid_contact_forces`; **soft** FEM blocks via a recomputed
+   `n·ke·penetration` over the public `Contacts.soft_contact_*` geometry, enabled by passing
+   `soft_contact_ke=` and building the proxies with `has_particle_collision=True`).
 
-- `GripForceClamp` (rigid): on first *detected* contact, applies an explicit **two-point
-  capped-Coulomb clamp** to the grasped body's `body_f` — normal ramps 0→15 N + friction
-  hold; the penalty squeeze is relieved (pads ease out) so it can't over-squeeze/eject.
-- `RigidGripWidth`: contact-driven width control — creep to first contact, then ease out.
-- `SoftGripWidth`: squeeze-to-force servo — close until the *measured* per-pad soft reaction
-  reaches the ramped setpoint.
-- Reaction readback (public API): rigid via `SolverVBD.collect_rigid_contact_forces`; soft
-  recomputed from `soft_contact_*` geometry as `ke·penetration` per proxy.
+**Feedback is net-to-EE, not per-finger.** The two pad wrenches summed cancel the internal
+squeeze and leave the external load (weight + motion reaction), which goes to the arm; the
+position-held fingers keep their grip. The per-pad reaction is available as tactile data via
+`TwoWayProxyCoupling.raw_force_norms()` but is **never** fed to the finger DOFs.
 
-**Stability invariant (do not violate):** the gripper is *position*-controlled; never feed
-the object reaction back into the gripper DOF as stiff continuous in-loop feedback — across
-one substep of lag against the stiff penalty contact (`k·dt²/m > 1`) it chatters to hundreds
-of N and ejects the object. Use position control + a creeping/ramped setpoint (tried-and-
-rejected: continuous force feedback).
+### Stability invariant (do not violate)
 
-Prior approach (superseded): a force-triggered *latch* (`_update_grip_target_kernel`) that
-creeps closed and latches the width when the reaction crosses a threshold. Same invariant.
+Never feed the object reaction into the gripper **DOF / per-finger** — confirmed empirically:
+the pad reaction is outward, so routing it to each finger pushes the pads open and the grasp is
+lost (grip → 0). Keep the fingers position-controlled and feed the **net** reaction to the arm.
 
-## Cable: two-way coupling — `examples/cable_coupling.py`
+## Grip-force tuning
 
-The cable uses a different bridge (`TwoWayProxyCoupling`): the cable reaction is harvested
-and fed back to the arm so the grasp is two-way. M1 (kinematic proxy) is the verified
-default; M2 (NVIDIA dynamic finite-mass proxy, for a true actuator-limited grip) is WIP.
-**Status, design, and the dynamic-vs-kinematic divergence analysis live in ONGOING.md.**
+The grip force is **emergent and physical** — the position-controlled squeeze against bounded
+contact (NVIDIA default-hard contacts + re-derived physical damping), not a clamp. Typical
+operating point ≈ **30–90 N** for the cable, comparable for the rigid/soft grips; aim for
+**~10–30 N** by adjusting the knobs below. **All knobs are centralized in `assets/params.py`**, so
+changing them changes every demo identically (same robot, same grip).
+
+Knobs (most-used first), all in `assets.params.GRIP` unless noted:
+
+- **`grasp_interference`** (default 1 mm) — how far past the object surface the close target bites.
+  The per-example close target is `gripper_closed = object_half_width + object_margin +
+  proxy_margin − grasp_interference`. **More interference → deeper squeeze → more force.** This is
+  the primary force knob.
+- **`proxy_ke`** (5e4 N/m) — proxy contact stiffness. Higher → more force per unit penetration.
+- **`FRANKA.finger_effort`** (20 N) — the finger actuator force limit (physical, *not* a cap on
+  the grip). It bounds how hard the actuator can drive the close, so it bounds the *transient*
+  squeeze; the steady grip is set by interference × stiffness.
+- **`proxy_kd`** (1e2 N·s/m, absolute) — contact damping. Re-derived for the pinned Newton; the
+  old 4e5/5e6 values were ~1e4× critical and dominated the grip with a spurious
+  velocity-proportional force. Leave near 1e2 unless re-deriving for a Newton bump (see CLAUDE.md).
+- **`proxy_mass`** (10 kg) — heavier → the proxy resists being pushed off the object (maintains
+  penetration); too light loses the grip. 10 kg is a stable default.
+
+To target a specific force: tweak `grasp_interference` first (it's roughly linear in the steady
+grip), verify with `CABLE_DIAG=1` (prints per-pad `grip=(left,right)N`), then `--test`.
+
+## grip_force.py (legacy)
+
+The old post-hoc **0→15 N capped-Coulomb clamp / squeeze-to-force** (`GripForceClamp`,
+`RigidGripWidth`, `SoftGripWidth`) is retired from the migrated examples. It survives only for
+`pickplace_ycb_franka` (the one example **not** yet on the dynamic proxy — it has a pre-existing
+object fly-away that is out of scope; see ONGOING.md). Remove `grip_force.py` once ycb migrates.
 
 ## Obstacle (table) non-penetration
 
-See the robot-side `robot_contact_table` static collider in
-[docs/solver-architecture.md](solver-architecture.md).
+The robot-side hidden `robot_contact_table` collider stops the gripper at the table surface; the
+object-model table is filtered against the dynamic proxies (a dynamic proxy re-pinned against the
+static table resolves explosively). Both come from `assets.params.TABLE` /
+`franka_common.build_franka_robot` / `build_gripper_proxies`.

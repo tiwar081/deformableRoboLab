@@ -1,17 +1,19 @@
-"""Two-way dynamic-proxy coupling between the MuJoCo robot and the VBD cable.
+"""Generalized two-way dynamic-proxy grip coupling between the MuJoCo robot and a VBD object.
 
-Implements NVIDIA's two-way cable-manipulation recipe (developer.nvidia.com "Newton adds
-contact-rich manipulation"): the finger proxies are DYNAMIC finite-mass bodies living in the
-VBD object model and mirroring the robot finger poses. Each substep the proxy is re-pinned to
-the finger pose+velocity with the gravity + (lagged) coupling-force velocity deltas
-pre-subtracted (momentum-consistent "undo"), so it stays slaved to the robot while still
-participating as a finite-mass contact body in the VBD solve. The cable's contact wrench on the
-proxies is harvested and the NET (both pads summed → internal squeeze cancels, external load
-remains) is fed back onto the robot ARM/EE one substep later. The grasp is emergent two-way
-contact: the arm genuinely feels the cable while the position-held fingers keep their grip, and
-the grip force is whatever the squeeze produces against the bounded contact — finite and physical,
-no force cap. Per-pad reaction is available via ``raw_force_norms()`` (tactile), but is NOT fed to
-the finger DOFs (that pushes the pads open and loses the grasp).
+NVIDIA's two-way recipe, generalized to any gripped VBD object (cable rod, rigid box, FEM block):
+the finger proxies are DYNAMIC finite-mass bodies in the object model mirroring the fingers; each
+substep they are re-pinned to the finger pose+velocity with the gravity + (lagged) contact-wrench
+velocity deltas pre-subtracted (momentum-consistent "undo"), so they stay slaved to the robot
+while still participating as finite-mass contact bodies in the VBD solve. The object's contact
+reaction on the proxies is harvested and the NET (both pads summed → internal squeeze cancels,
+external load remains) is fed back onto the robot ARM/EE one substep later. Grip force is the
+position-controlled squeeze against bounded contact — finite and physical, NO force cap.
+
+Two harvest paths, both accumulated into the same lagged wrench:
+  * rigid objects  → ``SolverVBD.collect_rigid_contact_forces`` (rigid↔rigid contact).
+  * soft particles → re-computed ``ke·penetration`` over the public ``Contacts.soft_contact_*``
+    geometry (Newton exposes no body↔particle force API), enabled when the proxies carry
+    ``has_particle_collision=True``.
 
 Per substep the host loop calls, in order:
     coupling.apply_to_robot(robot_state)   # after robot.clear_forces(), before robot.step()
@@ -19,10 +21,9 @@ Per substep the host loop calls, in order:
     coupling.sync_proxies(robot_state, obj_state_0, obj_state_1)
     coupling.snapshot(obj_state_0)
     ... object.collide(), object.step(), swap ...
-    coupling.harvest(obj_state_0)          # collect cable->proxy wrench for next step
+    coupling.harvest(obj_state_0)          # collect object->proxy wrench for next step
 
-All public Newton API (``State.body_f``, ``collect_rigid_contact_forces``); nothing in
-``_external`` is modified. Everything is CUDA-graph capturable.
+All public Newton API; nothing in ``_external`` is modified. Everything is CUDA-graph capturable.
 """
 from __future__ import annotations
 
@@ -42,9 +43,9 @@ def _apply_coupling_to_ee_kernel(
     robot_body_com: wp.array(dtype=wp.vec3),
     robot_body_f: wp.array(dtype=wp.spatial_vector),
 ):
-    # Apply the previous step's harvested cable->proxy reaction onto the ARM (EE body), NOT the
+    # Apply the previous step's harvested object->proxy reaction onto the ARM (EE body), NOT the
     # finger bodies: the SUM of the two pad wrenches cancels the internal squeeze and leaves the
-    # real external cable load (weight + sweep reaction), so the arm feels the cable while the
+    # real external load (weight + motion reaction), so the arm feels the object while the
     # position-controlled fingers keep their grip. Feeding the per-pad squeeze to the fingers
     # instead pushes them open and loses the grasp (the "no continuous feedback into the gripper
     # DOF" invariant). Each pad wrench (about the finger origin) is transferred to the EE COM.
@@ -78,11 +79,10 @@ def _sync_proxy_state_kernel(
     object_body_q_1: wp.array(dtype=wp.transform),
     object_body_qd_1: wp.array(dtype=wp.spatial_vector),
 ):
-    # Re-pin the dynamic proxy to the finger pose+velocity, then subtract the velocity change
-    # that gravity + the (lagged) contact wrench WILL impart during the VBD step, so after VBD
-    # integrates them the proxy ends at the finger's velocity. Mirrors solver.integrate_rigid_body:
-    # v += (f*inv_m + g*nonzero(inv_m))*dt, angular delta = R*(inv_I*(R^-1*tau))*dt. The undo uses
-    # the SAME lagged wrench that apply_to_robot fed the robot this substep (momentum-consistent);
+    # Re-pin the dynamic proxy to the finger pose+velocity, then subtract the velocity change that
+    # gravity + the (lagged) contact wrench WILL impart during the VBD step, so after VBD integrates
+    # them the proxy ends at the finger's velocity. Mirrors solver.integrate_rigid_body. The undo
+    # uses the SAME lagged wrench apply_to_robot fed the robot this substep (momentum-consistent);
     # the residual (current - lagged) is small once the grip force is bounded.
     i = wp.tid()
     fb = finger_bodies[i]
@@ -114,8 +114,8 @@ def _harvest_proxy_wrench_kernel(
     proxy_force: wp.array(dtype=wp.vec3),
     proxy_torque: wp.array(dtype=wp.vec3),
 ):
-    # Sum, per proxy, the contact force the other body (cable) exerts on it and the torque about
-    # the proxy COM. force_on_body1 is the force on body1; body0 gets -it.
+    # Rigid harvest: sum, per proxy, the rigid contact force the other body exerts on it and the
+    # torque about the proxy COM. force_on_body1 is the force on body1; body0 gets -it.
     i = wp.tid()
     if i >= contact_count[0]:
         return
@@ -133,12 +133,57 @@ def _harvest_proxy_wrench_kernel(
         wp.atomic_add(proxy_torque, b0, wp.cross(point0_world[i] - com, f))
 
 
+@wp.kernel
+def _harvest_soft_wrench_kernel(
+    soft_contact_count: wp.array(dtype=wp.int32),
+    soft_contact_particle: wp.array(dtype=wp.int32),
+    soft_contact_shape: wp.array(dtype=wp.int32),
+    soft_contact_body_pos: wp.array(dtype=wp.vec3),
+    soft_contact_normal: wp.array(dtype=wp.vec3),
+    particle_q: wp.array(dtype=wp.vec3),
+    particle_radius: wp.array(dtype=float),
+    shape_body: wp.array(dtype=wp.int32),
+    object_body_q: wp.array(dtype=wp.transform),
+    soft_contact_ke: float,
+    left_proxy: int,
+    right_proxy: int,
+    proxy_force: wp.array(dtype=wp.vec3),
+    proxy_torque: wp.array(dtype=wp.vec3),
+):
+    # Soft harvest: Newton exposes no body-particle force readback, so recompute the penalty force
+    # (n·ke·penetration, matching VBD's own body-particle law) the soft block exerts on each proxy
+    # pad, from the PUBLIC soft-contact geometry. Accumulate force + torque about the proxy COM.
+    i = wp.tid()
+    if i >= soft_contact_count[0]:
+        return
+    pid = soft_contact_particle[i]
+    shape = soft_contact_shape[i]
+    if pid < 0 or shape < 0:
+        return
+    body = shape_body[shape]
+    if body != left_proxy and body != right_proxy:
+        return
+    bx = wp.transform_point(object_body_q[body], soft_contact_body_pos[i])
+    n = soft_contact_normal[i]
+    pen = -(wp.dot(n, particle_q[pid] - bx) - particle_radius[pid])
+    if pen <= 0.0:
+        return
+    f = n * (soft_contact_ke * pen)
+    com = wp.transform_get_translation(object_body_q[body])
+    wp.atomic_add(proxy_force, body, f)
+    wp.atomic_add(proxy_torque, body, wp.cross(bx - com, f))
+
+
 class TwoWayProxyCoupling:
-    """Dynamic-proxy two-way bridge between a MuJoCo robot and a VBD object model."""
+    """Dynamic-proxy two-way bridge between a MuJoCo robot and a VBD object model. Works for any
+    gripped object; set ``soft_contact_ke`` (and use particle-colliding proxies) to also harvest
+    the proxy↔FEM-particle reaction."""
 
     def __init__(self, robot_model, object_model, object_solver, object_contacts, object_state,
-                 robot_finger_bodies, proxy_bodies, ee_body, sim_dt, gravity=(0.0, 0.0, -9.81)):
+                 robot_finger_bodies, proxy_bodies, ee_body, sim_dt,
+                 gravity=(0.0, 0.0, -9.81), soft_contact_ke=None):
         device = object_state.body_q.device
+        self.object_model = object_model
         self.object_solver = object_solver
         self.object_contacts = object_contacts
         self.sim_dt = float(sim_dt)
@@ -151,6 +196,9 @@ class TwoWayProxyCoupling:
         self._proxy_bodies = wp.array(proxy_bodies, dtype=wp.int32, device=device)
         self.left_proxy, self.right_proxy = (int(b) for b in proxy_bodies)
         self._n = len(proxy_bodies)
+        # When set, the proxies carry has_particle_collision=True and we also harvest the
+        # body↔particle reaction (recomputed) so the soft block's squeeze is fed back too.
+        self.soft_contact_ke = None if soft_contact_ke is None else float(soft_contact_ke)
 
         nb = object_model.body_count
         # ONE raw lagged-wrench pair, fed to BOTH the momentum-consistent undo (sync_proxies) and
@@ -181,17 +229,24 @@ class TwoWayProxyCoupling:
         wp.copy(self._obj_body_q_prev, object_state_0.body_q)
 
     def harvest(self, object_state_0):
-        body0, body1, p0, p1, f1, cc = self.object_solver.collect_rigid_contact_forces(
-            object_state_0.body_q, self._obj_body_q_prev, self.object_contacts, self.sim_dt)
         self._force_lag.zero_()
         self._torque_lag.zero_()
+        body0, body1, p0, p1, f1, cc = self.object_solver.collect_rigid_contact_forces(
+            object_state_0.body_q, self._obj_body_q_prev, self.object_contacts, self.sim_dt)
         wp.launch(_harvest_proxy_wrench_kernel, dim=body0.shape[0], inputs=[
             cc, body0, body1, p0, p1, f1, object_state_0.body_q, self.left_proxy, self.right_proxy,
         ], outputs=[self._force_lag, self._torque_lag], device=self._force_lag.device)
+        if self.soft_contact_ke is not None:
+            c = self.object_contacts
+            wp.launch(_harvest_soft_wrench_kernel, dim=c.soft_contact_particle.shape[0], inputs=[
+                c.soft_contact_count, c.soft_contact_particle, c.soft_contact_shape,
+                c.soft_contact_body_pos, c.soft_contact_normal, object_state_0.particle_q,
+                self.object_model.particle_radius, self.object_model.shape_body,
+                object_state_0.body_q, self.soft_contact_ke, self.left_proxy, self.right_proxy,
+            ], outputs=[self._force_lag, self._torque_lag], device=self._force_lag.device)
 
     def raw_force_norms(self):
-        """Per-proxy |force| [N] of the harvested cable reaction — the actual force the grasped
-        cable exerts on each pad (raw, un-clamped). With the dynamic two-way grip this is the
-        physical grip force; it should be finite and bounded (not the kinematic 1e4-1e6 N)."""
+        """Per-proxy |force| [N] of the harvested object reaction — the physical grip force on each
+        pad (raw, un-clamped). Finite and bounded (not the old kinematic 1e4-1e6 N)."""
         f = self._force_lag.numpy()
         return [float(np.linalg.norm(f[p])) for p in (self.left_proxy, self.right_proxy)]

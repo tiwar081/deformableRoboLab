@@ -15,27 +15,27 @@ Terminal output is tee'd to `outputs/terminal`.
 
 ## Physics demos
 
+All of these (except `pickplace_ycb`) share the **centralized** grip: `class Example(GraspExample)`
+(`examples/franka_common.py`) + the dynamic-proxy `TwoWayProxyCoupling` (`examples/grip_coupling.py`)
++ params from `assets/params.py`. Physical, bounded grip force (~10–90 N), no cap. Each only defines
+its object + keyframe motion + `test_final`; all pass `--test`.
+
 - **`cable_rigidCube_franka`** — descends to a cable on the table, grasps, lifts, sweeps
-  side to side; a rigid cube sits on the table. 8 substeps. Two-way cable coupling
-  (`cable_coupling.py`, M1 kinematic).
+  side to side; a rigid cube sits on the table. 8 substeps.
 - **`cable_soft_franka`** — same cable demo + a soft FEM block the swept cable dents/nudges.
-  16 substeps. Two-way cable coupling (M1 default; M2 force-limited WIP behind
-  `force_limited_grip` — see ONGOING.md).
-- **`rigidCube_soft_franka`** — grasps a heavy rigid cube (steel, ~1 kg) via a pre-grasp
-  waypoint, carries it, drops it half-offset onto a pillow-soft block
-  (`k_mu=1.25e2,k_lambda=6.25e2`); cube squashes the block edge and rolls off. 16 substeps.
-  Force-limited grip via `grip_force.py` (rigid clamp).
-- **`soft_compression_franka`** — grasps a heavy metal sheet (~2× the cube; 18×12×0.8 cm
-  plate + grasp handle) by its handle, drops it half-offset onto the soft block; settles
-  tilted holding ~1 cm compression. 16 substeps. Force-limited grip (rigid clamp).
-- **`soft_pickplace_franka`** — picks up a small graspable soft FEM block (~33 mm), carries
-  it across the table, places it at a target. 16 substeps. Force-limited grip via
-  `SoftGripWidth` (squeeze-to-force). Caveat: the small block is too soft to hold a steady
-  15 N — a lower target gives a cleaner hold.
+  16 substeps. (`CABLE_DIAG=1` prints a per-frame grip/lift health line.)
+- **`rigidCube_soft_franka`** — grasps a heavy steel cube (~1 kg) via a pre-grasp waypoint,
+  carries it, drops it half-offset onto a pillow-soft block (`SOFT_BLOCK_PILLOW`). 16 substeps.
+- **`soft_compression_franka`** — grasps a metal sheet (plate + handle) by its handle, presses/
+  drops it onto the soft block to compress it. 16 substeps.
+- **`soft_pickplace_franka`** — picks up a small soft FEM block (~33 mm) and places it at a
+  target. 16 substeps. The proxies carry particle collision and the coupling harvests the
+  proxy↔particle reaction (soft grip).
 
 `pickplace_ycb_franka` — rubik's-cube + banana + bowl friction/impact demo, kept on the VBD
-object framework as the "VBD can host rigid meshes" proof. Force-limited grip via
-`grip_force.py`. Has a known pre-existing passive resting-object ejection (out of scope).
+object framework as the "VBD can host rigid meshes" proof. **The one example still on the legacy
+`grip_force.py` clamp** (not yet on the dynamic proxy): it has a pre-existing object fly-away that
+is out of scope — migrate + retire `grip_force.py` once that is fixed.
 
 ## RoboLab-graphics variants
 
