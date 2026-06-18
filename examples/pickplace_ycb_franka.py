@@ -70,6 +70,8 @@ except ModuleNotFoundError as exc:
 
 from pxr import Usd, UsdGeom
 
+from examples.grip_force import GraspTarget, GripForceClamp, RigidGripWidth
+
 
 # Recorded start poses from RoboLab's RubiksCubeAndBananaTask (world frame, robot
 # at origin). z adjusted so each object rests on our table top.
@@ -189,34 +191,6 @@ def _set_robot_targets_kernel(
 
 
 @wp.kernel
-def _update_grip_target_kernel(
-    t_frame: wp.array(dtype=float),
-    substep: int,
-    sim_dt: float,
-    reaction: wp.array(dtype=float),
-    threshold: float,
-    close_rate: float,
-    gripper_open: float,
-    grip_target: wp.array(dtype=float),
-    latched: wp.array(dtype=wp.int32),
-):
-    # Grasp windows: cube 2.6..6.2; banana closes only after it has stopped at the
-    # table (10.2) and holds through the slow ascent/carry until release (16.0).
-    t = t_frame[0] + float(substep) * sim_dt
-    grasp_a = t >= 2.6 and t < 6.2
-    grasp_b = t >= 10.2 and t < 17.8
-    if grasp_a or grasp_b:
-        if latched[0] == 0:
-            if reaction[0] >= threshold or reaction[1] >= threshold:
-                latched[0] = 1
-            else:
-                grip_target[0] = wp.max(grip_target[0] - close_rate * sim_dt, 0.0)
-    else:
-        grip_target[0] = gripper_open
-        latched[0] = 0
-
-
-@wp.kernel
 def _sync_gripper_proxies_kernel(
     robot_body_q: wp.array(dtype=wp.transform),
     finger_bodies: wp.array(dtype=wp.int32),
@@ -291,6 +265,9 @@ class Example:
         self.grip_force_threshold = float(getattr(args, "grip_threshold", 15.0))
         self.grip_close_rate = 0.02
         self.grip_filter = 0.5
+        self.grip_touch_eps = 0.5  # reaction [N] that counts as first contact (live detection)
+        self.grip_release_eps = 2.0  # back off the pads until the penalty squeeze drops below this [N]
+        self.grip_ramp_time = float(getattr(args, "grip_ramp_time", 0.5))
 
         self.cube_half = 0.029
         self.cube_pos = np.array([CUBE_XY[0], CUBE_XY[1], self.table_top_z + self.cube_half], dtype=np.float32)
@@ -414,8 +391,23 @@ class Example:
         self._grip_reaction_raw = wp.zeros(2, dtype=wp.float32, device=device)
         self._grip_reaction = wp.zeros(2, dtype=wp.float32, device=device)
         self._grip_target = wp.array([self.gripper_open], dtype=wp.float32, device=device)
-        self._grip_latched = wp.zeros(1, dtype=wp.int32, device=device)
         self._obj_body_q_prev = wp.zeros(self.object_model.body_count, dtype=wp.transform, device=device)
+
+        # Force-limited grasp (rigid): contact-driven width control closes the pads to
+        # first contact (then eases out to relax the penalty), and GripForceClamp ramps
+        # an explicit 0->15 N grip force and holds the body to the pads.
+        self._grasp_windows = [(2.6, 6.2), (10.2, 17.8)]  # cube, banana
+        self.grip_width = RigidGripWidth(
+            self._grip_target, self._grasp_windows, self._grip_reaction,
+            close_rate=self.grip_close_rate, gripper_open=self.gripper_open,
+            touch_eps=self.grip_touch_eps, release_eps=self.grip_release_eps)
+        self.grip_clamp = GripForceClamp(
+            self.object_model, self.object_state_0, self.left_proxy, self.right_proxy,
+            targets=[GraspTarget(self.cube_body, (2.6, 6.2)),
+                     GraspTarget(self.banana_body, (10.2, 17.8))],
+            reaction=self._grip_reaction, max_force=self.grip_force_threshold,
+            ramp_time=self.grip_ramp_time, mu=0.8, touch_eps=self.grip_touch_eps)
+
         self.graph = None
         self._frames_simulated = 0
         self._capture_enabled = wp.get_device(str(ik_model.device)).is_cuda and self.sim_substeps % 2 == 0
@@ -488,7 +480,12 @@ class Example:
         b.add_shape(body=self.bowl_body, type=int(newton.GeoType.MESH), xform=wp.transform_identity(),
                     cfg=bowl_cfg, scale=(1.0, 1.0, 1.0), src=bowl_mesh, color=wp.vec3(0.75, 0.22, 0.18), label="bowl")
 
-        # Gripper proxies (rigid contact only).
+        # Gripper proxies: collision is kept ON so the proxy<->object contact provides
+        # LIVE contact detection (the width controller closes until it reads a reaction)
+        # and a non-penetration backstop. For rigid objects the grasp FORCE itself is
+        # applied explicitly by GripForceClamp (see grip_force.py) the moment contact is
+        # detected — the pads stop at first contact and the penalty stays quiet because
+        # the clamp holds the object to the pads (no further penetration).
         proxy_cfg = newton.ModelBuilder.ShapeConfig(density=0.0, is_visible=False, has_shape_collision=True,
                                                     has_particle_collision=False, margin=self.gripper_proxy_margin,
                                                     gap=self.gripper_proxy_gap, ke=5e4, kd=1e2, mu=2.0)
@@ -599,10 +596,7 @@ class Example:
         ], outputs=[self.robot_control.joint_target_q], device=self.robot_control.joint_target_q.device)
 
     def _update_grip_target(self, substep):
-        wp.launch(_update_grip_target_kernel, dim=1, inputs=[
-            self._t_frame, substep, self.sim_dt, self._grip_reaction, self.grip_force_threshold,
-            self.grip_close_rate, self.gripper_open,
-        ], outputs=[self._grip_target, self._grip_latched], device=self._grip_target.device)
+        self.grip_width.update(self._t_frame, substep, self.sim_dt)
 
     def _sync_gripper_proxies(self):
         wp.launch(_sync_gripper_proxies_kernel, dim=2,
@@ -655,8 +649,10 @@ class Example:
             self._snapshot_object_body_q()
             self.object_state_0.clear_forces()
             self.object_model.collide(self.object_state_0, self.object_contacts)
+            self.grip_clamp.apply(self.object_state_0, self._t_frame, substep, self.sim_dt)
             self.object_solver.step(self.object_state_0, self.object_state_1, self.object_control, self.object_contacts, self.sim_dt)
             self.object_state_0, self.object_state_1 = self.object_state_1, self.object_state_0
+            self.grip_clamp.update_prev(self.object_state_0)
             self._update_grip_reaction()
 
     def step(self):

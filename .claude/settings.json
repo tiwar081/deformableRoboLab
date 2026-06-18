@@ -58,7 +58,16 @@
       "Bash(timeout 600 .venv/bin/python /tmp/verify_grip_ramp.py)",
       "Bash(grep -vE \"Warp|Module|Compiling|^\\\\[|cuda:0 .*MiB|^$\")",
       "Bash(grep -vE \"Warp|Module|Compiling|^\\\\[|MiB|^$\")",
-      "Bash(PYTHONPATH=. timeout 600 .venv/bin/python /tmp/verify_grip_ramp.py)"
+      "Bash(PYTHONPATH=. timeout 600 .venv/bin/python /tmp/verify_grip_ramp.py)",
+      "Bash(PYTHONPATH=. timeout 900 .venv/bin/python /tmp/verify_clamp.py)",
+      "Bash(.venv/bin/python -c \"import ast; ast.parse\\(open\\('examples/grip_force.py'\\).read\\(\\)\\); print\\('parse OK'\\)\")",
+      "Bash(.venv/bin/python -c \"import ast; ast.parse\\(open\\('examples/grip_force.py'\\).read\\(\\)\\); ast.parse\\(open\\('examples/pickplace_ycb_franka.py'\\).read\\(\\)\\); print\\('parse OK'\\)\")",
+      "Bash(.venv/bin/python -c \"import ast; ast.parse\\(open\\('examples/rigidCube_soft_franka.py'\\).read\\(\\)\\); print\\('parse OK'\\)\")",
+      "Bash(.venv/bin/python -c \"import ast; ast.parse\\(open\\('examples/soft_compression_franka.py'\\).read\\(\\)\\); print\\('parse OK'\\)\")",
+      "Bash(.venv/bin/python -c \"import ast; ast.parse\\(open\\('examples/cable_rigidCube_franka.py'\\).read\\(\\)\\); print\\('parse OK'\\)\")",
+      "Bash(PYTHONPATH=. timeout 600 .venv/bin/python -m examples rigidCube_soft_franka_robolab --device cuda:0 --num-frames 2 --output-path outputs/_smoke/x.usd)",
+      "Bash(chmod +x /tmp/render_videos.sh)",
+      "Bash(bash /tmp/render_videos.sh)"
     ],
     "additionalDirectories": [
       "/dev",

@@ -57,6 +57,8 @@ except ModuleNotFoundError as exc:
         "This example requires the Newton Python package. Run it from an environment where `import newton` works."
     ) from exc
 
+from examples.cable_coupling import TwoWayProxyCoupling
+
 
 def _quat_rotate_xyzw(q: np.ndarray, v: np.ndarray) -> np.ndarray:
     q_xyz = q[:3]
@@ -141,18 +143,6 @@ def _set_robot_targets_kernel(
     joint_target_q[i] = q
 
 
-@wp.kernel
-def _sync_gripper_proxies_kernel(
-    robot_body_q: wp.array(dtype=wp.transform),
-    finger_bodies: wp.array(dtype=wp.int32),
-    proxy_bodies: wp.array(dtype=wp.int32),
-    object_body_q_0: wp.array(dtype=wp.transform),
-    object_body_q_1: wp.array(dtype=wp.transform),
-):
-    i = wp.tid()
-    tf = robot_body_q[finger_bodies[i]]
-    object_body_q_0[proxy_bodies[i]] = tf
-    object_body_q_1[proxy_bodies[i]] = tf
 
 
 class Example:
@@ -259,7 +249,7 @@ class Example:
             self.robot_model,
             solver="newton",
             integrator="implicitfast",
-            iterations=15,
+            iterations=20,  # raised for the two-way coupling (article uses 20)
             ls_iterations=100,
             nconmax=robot_contact_max,
             njmax=robot_contact_max * 2,
@@ -289,7 +279,7 @@ class Example:
         self.object_solver = newton.solvers.SolverVBD(
             self.object_model,
             iterations=args.vbd_iterations,
-            rigid_body_contact_buffer_size=512,
+            rigid_body_contact_buffer_size=2048,  # headroom so wrench-harvest buffers don't grow mid-capture
             rigid_contact_history=True,
             # Keep hard contacts (penalty-only friction loses the lifted cable),
             # but disable sticky contact-point replay and resolve penetration
@@ -309,6 +299,12 @@ class Example:
         self._pickup_q_wp = wp.array(self.pickup_q, dtype=wp.float32, device=ik_model.device)
         self._finger_bodies_wp = wp.array(self.robot_finger_bodies, dtype=wp.int32, device=ik_model.device)
         self._proxy_bodies_wp = wp.array(self.gripper_proxy_bodies, dtype=wp.int32, device=ik_model.device)
+        # Two-way dynamic-proxy bridge (replaces the one-way kinematic pose mirror): the
+        # arm feels the cable via the net pad reaction harvested back onto the EE body.
+        self.coupling = TwoWayProxyCoupling(
+            self.robot_model, self.object_model, self.object_solver, self.object_contacts,
+            self.object_state_0, self.robot_finger_bodies, self.gripper_proxy_bodies,
+            self.ee_body, self.sim_dt)
         self.graph = None
         self._frames_simulated = 0
         # Capture needs an even substep count so the state buffer swap returns
@@ -613,13 +609,7 @@ class Example:
         )
 
     def _sync_gripper_proxies(self) -> None:
-        wp.launch(
-            _sync_gripper_proxies_kernel,
-            dim=2,
-            inputs=[self.robot_state_0.body_q, self._finger_bodies_wp, self._proxy_bodies_wp],
-            outputs=[self.object_state_0.body_q, self.object_state_1.body_q],
-            device=self.object_state_0.body_q.device,
-        )
+        self.coupling.sync_proxies(self.robot_state_0, self.object_state_0, self.object_state_1)
 
     def _sync_viz_state(self) -> None:
         body_q = self.viz_state.body_q.numpy()
@@ -643,6 +633,7 @@ class Example:
 
             self.robot_state_0.clear_forces()
             self.robot_state_1.clear_forces()
+            self.coupling.apply_to_robot(self.robot_state_0)  # lagged cable reaction onto the arm
             self.robot_collision_pipeline.collide(self.robot_state_0, self.robot_contacts)
             self.robot_solver.step(
                 self.robot_state_0,
@@ -654,6 +645,7 @@ class Example:
             self.robot_state_0, self.robot_state_1 = self.robot_state_1, self.robot_state_0
 
             self._sync_gripper_proxies()
+            self.coupling.snapshot(self.object_state_0)
 
             self.object_state_0.clear_forces()
             self.object_model.collide(self.object_state_0, self.object_contacts)
@@ -665,6 +657,8 @@ class Example:
                 self.sim_dt,
             )
             self.object_state_0, self.object_state_1 = self.object_state_1, self.object_state_0
+
+            self.coupling.harvest(self.object_state_0)
 
     def step(self) -> None:
         self._t_frame.assign(np.array([self.sim_time], dtype=np.float32))

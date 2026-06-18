@@ -65,6 +65,8 @@ except ModuleNotFoundError as exc:
         "This example requires the Newton Python package. Run it from an environment where `import newton` works."
     ) from exc
 
+from examples.grip_force import SoftGripWidth
+
 
 def _quat_rotate_xyzw(q: np.ndarray, v: np.ndarray) -> np.ndarray:
     q_xyz = q[:3]
@@ -284,10 +286,12 @@ class Example:
         self.grasp_tcp_height = self.table_top_z + self.block_half
         self.lift_height = self.table_top_z + 0.16
 
-        # Force-controlled gripper latch (see module docstring).
-        self.grip_force_threshold = float(getattr(args, "grip_threshold", 8.0))
+        # Squeeze-to-force gripper: close until the MEASURED soft reaction reaches the
+        # ramped 0->threshold setpoint (per pad), capped (see grip_force.SoftGripWidth).
+        self.grip_force_threshold = float(getattr(args, "grip_threshold", 15.0))
         self.grip_close_rate = 0.02
         self.grip_filter = 0.5
+        self.grip_ramp_time = float(getattr(args, "grip_ramp_time", 0.5))
 
         self.home_q = np.array(
             [-0.0036802115, 0.023901723, 0.003680411, -2.3683236, -0.00012918962,
@@ -388,6 +392,10 @@ class Example:
         self._grip_reaction = wp.zeros(2, dtype=wp.float32, device=device)
         self._grip_target = wp.array([self.gripper_open], dtype=wp.float32, device=device)
         self._grip_latched = wp.zeros(1, dtype=wp.int32, device=device)
+        self.grip_width = SoftGripWidth(
+            self._grip_target, [(3.2, 8.0)], self._grip_reaction,
+            max_force=self.grip_force_threshold, ramp_time=self.grip_ramp_time,
+            close_rate=self.grip_close_rate, gripper_open=self.gripper_open)
 
         self._sync_gripper_proxies()
 
@@ -538,10 +546,7 @@ class Example:
         ], outputs=[self.robot_control.joint_target_q], device=self.robot_control.joint_target_q.device)
 
     def _update_grip_target(self, substep):
-        wp.launch(_update_grip_target_kernel, dim=1, inputs=[
-            self._t_frame, substep, self.sim_dt, self._grip_reaction, self.grip_force_threshold,
-            self.grip_close_rate, self.gripper_open,
-        ], outputs=[self._grip_target, self._grip_latched], device=self._grip_target.device)
+        self.grip_width.update(self._t_frame, substep, self.sim_dt)
 
     def _sync_gripper_proxies(self):
         wp.launch(_sync_gripper_proxies_kernel, dim=2,
@@ -647,7 +652,7 @@ class Example:
         parser.set_defaults(output_path=str(Path("outputs") / "soft_pickplace_franka.usd"), num_frames=720)
         parser.add_argument("--substeps", type=int, default=16, help="Simulation substeps per rendered frame.")
         parser.add_argument("--vbd-iterations", type=int, default=12, help="VBD iterations for the objects.")
-        parser.add_argument("--grip-threshold", type=float, default=8.0, help="Gripper stop force per finger [N].")
+        parser.add_argument("--grip-threshold", type=float, default=15.0, help="Gripper squeeze force per finger [N].")
         return parser
 
 

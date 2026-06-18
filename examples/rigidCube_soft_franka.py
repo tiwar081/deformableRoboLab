@@ -58,6 +58,8 @@ except ModuleNotFoundError as exc:
         "This example requires the Newton Python package. Run it from an environment where `import newton` works."
     ) from exc
 
+from examples.grip_force import GraspTarget, GripForceClamp, RigidGripWidth
+
 
 def _quat_rotate_xyzw(q: np.ndarray, v: np.ndarray) -> np.ndarray:
     q_xyz = q[:3]
@@ -485,6 +487,16 @@ class Example:
         self._grip_latched = wp.zeros(1, dtype=wp.int32, device=device)
         self._obj_body_q_prev = wp.zeros(self.object_model.body_count, dtype=wp.transform, device=device)
 
+        # Force-limited rigid grasp: contact-driven width + explicit 0->15 N clamp.
+        self._grasp_window = (3.2, 8.0)  # close_start .. release_start
+        self.grip_width = RigidGripWidth(
+            self._grip_target, [self._grasp_window], self._grip_reaction,
+            close_rate=self.grip_close_rate, gripper_open=self.gripper_open)
+        self.grip_clamp = GripForceClamp(
+            self.object_model, self.object_state_0, self.left_proxy, self.right_proxy,
+            targets=[GraspTarget(self.cube_body, self._grasp_window)],
+            reaction=self._grip_reaction, max_force=self.grip_force_threshold, mu=0.8)
+
         self._sync_gripper_proxies()
 
         viz_builder = newton.ModelBuilder()
@@ -791,22 +803,8 @@ class Example:
         )
 
     def _update_grip_target(self, substep: int) -> None:
-        # Force-triggered latch from the previous substep's reaction.
-        wp.launch(
-            _update_grip_target_kernel,
-            dim=1,
-            inputs=[
-                self._t_frame,
-                substep,
-                self.sim_dt,
-                self._grip_reaction,
-                self.grip_force_threshold,
-                self.grip_close_rate,
-                self.gripper_open,
-            ],
-            outputs=[self._grip_target, self._grip_latched],
-            device=self._grip_target.device,
-        )
+        # Contact-driven width control (stop at first contact, ease out to relax penalty).
+        self.grip_width.update(self._t_frame, substep, self.sim_dt)
 
     def _sync_gripper_proxies(self) -> None:
         wp.launch(
@@ -902,6 +900,8 @@ class Example:
                 self._snapshot_object_body_q()
             self.object_state_0.clear_forces()
             self.object_model.collide(self.object_state_0, self.object_contacts)
+            if self.force_control:
+                self.grip_clamp.apply(self.object_state_0, self._t_frame, substep, self.sim_dt)
             self.object_solver.step(
                 self.object_state_0,
                 self.object_state_1,
@@ -913,6 +913,7 @@ class Example:
 
             # Recover the object->proxy reaction for the next substep's feedback.
             if self.force_control:
+                self.grip_clamp.update_prev(self.object_state_0)
                 self._update_grip_reaction()
 
     def step(self) -> None:

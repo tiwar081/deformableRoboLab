@@ -57,6 +57,8 @@ except ModuleNotFoundError as exc:
         "This example requires the Newton Python package. Run it from an environment where `import newton` works."
     ) from exc
 
+from examples.grip_force import GraspTarget, GripForceClamp, GripReaction, RigidGripWidth
+
 
 def _quat_rotate_xyzw(q: np.ndarray, v: np.ndarray) -> np.ndarray:
     q_xyz = q[:3]
@@ -98,6 +100,7 @@ def _set_robot_targets_kernel(
     drop_q: wp.array(dtype=float),
     gripper_open: float,
     gripper_closed: float,
+    grip_target: wp.array(dtype=float),
     joint_target_q: wp.array(dtype=float),
 ):
     # Device-side mirror of the keyframe schedule so the substep loop is free
@@ -131,18 +134,9 @@ def _set_robot_targets_kernel(
         q = (1.0 - alpha) * drop_q[i] + alpha * home_q[i]
 
     if i >= 7:
-        if t < close_start:
-            q = gripper_open
-        elif t < hold_start:
-            alpha = _wp_smoothstep((t - close_start) / (hold_start - close_start))
-            q = (1.0 - alpha) * gripper_open + alpha * gripper_closed
-        elif t < release_start:
-            q = gripper_closed
-        elif t < retreat_start:
-            alpha = _wp_smoothstep((t - release_start) / (retreat_start - release_start))
-            q = (1.0 - alpha) * gripper_closed + alpha * gripper_open
-        else:
-            q = gripper_open
+        # Finger width is governed by the contact-driven RigidGripWidth controller; the
+        # grasp force comes from the explicit GripForceClamp (see grip_force.py).
+        q = grip_target[0]
 
     joint_target_q[i] = q
 
@@ -371,6 +365,27 @@ class Example:
         self._drop_q_wp = wp.array(self.drop_q, dtype=wp.float32, device=ik_model.device)
         self._finger_bodies_wp = wp.array(self.robot_finger_bodies, dtype=wp.int32, device=ik_model.device)
         self._proxy_bodies_wp = wp.array(self.gripper_proxy_bodies, dtype=wp.int32, device=ik_model.device)
+
+        # Force-limited rigid grasp (the sheet is grasped by its rigid handle): a
+        # contact-driven width controller closes the pads to first contact, and the
+        # explicit GripForceClamp ramps a 0->15 N grip and holds the sheet to the pads.
+        device = ik_model.device
+        self.left_proxy, self.right_proxy = (int(b) for b in self.gripper_proxy_bodies)
+        self.grip_force_threshold = float(getattr(args, "grip_threshold", 15.0))
+        self.grip_close_rate = 0.02
+        self._grip_target = wp.array([self.gripper_open], dtype=wp.float32, device=device)
+        self._grasp_window = (3.2, 8.0)  # close_start .. release_start
+        self.grip_reaction = GripReaction(
+            self.object_solver, self.object_contacts, self.object_state_0,
+            self.left_proxy, self.right_proxy)
+        self.grip_width = RigidGripWidth(
+            self._grip_target, [self._grasp_window], self.grip_reaction.reaction,
+            close_rate=self.grip_close_rate, gripper_open=self.gripper_open)
+        self.grip_clamp = GripForceClamp(
+            self.object_model, self.object_state_0, self.left_proxy, self.right_proxy,
+            targets=[GraspTarget(self.sheet_body, self._grasp_window)],
+            reaction=self.grip_reaction.reaction, max_force=self.grip_force_threshold, mu=0.8)
+
         self.graph = None
         self._frames_simulated = 0
         # Capture needs an even substep count so the state buffer swap returns
@@ -681,10 +696,14 @@ class Example:
                 self._drop_q_wp,
                 self.gripper_open,
                 self.gripper_closed,
+                self._grip_target,
             ],
             outputs=[self.robot_control.joint_target_q],
             device=self.robot_control.joint_target_q.device,
         )
+
+    def _update_grip_target(self, substep: int) -> None:
+        self.grip_width.update(self._t_frame, substep, self.sim_dt)
 
     def _sync_gripper_proxies(self) -> None:
         wp.launch(
@@ -719,6 +738,7 @@ class Example:
 
     def simulate(self) -> None:
         for substep in range(self.sim_substeps):
+            self._update_grip_target(substep)
             self._set_robot_targets(substep)
 
             self.robot_state_0.clear_forces()
@@ -735,8 +755,10 @@ class Example:
 
             self._sync_gripper_proxies()
 
+            self.grip_reaction.snapshot(self.object_state_0)
             self.object_state_0.clear_forces()
             self.object_model.collide(self.object_state_0, self.object_contacts)
+            self.grip_clamp.apply(self.object_state_0, self._t_frame, substep, self.sim_dt)
             self.object_solver.step(
                 self.object_state_0,
                 self.object_state_1,
@@ -745,6 +767,8 @@ class Example:
                 self.sim_dt,
             )
             self.object_state_0, self.object_state_1 = self.object_state_1, self.object_state_0
+            self.grip_clamp.update_prev(self.object_state_0)
+            self.grip_reaction.update(self.object_state_0, self.sim_dt)
 
     def step(self) -> None:
         self._t_frame.assign(np.array([self.sim_time], dtype=np.float32))

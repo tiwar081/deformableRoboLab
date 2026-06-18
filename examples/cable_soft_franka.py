@@ -57,6 +57,8 @@ except ModuleNotFoundError as exc:
         "This example requires the Newton Python package. Run it from an environment where `import newton` works."
     ) from exc
 
+from examples.cable_coupling import TwoWayProxyCoupling
+
 
 def _quat_rotate_xyzw(q: np.ndarray, v: np.ndarray) -> np.ndarray:
     q_xyz = q[:3]
@@ -141,18 +143,6 @@ def _set_robot_targets_kernel(
     joint_target_q[i] = q
 
 
-@wp.kernel
-def _sync_gripper_proxies_kernel(
-    robot_body_q: wp.array(dtype=wp.transform),
-    finger_bodies: wp.array(dtype=wp.int32),
-    proxy_bodies: wp.array(dtype=wp.int32),
-    object_body_q_0: wp.array(dtype=wp.transform),
-    object_body_q_1: wp.array(dtype=wp.transform),
-):
-    i = wp.tid()
-    tf = robot_body_q[finger_bodies[i]]
-    object_body_q_0[proxy_bodies[i]] = tf
-    object_body_q_1[proxy_bodies[i]] = tf
 
 
 class Example:
@@ -175,6 +165,33 @@ class Example:
         self.cable_contact_margin = 0.001
         self.gripper_proxy_margin = 0.001
         self.gripper_proxy_gap = self.cable_radius
+        # ---- Force-limited cable grip (single on/off switch) ----------------------
+        # ON  : DYNAMIC finite-mass proxies (NVIDIA two-way recipe) + per-pad reaction
+        #       fed to the fingers + the gripper actuator EFFORT capped at
+        #       `cable_grip_force_limit` N. The effort cap is what makes the grip both
+        #       STABLE (the gripper backs off, so the over-penetration / ALM multiplier
+        #       resolves instead of ramping) and FORCE-LIMITED (the cable feels ~the cap).
+        # OFF : clean revert to Milestone-1 KINEMATIC proxies + net-to-EE feedback
+        #       (arm feels the cable; grip force uncontrolled). Nothing else changes.
+        # The limit VALUE is tunable independently of the switch.
+        # Default OFF for now: the limit-ON path (dynamic proxy) is a work-in-progress
+        # that currently diverges at first contact (see analysis); OFF = the verified
+        # Milestone-1 kinematic two-way coupling. Flip to True once the dynamic-proxy
+        # contact instability is resolved (softened proxy<->cable / filtered proxy<->table).
+        self.force_limited_grip = False         # WIP (see analysis); OFF = verified M1 kinematic
+        self.cable_grip_force_limit = 15.0      # N per finger (actuator effort cap); tunable
+        self.proxy_dynamic = self.force_limited_grip
+        # Effective mass stands in for the reflected articulated-chain inertia ("scaled
+        # for coupling stability"); heavy -> small inv_mass -> the one-step-lag undo
+        # cancels the contact velocity cleanly. Only used when proxy_dynamic.
+        self.proxy_effective_mass = 10.0        # kg per proxy
+        self.proxy_effective_inertia = 0.1      # kg·m², isotropic
+        # Fallback step 2: soften the proxy<->cable contact so the dynamic-proxy vs light
+        # (~8.5 g) cable-segment pair has eta = ke_pair*dt^2/m_reduced < 1 (else the
+        # alpha=0 over-correction ejects the segment during the pinch/hold). ke_pair is
+        # the MEAN of the two shapes' ke, so both the proxy and the cable shape ke are
+        # lowered to this value in force-limited mode (M1 keeps the stiff defaults).
+        self.cable_grip_contact_ke = 5.0e3
         # Soft body: the FEM block from Newton's rigid_soft_contact example
         # (the only upstream two-way VBD rigid+soft scene), scaled to the
         # table. Material, contact values, and particle sizing follow that
@@ -276,12 +293,15 @@ class Example:
             self.robot_model,
             solver="newton",
             integrator="implicitfast",
-            iterations=15,
+            iterations=20,  # raised for the two-way coupling (article uses 20)
             ls_iterations=100,
+            # NB: article uses ls_parallel=True, but it is DEPRECATED/being removed in this
+            # Newton build. Stiff impratio (article cable/cube configs) only in force-limited
+            # mode; OFF reverts to the M1 value so the toggle is a clean revert.
             nconmax=robot_contact_max,
             njmax=robot_contact_max * 2,
             cone="elliptic",
-            impratio=50.0,
+            impratio=(1000.0 if self.force_limited_grip else 50.0),
             use_mujoco_contacts=False,
         )
 
@@ -314,7 +334,7 @@ class Example:
         self.object_solver = newton.solvers.SolverVBD(
             self.object_model,
             iterations=args.vbd_iterations,
-            rigid_body_contact_buffer_size=512,
+            rigid_body_contact_buffer_size=2048,  # headroom so wrench-harvest buffers don't grow mid-capture
             rigid_body_particle_contact_buffer_size=512,
             rigid_contact_history=True,
             # Keep hard contacts (penalty-only friction loses the lifted cable),
@@ -342,6 +362,12 @@ class Example:
         self._pickup_q_wp = wp.array(self.pickup_q, dtype=wp.float32, device=ik_model.device)
         self._finger_bodies_wp = wp.array(self.robot_finger_bodies, dtype=wp.int32, device=ik_model.device)
         self._proxy_bodies_wp = wp.array(self.gripper_proxy_bodies, dtype=wp.int32, device=ik_model.device)
+        # Two-way dynamic-proxy bridge (replaces the one-way kinematic pose mirror).
+        self.coupling = TwoWayProxyCoupling(
+            self.robot_model, self.object_model, self.object_solver, self.object_contacts,
+            self.object_state_0, self.robot_finger_bodies, self.gripper_proxy_bodies,
+            self.ee_body, self.sim_dt, proxy_dynamic=self.proxy_dynamic,
+            feedback_to_fingers=self.force_limited_grip)
         self.graph = None
         self._frames_simulated = 0
         # Capture needs an even substep count so the state buffer swap returns
@@ -398,11 +424,14 @@ class Example:
 
         builder.joint_q[:9] = self.home_q.tolist()
         builder.joint_target_q[:9] = self.home_q.tolist()
+        # Finger (dof >=7) effort cap: in force-limited mode it is the grip-force limit
+        # (the gripper cannot squeeze the cable harder than this); otherwise the default.
+        finger_effort = self.cable_grip_force_limit if self.force_limited_grip else 20.0
         for dof in range(9):
             builder.joint_target_ke[dof] = 420.0 if dof < 7 else 300.0
             builder.joint_target_kd[dof] = 42.0 if dof < 7 else 30.0
             builder.joint_target_mode[dof] = int(JointTargetMode.POSITION)
-            builder.joint_effort_limit[dof] = 87.0 if dof < 7 else 20.0
+            builder.joint_effort_limit[dof] = 87.0 if dof < 7 else finger_effort
             builder.joint_armature[dof] = 0.1
 
         gravcomp_attr = builder.custom_attributes["mujoco:jnt_actgravcomp"]
@@ -444,7 +473,7 @@ class Example:
         builder.default_shape_cfg.mu = 0.8
 
         table_cfg = newton.ModelBuilder.ShapeConfig(density=0.0, ke=5.0e4, kd=1.0e2, mu=0.8)
-        builder.add_shape_box(
+        self._obj_table_shape = builder.add_shape_box(
             body=-1,
             xform=wp.transform(self.table_pos, wp.quat_identity()),
             hx=float(self.table_half[0]),
@@ -493,7 +522,7 @@ class Example:
             has_particle_collision=False,
             margin=self.gripper_proxy_margin,
             gap=self.gripper_proxy_gap,
-            ke=5.0e4,
+            ke=(self.cable_grip_contact_ke if self.force_limited_grip else 5.0e4),
             kd=1.0e2,
             mu=1.0,
         )
@@ -506,7 +535,14 @@ class Example:
         ):
             body = builder.add_body(
                 xform=wp.transform(wp.vec3(0.0, 0.0, 0.0), wp.quat_identity()),
-                is_kinematic=True,
+                is_kinematic=not self.proxy_dynamic,
+                mass=(self.proxy_effective_mass if self.proxy_dynamic else 0.0),
+                inertia=(wp.mat33(self.proxy_effective_inertia, 0.0, 0.0,
+                                  0.0, self.proxy_effective_inertia, 0.0,
+                                  0.0, 0.0, self.proxy_effective_inertia)
+                         if self.proxy_dynamic else None),
+                com=wp.vec3(0.0, 0.0, 0.0),
+                lock_inertia=self.proxy_dynamic,  # density-0 proxy shapes must not overwrite the effective mass
                 label=label,
             )
             self.gripper_proxy_bodies.append(body)
@@ -519,6 +555,15 @@ class Example:
                 label_prefix=label,
             )
 
+        # Fallback step 1 (force-limited/dynamic mode only): filter proxy<->table
+        # collision. A DYNAMIC proxy re-pinned each substep against the STATIC table
+        # contact resolves explosively (alpha=0 over-correction); the object-model table
+        # contact on the proxy is redundant anyway (the robot-side `robot_contact_table`
+        # already stops the real fingers). Gated so M1 (kinematic) stays byte-identical.
+        if self.force_limited_grip:
+            for proxy_shape in self.gripper_proxy_shapes:
+                builder.add_shape_collision_filter_pair(self._obj_table_shape, proxy_shape)
+
         positions = [wp.vec3(*p) for p in self.cable_node_positions]
 
         self.cable_body_start = builder.body_count
@@ -528,7 +573,7 @@ class Example:
             # motion converted into multi-m/s ejection kicks.
             density=1200.0,
             margin=self.cable_contact_margin,
-            ke=2.0e4,
+            ke=(self.cable_grip_contact_ke if self.force_limited_grip else 2.0e4),
             kd=20.0,
             mu=self.cable_friction,
         )
@@ -669,13 +714,9 @@ class Example:
         )
 
     def _sync_gripper_proxies(self) -> None:
-        wp.launch(
-            _sync_gripper_proxies_kernel,
-            dim=2,
-            inputs=[self.robot_state_0.body_q, self._finger_bodies_wp, self._proxy_bodies_wp],
-            outputs=[self.object_state_0.body_q, self.object_state_1.body_q],
-            device=self.object_state_0.body_q.device,
-        )
+        # Two-way: copy finger pose+velocity into the dynamic proxy and pre-subtract the
+        # gravity + lagged-coupling velocity deltas (see TwoWayProxyCoupling).
+        self.coupling.sync_proxies(self.robot_state_0, self.object_state_0, self.object_state_1)
 
     def _sync_viz_state(self) -> None:
         body_q = self.viz_state.body_q.numpy()
@@ -705,6 +746,9 @@ class Example:
 
             self.robot_state_0.clear_forces()
             self.robot_state_1.clear_forces()
+            # Two-way: apply the previous step's harvested cable->proxy wrench onto the
+            # robot finger (one-step lag) before stepping the arm.
+            self.coupling.apply_to_robot(self.robot_state_0)
             self.robot_collision_pipeline.collide(self.robot_state_0, self.robot_contacts)
             self.robot_solver.step(
                 self.robot_state_0,
@@ -716,6 +760,7 @@ class Example:
             self.robot_state_0, self.robot_state_1 = self.robot_state_1, self.robot_state_0
 
             self._sync_gripper_proxies()
+            self.coupling.snapshot(self.object_state_0)
 
             self.object_state_0.clear_forces()
             self.object_model.collide(self.object_state_0, self.object_contacts)
@@ -727,6 +772,9 @@ class Example:
                 self.sim_dt,
             )
             self.object_state_0, self.object_state_1 = self.object_state_1, self.object_state_0
+
+            # Harvest the cable->proxy contact wrench for next step's robot feedback.
+            self.coupling.harvest(self.object_state_0)
 
     def step(self) -> None:
         self._t_frame.assign(np.array([self.sim_time], dtype=np.float32))
