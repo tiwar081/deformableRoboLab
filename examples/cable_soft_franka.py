@@ -165,33 +165,25 @@ class Example:
         self.cable_contact_margin = 0.001
         self.gripper_proxy_margin = 0.001
         self.gripper_proxy_gap = self.cable_radius
-        # ---- Force-limited cable grip (single on/off switch) ----------------------
-        # ON  : DYNAMIC finite-mass proxies (NVIDIA two-way recipe) + per-pad reaction
-        #       fed to the fingers + the gripper actuator EFFORT capped at
-        #       `cable_grip_force_limit` N. The effort cap is what makes the grip both
-        #       STABLE (the gripper backs off, so the over-penetration / ALM multiplier
-        #       resolves instead of ramping) and FORCE-LIMITED (the cable feels ~the cap).
-        # OFF : clean revert to Milestone-1 KINEMATIC proxies + net-to-EE feedback
-        #       (arm feels the cable; grip force uncontrolled). Nothing else changes.
-        # The limit VALUE is tunable independently of the switch.
-        # Default OFF for now: the limit-ON path (dynamic proxy) is a work-in-progress
-        # that currently diverges at first contact (see analysis); OFF = the verified
-        # Milestone-1 kinematic two-way coupling. Flip to True once the dynamic-proxy
-        # contact instability is resolved (softened proxy<->cable / filtered proxy<->table).
-        self.force_limited_grip = False         # WIP (see analysis); OFF = verified M1 kinematic
-        self.cable_grip_force_limit = 15.0      # N per finger (actuator effort cap); tunable
-        self.proxy_dynamic = self.force_limited_grip
-        # Effective mass stands in for the reflected articulated-chain inertia ("scaled
-        # for coupling stability"); heavy -> small inv_mass -> the one-step-lag undo
-        # cancels the contact velocity cleanly. Only used when proxy_dynamic.
+        # ---- Two-way dynamic-proxy cable grip (NVIDIA recipe; single faithful path) ----
+        # The finger proxies are DYNAMIC finite-mass bodies in the VBD model (cable_coupling.py):
+        # the cable's contact reaction is harvested and the NET (external) load is fed back to the
+        # arm/EE one step later, so the arm genuinely feels the cable. The grip force emerges from
+        # the position-controlled squeeze against bounded contact — finite and physical (~30-90 N),
+        # no force cap. Effective mass stands in for the reflected articulated-chain inertia
+        # ("scaled for coupling stability"): heavy -> small inv_mass -> the one-step-lag undo
+        # cancels the contact velocity cleanly.
         self.proxy_effective_mass = 10.0        # kg per proxy
         self.proxy_effective_inertia = 0.1      # kg·m², isotropic
-        # Fallback step 2: soften the proxy<->cable contact so the dynamic-proxy vs light
-        # (~8.5 g) cable-segment pair has eta = ke_pair*dt^2/m_reduced < 1 (else the
-        # alpha=0 over-correction ejects the segment during the pinch/hold). ke_pair is
-        # the MEAN of the two shapes' ke, so both the proxy and the cable shape ke are
-        # lowered to this value in force-limited mode (M1 keeps the stiff defaults).
-        self.cable_grip_contact_ke = 5.0e3
+        # Re-derived contact damping for Newton 6dfe7303 (absolute VBD damping [N·s/m]). The old
+        # stiffness-relative values (cable 20·ke=4e5, proxy 1e2·ke=5e6) are ~1e4x critical and,
+        # once the alpha=0+history force runaway was removed, dominated the grip with a spurious
+        # velocity-proportional force (~4e4 N during the lift). ~1e2 N·s/m is a few× the
+        # proxy<->cable critical damping (2·sqrt(ke_pair·m_seg) ≈ 33) — bounded and stable.
+        self.contact_kd = 1.0e2
+        # Franka finger actuator effort [N] — the physical squeeze limit and a grip tuning knob
+        # (NOT a post-hoc force cap). The grip equilibrates at actuator force vs cable reaction.
+        self.finger_effort = 20.0
         # Soft body: the FEM block from Newton's rigid_soft_contact example
         # (the only upstream two-way VBD rigid+soft scene), scaled to the
         # table. Material, contact values, and particle sizing follow that
@@ -293,15 +285,13 @@ class Example:
             self.robot_model,
             solver="newton",
             integrator="implicitfast",
-            iterations=20,  # raised for the two-way coupling (article uses 20)
+            iterations=20,  # NVIDIA cable/cube config
             ls_iterations=100,
-            # NB: article uses ls_parallel=True, but it is DEPRECATED/being removed in this
-            # Newton build. Stiff impratio (article cable/cube configs) only in force-limited
-            # mode; OFF reverts to the M1 value so the toggle is a clean revert.
+            # NB: article uses ls_parallel=True, but it is DEPRECATED/being removed in this Newton build.
             nconmax=robot_contact_max,
             njmax=robot_contact_max * 2,
             cone="elliptic",
-            impratio=(1000.0 if self.force_limited_grip else 50.0),
+            impratio=1000.0,  # NVIDIA cable/cube config: stiff contacts for the two-way coupling
             use_mujoco_contacts=False,
         )
 
@@ -336,15 +326,12 @@ class Example:
             iterations=args.vbd_iterations,
             rigid_body_contact_buffer_size=2048,  # headroom so wrench-harvest buffers don't grow mid-capture
             rigid_body_particle_contact_buffer_size=512,
-            rigid_contact_history=True,
-            # Keep hard contacts (penalty-only friction loses the lifted cable),
-            # but disable sticky contact-point replay and resolve penetration
-            # fully each step (alpha=0, as in Newton's cable_twist, which also
-            # drives kinematic bodies in persistent cable contact): penetration
-            # accumulating against the moving pads spikes the contact force and
-            # its friction bound, kicking the pinched cable out.
+            # NVIDIA's plain SolverVBD contact config: default hard contacts (alpha=0.95, no
+            # cross-step history). The previous alpha=0 + rigid_contact_history accumulated the
+            # ALM multiplier without bound against the position-held pads (grip force 1e4-1e6 N)
+            # and diverged the dynamic proxy; the bounded within-step ALM force holds the cable via
+            # honest actuator-driven squeeze friction instead. Sticky point-replay stays off.
             rigid_contact_stick_motion_eps=0.0,
-            rigid_avbd_contact_alpha=0.0,
             particle_self_contact_radius=self.particle_self_contact_radius,
             particle_self_contact_margin=self.particle_self_contact_margin,
             particle_enable_self_contact=False,
@@ -362,17 +349,20 @@ class Example:
         self._pickup_q_wp = wp.array(self.pickup_q, dtype=wp.float32, device=ik_model.device)
         self._finger_bodies_wp = wp.array(self.robot_finger_bodies, dtype=wp.int32, device=ik_model.device)
         self._proxy_bodies_wp = wp.array(self.gripper_proxy_bodies, dtype=wp.int32, device=ik_model.device)
-        # Two-way dynamic-proxy bridge (replaces the one-way kinematic pose mirror).
+        # Two-way dynamic-proxy bridge (NVIDIA recipe; net cable load fed to the arm/EE).
         self.coupling = TwoWayProxyCoupling(
             self.robot_model, self.object_model, self.object_solver, self.object_contacts,
             self.object_state_0, self.robot_finger_bodies, self.gripper_proxy_bodies,
-            self.ee_body, self.sim_dt, proxy_dynamic=self.proxy_dynamic,
-            feedback_to_fingers=self.force_limited_grip)
+            self.ee_body, self.sim_dt)
         self.graph = None
         self._frames_simulated = 0
         # Capture needs an even substep count so the state buffer swap returns
         # to its starting binding at the end of each captured frame.
-        self._capture_enabled = wp.get_device(str(ik_model.device)).is_cuda and self.sim_substeps % 2 == 0
+        self._capture_enabled = (
+            wp.get_device(str(ik_model.device)).is_cuda
+            and self.sim_substeps % 2 == 0
+            and not os.environ.get("CABLE_NO_CAPTURE")  # diagnostic: run the uncaptured substep loop
+        )
 
         self._sync_gripper_proxies()
 
@@ -424,9 +414,9 @@ class Example:
 
         builder.joint_q[:9] = self.home_q.tolist()
         builder.joint_target_q[:9] = self.home_q.tolist()
-        # Finger (dof >=7) effort cap: in force-limited mode it is the grip-force limit
-        # (the gripper cannot squeeze the cable harder than this); otherwise the default.
-        finger_effort = self.cable_grip_force_limit if self.force_limited_grip else 20.0
+        # Finger (dof >=7) actuator effort [N] — the physical squeeze limit (grip tuning knob),
+        # not a post-hoc force cap. The grip equilibrates at actuator force vs cable reaction.
+        finger_effort = self.finger_effort
         for dof in range(9):
             builder.joint_target_ke[dof] = 420.0 if dof < 7 else 300.0
             builder.joint_target_kd[dof] = 42.0 if dof < 7 else 30.0
@@ -522,7 +512,7 @@ class Example:
             has_particle_collision=False,
             margin=self.gripper_proxy_margin,
             gap=self.gripper_proxy_gap,
-            ke=(self.cable_grip_contact_ke if self.force_limited_grip else 5.0e4),
+            ke=5.0e4,
             kd=1.0e2,
             mu=1.0,
         )
@@ -535,14 +525,13 @@ class Example:
         ):
             body = builder.add_body(
                 xform=wp.transform(wp.vec3(0.0, 0.0, 0.0), wp.quat_identity()),
-                is_kinematic=not self.proxy_dynamic,
-                mass=(self.proxy_effective_mass if self.proxy_dynamic else 0.0),
-                inertia=(wp.mat33(self.proxy_effective_inertia, 0.0, 0.0,
-                                  0.0, self.proxy_effective_inertia, 0.0,
-                                  0.0, 0.0, self.proxy_effective_inertia)
-                         if self.proxy_dynamic else None),
+                is_kinematic=False,
+                mass=self.proxy_effective_mass,
+                inertia=wp.mat33(self.proxy_effective_inertia, 0.0, 0.0,
+                                 0.0, self.proxy_effective_inertia, 0.0,
+                                 0.0, 0.0, self.proxy_effective_inertia),
                 com=wp.vec3(0.0, 0.0, 0.0),
-                lock_inertia=self.proxy_dynamic,  # density-0 proxy shapes must not overwrite the effective mass
+                lock_inertia=True,  # density-0 proxy shapes must not overwrite the effective mass
                 label=label,
             )
             self.gripper_proxy_bodies.append(body)
@@ -555,14 +544,12 @@ class Example:
                 label_prefix=label,
             )
 
-        # Fallback step 1 (force-limited/dynamic mode only): filter proxy<->table
-        # collision. A DYNAMIC proxy re-pinned each substep against the STATIC table
-        # contact resolves explosively (alpha=0 over-correction); the object-model table
-        # contact on the proxy is redundant anyway (the robot-side `robot_contact_table`
-        # already stops the real fingers). Gated so M1 (kinematic) stays byte-identical.
-        if self.force_limited_grip:
-            for proxy_shape in self.gripper_proxy_shapes:
-                builder.add_shape_collision_filter_pair(self._obj_table_shape, proxy_shape)
+        # Filter proxy<->table collision. A DYNAMIC proxy re-pinned each substep against the
+        # STATIC table resolves explosively (the table can't move to resolve penetration); the
+        # object-model table contact on the proxy is redundant anyway — the robot-side
+        # `robot_contact_table` already stops the real fingers.
+        for proxy_shape in self.gripper_proxy_shapes:
+            builder.add_shape_collision_filter_pair(self._obj_table_shape, proxy_shape)
 
         positions = [wp.vec3(*p) for p in self.cable_node_positions]
 
@@ -573,7 +560,7 @@ class Example:
             # motion converted into multi-m/s ejection kicks.
             density=1200.0,
             margin=self.cable_contact_margin,
-            ke=(self.cable_grip_contact_ke if self.force_limited_grip else 2.0e4),
+            ke=2.0e4,
             kd=20.0,
             mu=self.cable_friction,
         )
@@ -587,6 +574,7 @@ class Example:
             bend_damping=0.3,  # Newton 1.4 absolute VBD damping: 0.02·bend_stiffness(1.5e1)
             label="vbd_cable",
             wrap_in_articulation=True,
+            body_frame_origin="start",  # preserve legacy start-node frame (explicit; silences deprecation)
         )
         self.cable_body_count = len(self.cable_bodies)
 
@@ -634,7 +622,7 @@ class Example:
         for shape in self.gripper_proxy_shapes:
             mu[shape] = 1.0
             ke[shape] = 5.0e4
-            kd[shape] = 5.0e6  # Newton 1.4 absolute VBD damping: 1e2·ke(5e4)
+            kd[shape] = self.contact_kd  # re-derived physical damping (was 5e6, ~1e4x critical)
         self.object_model.shape_material_mu.assign(mu)
         self.object_model.shape_material_ke.assign(ke)
         self.object_model.shape_material_kd.assign(kd)
@@ -650,7 +638,7 @@ class Example:
                 # authored cable_cfg values; the blanket fill above would raise
                 # ke to 5e4 and stiffen the averaged cable-block contact pair
                 ke[shape] = 2.0e4
-                kd[shape] = 4.0e5  # Newton 1.4 absolute VBD damping: 20·ke(2e4)
+                kd[shape] = self.contact_kd  # re-derived physical damping (was 4e5, ~1e4x critical)
         self.object_model.shape_material_mu.assign(mu)
         self.object_model.shape_material_ke.assign(ke)
         self.object_model.shape_material_kd.assign(kd)
@@ -799,6 +787,21 @@ class Example:
 
         self._frames_simulated += 1
         self.sim_time += self.frame_dt
+
+        if os.environ.get("CABLE_DIAG") and self._frames_simulated % 20 == 0:
+            self._log_diag()
+
+    def _log_diag(self) -> None:
+        # Optional per-frame grip/lift health probe (env CABLE_DIAG=1): per-pad cable reaction
+        # [N] (the physical grip force) and the cable's vertical extent.
+        left_f, right_f = self.coupling.raw_force_norms()
+        bq = self.object_state_0.body_q.numpy()
+        cz = bq[self.cable_body_start : self.cable_body_start + self.cable_body_count, 2]
+        print(
+            f"[t={self.sim_time:5.2f}] grip=({left_f:6.1f},{right_f:6.1f})N "
+            f"cableZ=[{cz.min():.3f},{cz.max():.3f}] finite={bool(np.all(np.isfinite(bq)))}",
+            flush=True,
+        )
 
     def render(self) -> None:
         self._sync_viz_state()

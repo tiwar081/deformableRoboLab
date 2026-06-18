@@ -22,8 +22,10 @@ Priorities, in order: **1) physics fidelity → 2) render quality → 3) speed.*
 Two-way contact only happens inside one solver; the MuJoCo↔VBD bridge is one-way.
 
 - **Any deformable/soft object present** → split `SolverMuJoCo` (robot) + `SolverVBD` (all
-  objects) + kinematic gripper-proxy bridge. VBD is the only Newton solver hosting
-  rigid+cable+soft+mutual two-way contact in one world.
+  objects) + **dynamic finite-mass gripper-proxy bridge** (NVIDIA recipe: proxies mirror the
+  fingers, the cable's contact reaction is harvested and the net external load fed to the arm/EE
+  one step later). VBD is the only Newton solver hosting rigid+cable+soft+mutual two-way contact
+  in one world.
 - **Rigid-only** → a single `SolverMuJoCo` for robot + objects (true two-way grasp, mature
   mesh contact). Preferred for new rigid-only demos.
 - `pickplace_ycb_franka` is rigid-only but kept on VBD on purpose (proof VBD hosts rigid meshes).
@@ -39,21 +41,28 @@ Details: [docs/solver-architecture.md](docs/solver-architecture.md).
   and contact response must come from modeled contacts, constraints, gravity, solver dynamics.
 - If a demo can't yet do a task physically, **leave the failure visible** and improve the
   model/contacts/solver/controller — don't hide it.
-- The kinematic gripper proxies are only a contact bridge (mirror finger poses); they must not
-  directly move, attach, or constrain objects.
+- The gripper proxies are only a contact bridge (dynamic finite-mass bodies slaved to the finger
+  pose via the momentum-consistent undo); they must not directly move, attach, or constrain
+  objects. Object reaction goes back to the **arm/EE** (net load), never into the gripper DOF.
 - **No velocity clamps on objects** (robot/table excepted).
 - **Never read or depend on `_external/` at runtime.** Import or copy what you need; assume
   `_external/` (newton, RoboLab) can be deleted and the codebase must still run.
 
 ## Newton version (environment gotcha)
 
-`newton` is editable-installed from `_external/newton`, **drifted off the README-pinned commit
-`2a1d4215`** to `2c242002`. Newton `c1af91d2` "Use absolute VBD damping" reinterprets VBD
-damping from stiffness-relative (`D = kd·ke`) to **absolute** units and reformulates tet
-damping into an objective `C=FᵀF` strain-rate metric that no longer damps rigid rotation.
-This is why the examples carry inflated object-specific damping and 4×-softened soft blocks —
-**if `_external/newton` is re-pinned/updated, re-derive the damping values.** Solver-wide
-damping (`soft_contact_kd`, blanket `shape_material_kd`) is intentionally left native (`1e-4`/`1e2`).
+`newton` is editable-installed from `_external/newton`, currently a fresh clone at **`6dfe7303`**
+(Newton `v0.2.3-665`, README pin was `2a1d4215`). It keeps the **absolute VBD damping** semantics
+(`kd` is absolute [N·s/m], not stiffness-relative `D=kd·ke`) and the objective `C=FᵀF` tet-damping
+metric (rigid rotations no longer damped). It also adds fix **#3125** (rigid contact no longer
+injects energy for yawed finite-radius/small-radius cable contacts).
+
+**Damping must be re-derived per Newton bump — and the carried-over CONTACT `kd` were wrong.**
+`add_rod`-internal damping (`stretch_damping`, `bend_damping`) and tet `k_damp` are tuned for this
+build. But the per-shape **contact** `kd` values (cable `20·ke=4e5`, proxy `1e2·ke=5e6`) were
+~1e4× the contact critical damping; once the alpha=0 force-runaway was removed they dominated the
+grip with a spurious velocity-proportional force (~4e4 N). The cable example now uses a re-derived
+physical contact `kd≈1e2` (`Example.contact_kd`). **If you bump Newton again, re-check both the
+internal damping AND the contact `kd`.**
 
 ## Recurring mistakes to avoid (update as they recur)
 
@@ -62,9 +71,17 @@ damping (`soft_contact_kd`, blanket `shape_material_kd`) is intentionally left n
   object sim state. This is the #1 recurring soft-body bug.
 - **CUDA-graph capture** needs an **even substep count** and **one uncaptured warm-up frame**
   (lazy allocations raise inside capture). It falls back to the uncaptured loop on CPU/failure.
+- **Never feed the object reaction into the gripper DOF / per-finger** — confirmed empirically: the
+  pad reaction is outward, so routing it to each finger pushes the pads open and the grasp is lost
+  (grip force → 0). Feed the **net** reaction to the arm/EE (the internal squeeze cancels) and keep
+  the fingers position-controlled.
+- **Unphysical grip force has MORE than one cause.** When the harvested grip force is absurd, check
+  *both* the VBD contact mode (`alpha=0`+`rigid_contact_history` accumulate ALM `λ` → 1e4–1e6 N) AND
+  the contact damping `kd` (overdamped absolute `kd` → a velocity-proportional ~1e4 N during motion).
+  A dynamic finite-mass proxy diverges if *either* is unfixed; with both fixed it is stable (the old
+  "dynamic proxies NaN structurally" claim was the overdamped `kd`, not the proxy).
 - **Stiff penalty contact + light element ejects** (`η = ke·dt²/m_reduced > 1`, with VBD
-  `alpha=0` over-correction). Never feed the object reaction into the gripper DOF as stiff
-  continuous in-loop feedback — it chatters and ejects. Use position control + a ramped setpoint.
+  `alpha=0` over-correction). Prefer default-hard contacts + physical damping over `alpha=0`.
 - **Don't `shape_material_mu.fill_()` after finalize** — it clobbers per-shape friction that
   the grasp relies on (cable/pads set high on purpose).
 - Verify changes with **instrumented headless `--viewer null --device cuda:0`** runs +
@@ -77,9 +94,10 @@ This repo's own docs:
 - [docs/solver-architecture.md](docs/solver-architecture.md) — solver framework rule, robot &
   VBD object solver config + the `alpha=0`/ALM rationale, CUDA-graph capture rules, the viz
   particle-copy bug, the verification standard.
-- [docs/gripper.md](docs/gripper.md) — one-way proxy bridge, the centralized force limit in
-  `examples/grip_force.py` (rigid clamp / soft squeeze, 0→15 N ramp), the no-continuous-feedback
-  stability invariant, obstacle non-penetration.
+- [docs/gripper.md](docs/gripper.md) — gripper proxy bridge + the no-continuous-feedback stability
+  invariant, obstacle non-penetration. **Partly stale**: the cable now uses the dynamic finite-mass
+  proxy + net-to-EE feedback + physical contact damping with NO force cap (see ONGOING.md); the
+  `examples/grip_force.py` 0→15 N clamp still applies to the rigid/soft examples only.
 - [docs/deformables.md](docs/deformables.md) — cable (rod) and soft-FEM-block tuned parameters
   + reasons; notes on future cloth/zip-tie deformables.
 - [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.
