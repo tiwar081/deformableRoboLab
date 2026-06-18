@@ -127,11 +127,15 @@ class Example(GraspExample):
         self.has_particles = True
 
         self.table_top_z = TABLE.top_z
+        self.table_pos = np.array(TABLE.pos, dtype=np.float32)
+        self.table_half = np.array(TABLE.half, dtype=np.float32)
         self.gripper_open = FRANKA.gripper_open
         soft = SOFT_BLOCK_PICK
         self.block_half = 0.5 * soft.dim[0] * soft.cell
         self.pick_xy = np.array([0.10, -0.50], dtype=np.float32)
         self.place_xy = np.array([0.34, -0.28], dtype=np.float32)
+        # Block start position (the pick location) — used by the robolab object-view camera.
+        self.soft_start_pos = np.array([self.pick_xy[0], self.pick_xy[1], self.table_top_z], dtype=np.float32)
         self.particle_self_contact_radius = 0.003
         self.particle_self_contact_margin = 0.005
         self.grasp_tcp_height = self.table_top_z + self.block_half

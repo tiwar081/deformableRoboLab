@@ -111,6 +111,8 @@ class Example(GraspExample):
         self.has_particles = True
 
         self.table_top_z = TABLE.top_z
+        self.table_pos = np.array(TABLE.pos, dtype=np.float32)
+        self.table_half = np.array(TABLE.half, dtype=np.float32)
         self.gripper_open = FRANKA.gripper_open
         self.particle_self_contact_radius = 0.003
         self.particle_self_contact_margin = 0.005

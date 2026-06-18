@@ -115,6 +115,8 @@ class Example(GraspExample):
         self.has_particles = True
 
         self.table_top_z = TABLE.top_z
+        self.table_pos = np.array(TABLE.pos, dtype=np.float32)
+        self.table_half = np.array(TABLE.half, dtype=np.float32)
         self.gripper_open = FRANKA.gripper_open
         # Compression sheet: a thin plate with a graspable handle on top (example-specific tool).
         self.sheet_half = np.array([0.09, 0.06, 0.004], dtype=np.float32)

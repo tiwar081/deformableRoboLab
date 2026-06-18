@@ -115,6 +115,8 @@ class Example(GraspExample):
         self.has_particles = True
 
         self.table_top_z = TABLE.top_z
+        self.table_pos = np.array(TABLE.pos, dtype=np.float32)
+        self.table_half = np.array(TABLE.half, dtype=np.float32)
         self.gripper_open = FRANKA.gripper_open
         self.cube_half = STEEL_CUBE.half_extent
         self.cube_start_pos = np.array([0.10, -0.55, self.table_top_z + self.cube_half], dtype=np.float32)
