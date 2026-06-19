@@ -24,7 +24,7 @@ import warp as wp
 import examples
 from robolabViz.scenic import ScenicGraspExample
 from deformableManipulationTools import (
-    GRIP, SOFT_BLOCK_PICK, TABLE, PARTICLE_SOLVER_KWARGS,
+    GRIP, SOFT_BLOCK, TABLE, PARTICLE_SOLVER_KWARGS,
     add_table, add_soft_block, build_gripper_proxies, solve_gripper_ik, wp_smoothstep,
 )
 
@@ -100,12 +100,12 @@ def _set_robot_targets_kernel(
 
 class Example(ScenicGraspExample):
     has_particles = True
-    soft_block = SOFT_BLOCK_PICK
-    coupling_soft_ke = SOFT_BLOCK_PICK.soft_contact_ke
+    soft_block = SOFT_BLOCK
+    coupling_soft_ke = SOFT_BLOCK.soft_contact_ke
 
     def configure(self, args):
         self.table_top_z = TABLE.top_z
-        soft = SOFT_BLOCK_PICK
+        soft = SOFT_BLOCK
         self.block_half = 0.5 * soft.dim[0] * soft.cell
         self.pick_xy = np.array([0.10, -0.50], dtype=np.float32)
         self.place_xy = np.array([0.34, -0.28], dtype=np.float32)
@@ -138,7 +138,7 @@ class Example(ScenicGraspExample):
 
     def build_scene(self, builder, robot_builder):
         self._obj_table_shape = add_table(builder, TABLE)
-        add_soft_block(builder, SOFT_BLOCK_PICK, self.soft_start_pos)
+        add_soft_block(builder, SOFT_BLOCK, self.soft_start_pos)
         # Proxies WITH particle collision so the pads grip the soft block.
         self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
             builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape,

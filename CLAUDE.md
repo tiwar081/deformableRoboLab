@@ -61,8 +61,12 @@ raw-concave-mesh ejection). If a new demo needs a knob the package doesn't expos
 the package, don't special-case it in the example.
 
 - **`params.py`** — single source of truth for ALL physics parameters (frozen dataclasses):
-  `FRANKA`, `GRIP`, `TABLE`/`TABLE_YCB`, `CABLE`, `SOFT_BLOCK*`, `RIGID_CUBE`/`STEEL_CUBE`/`RUBIKS_CUBE`,
-  `BOWL_YCB`/`BANANA_YCB`.
+  `FRANKA`, `GRIP`, `TABLE`/`TABLE_YCB`, `CABLE`, `SOFT_BLOCK`, `RIGID_CUBE`, `PLATE`, and the
+  DISTINCT YCB objects `RUBIKS_CUBE`/`BOWL_YCB`/`BANANA_YCB`. **One** soft block + **one** rigid
+  cube (1 kg) are shared identically by every non-YCB demo so the demos are cross-comparable — no
+  per-demo object variants, and an example never creates or modifies an object. Asset builders
+  register their authored contact material; the framework restores it after the blanket proxy-fill,
+  so an example never re-applies a material override by hand.
 - **`framework.py`** — `GraspExample`: owns the entire build (robot+solver, object-model assembly,
   finalize ordering, materials, masses, coupling) + the substep loop + CUDA-graph capture + viz.
   A demo subclass implements `configure`/`plan`/`build_scene`/`set_robot_targets`/`test_final`.

@@ -116,14 +116,12 @@ class Example(ScenicGraspExample):
 
     def build_scene(self, builder, robot_builder):
         self._obj_table_shape = add_table(builder, TABLE)
-        self.cube_body, _ = add_rigid_box(builder, self.cube_start_pos, self.cube_half, RIGID_CUBE, mass=0.2)
+        self.cube_body, _ = add_rigid_box(builder, self.cube_start_pos, self.cube_half, RIGID_CUBE)
         self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
             builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape, gap=CABLE.radius)
         self.cable_body_start = builder.body_count
         self.cable_bodies, _, _ = add_cable(builder, self.cable_node_positions)
         self.cable_body_count = len(self.cable_bodies)
-        self.material_overrides.append(
-            {"bodies": self.cable_bodies, "ke": CABLE.contact_ke, "kd": CABLE.contact_kd, "mu": CABLE.friction})
 
     def set_robot_targets(self, substep):
         wp.launch(_set_robot_targets_kernel, dim=9, inputs=[

@@ -34,15 +34,19 @@ subclasses `ScenicGraspExample` (`robolabViz.scenic`, itself a `GraspExample`) a
 **scene** (`configure` + `build_scene`) and **policy** (`plan` + `set_robot_targets`) + the per-demo
 `check_physics` asserts; all pass `--test` (in either output style).
 
+Every non-YCB demo draws from **one** shared object set: the same `CABLE`, the same `SOFT_BLOCK`
+(medium-stiffness 5 cm FEM block), the same 1 kg `RIGID_CUBE`, and the centralized `PLATE`. The
+demos are therefore directly cross-comparable.
+
 - **`cable_rigidCube_franka`** — descends to a cable on the table, grasps, lifts, sweeps
-  side to side; a rigid cube sits on the table. 8 substeps.
-- **`cable_soft_franka`** — same cable demo + a soft FEM block the swept cable dents/nudges.
+  side to side; the shared 1 kg rigid cube sits on the table as an obstacle. 8 substeps.
+- **`cable_soft_franka`** — same cable demo + the shared soft FEM block the swept cable dents/nudges.
   16 substeps.
-- **`rigidCube_soft_franka`** — grasps a heavy steel cube (~1 kg) via a pre-grasp waypoint,
-  carries it, drops it half-offset onto a pillow-soft block (`SOFT_BLOCK_PILLOW`). 16 substeps.
-- **`soft_compression_franka`** — grasps a metal sheet (plate + handle) by its handle, presses/
-  drops it onto the soft block to compress it. 16 substeps.
-- **`soft_pickplace_franka`** — picks up a small soft FEM block (~33 mm) and places it at a
+- **`rigidCube_soft_franka`** — grasps the shared 1 kg `RIGID_CUBE` via a pre-grasp waypoint,
+  carries it, drops it half-offset onto the shared `SOFT_BLOCK` to squash it. 16 substeps.
+- **`soft_compression_franka`** — grasps the centralized `PLATE` (sheet + handle, ~2 kg) by its
+  handle, presses/drops it onto the shared `SOFT_BLOCK` to compress it. 16 substeps.
+- **`soft_pickplace_franka`** — picks up the shared `SOFT_BLOCK` (5 cm) and places it at a
   target. 16 substeps. The proxies carry particle collision and the coupling harvests the
   proxy↔particle reaction (soft grip).
 

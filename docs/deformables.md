@@ -2,10 +2,11 @@
 
 These are the tuned values + the reasons behind them — re-derive if Newton is re-pinned
 (see the Newton-version gotcha in CLAUDE.md). **All values now live in
-`deformableManipulationTools/params.py`** (`CABLE`, `SOFT_BLOCK`, `SOFT_BLOCK_PILLOW`,
-`SOFT_BLOCK_COMPRESS`, `SOFT_BLOCK_PICK`) — one source of truth shared by every example; the cable
-and FEM block are built by `deformableManipulationTools.assets.add_cable` / `add_soft_block`. Edit
-the params/builders, not the examples.
+`deformableManipulationTools/params.py`** (`CABLE`, `SOFT_BLOCK`) — one source of truth shared by
+every example; the cable and FEM block are built by `deformableManipulationTools.assets.add_cable`
+/ `add_soft_block`. Edit the params/builders, not the examples. There is now **one** `SOFT_BLOCK`
+(the per-demo `SOFT_BLOCK_PILLOW/COMPRESS/PICK` variants were collapsed into it) so all four soft
+demos are cross-comparable.
 
 ## Cable (VBD rod)
 
@@ -29,19 +30,19 @@ the params/builders, not the examples.
 The FEM grid from Newton's `rigid_soft_contact` example (the only upstream two-way VBD
 rigid+soft scene), scaled to the table:
 
-- `add_soft_grid(...)`, 4×4×4 cells of 0.0125 m (5×5×5 cm, 125 particles, ~12.5 g),
-  centered at `soft_start_pos`. `density=100`, `k_damp` re-tuned per Newton 1.4 (see gotcha).
-- Stiffness per example (softened 4× for visible deformation under Newton 1.4): `cable_soft`
-  & `soft_compression` `k_mu=2.5e3,k_lambda=1.25e4`; `soft_pickplace` `5e2/2.5e3`;
-  `rigidCube_soft` pillow-soft `1.25e2/6.25e2`.
-- Contact (upstream values): `soft_contact_ke=1e5, kd=1e-4, kf=1e3, mu=0.3`,
-  `particle_max_velocity=50`, `particle_enable_tile_solve=False`, particle radius 0.0035
-  (the contact boundary sits one particle radius above the rendered surface — large radii
-  read as contact-before-touching).
-- The body-particle pair material is the **average** of `soft_contact_*` and the rigid
-  shape's material, and VBD sums per-contact forces on the body. Dropping cube/sheet shapes
-  are restored to `ke=1e5,kd=1e-4` so their pair matches upstream's sphere-grid pairing;
-  averaging against the stiff table/pad shapes keeps body-body contacts stiff regardless.
+- `add_soft_grid(...)`, 4×4×4 cells of 0.0125 m (5×5×5 cm, 125 particles), centered at
+  `soft_start_pos`. `density=150`, `k_damp=10` (absolute, Newton 1.4 — see gotcha).
+- **One shared stiffness** `k_mu=5e2, k_lambda=2.5e3` (medium): soft enough to visibly dent/squash
+  under the dropped cube and the pressing plate, firm enough to grasp and lift in `soft_pickplace`
+  without squishing out of the pads. This single profile is a deliberate cross-comparability
+  tradeoff over the old per-demo tuning (pillow-soft / firm / small-firm).
+- Contact: `soft_contact_ke=1e5, kd=1e-4, kf=1e3, mu=0.8`, `particle_max_velocity=50`,
+  `particle_enable_tile_solve=False`, particle radius 0.0035 (the contact boundary sits one
+  particle radius above the rendered surface — large radii read as contact-before-touching).
+- The body-particle pair material is the **average** of `soft_contact_*` and the rigid shape's
+  material, and VBD sums per-contact forces on the body. The pressing cube/plate keep their authored
+  `ke=5e4`/`1e5` (registered by their asset builder, auto-restored after the blanket fill); the
+  rigid↔particle dent is dominated by `soft_contact_ke=1e5` regardless.
 - `rigid_body_particle_contact_buffer_size`: 4096 in the drop examples (a flat face contacts
   hundreds of particles; overflow drops contacts frame-to-frame → NaN), 512 in `cable_soft`.
 - Two-way coupling stability ~ `sqrt(pair_ke / m_body) · substep_dt` and particle mass; the

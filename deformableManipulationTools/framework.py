@@ -141,6 +141,10 @@ class GraspExample:
             self.object_model.shape_material_ke.fill_(GRIP.proxy_ke)
             self.object_model.shape_material_kd.fill_(GRIP.object_contact_kd)
             self.object_model.shape_material_mu.fill_(0.8)
+        # Restore each object's AUTHORED contact material (registered by its asset builder), then
+        # any framework-level overrides. Examples never re-apply materials by hand.
+        for ov in getattr(object_builder, "_robolab_material_restores", []):
+            self._apply_material_override(ov)
         for ov in self.material_overrides:
             self._apply_material_override(ov)
         restore_proxy_materials(self.object_model, self.gripper_proxy_shapes)

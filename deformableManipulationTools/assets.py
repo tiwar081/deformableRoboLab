@@ -15,11 +15,27 @@ import warp as wp
 
 import newton
 
-from .params import CABLE, TABLE, CableConfig, RigidBoxConfig, SoftBlockConfig, TableConfig, YcbMeshConfig
+from .params import (CABLE, PLATE, TABLE, CableConfig, PlateConfig, RigidBoxConfig, SoftBlockConfig,
+                     TableConfig, YcbMeshConfig)
 from . import mesh_collision as _mc
 
 # Vendored scene meshes live under assets/objects/ (data, referenced by path; not imported).
 OBJECTS_DIR = Path(__file__).resolve().parent.parent / "assets" / "objects"
+
+
+def _register_material(builder, *, shapes=None, bodies=None, ke=None, kd=None, mu=None) -> None:
+    """Record an object's AUTHORED contact material on the builder so the framework can restore it
+    after its blanket proxy-fill (which clobbers all shape materials for a uniform grip contact).
+    Centralizing this here means an example never has to re-apply a material override by hand."""
+    store = getattr(builder, "_robolab_material_restores", None)
+    if store is None:
+        store = builder._robolab_material_restores = []
+    entry = {"ke": ke, "kd": kd, "mu": mu}
+    if shapes is not None:
+        entry["shapes"] = [int(s) for s in shapes]
+    if bodies is not None:
+        entry["bodies"] = [int(b) for b in bodies]
+    store.append(entry)
 
 # Identical particle-contact SolverVBD config for every FEM-block demo (one source of truth).
 PARTICLE_SOLVER_KWARGS = dict(
@@ -55,23 +71,28 @@ def add_soft_block(builder: newton.ModelBuilder, cfg: SoftBlockConfig, center_po
 
 def add_cable(builder: newton.ModelBuilder, node_positions, cable: CableConfig = CABLE):
     """VBD rod (add_rod) with the shared cable material/damping. Returns (bodies, joints,
-    body_start). The blanket material fill + a cable material-override (see framework) restore the
-    authored contact material after finalize."""
+    body_start). Registers the authored contact material so the framework restores it after the
+    blanket proxy-fill (the high cable friction the grasp relies on must survive the fill)."""
     cfg = newton.ModelBuilder.ShapeConfig(
-        density=cable.density, margin=cable.contact_margin, ke=cable.contact_ke, kd=20.0, mu=cable.friction)
+        density=cable.density, margin=cable.contact_margin, ke=cable.contact_ke,
+        kd=cable.contact_kd, mu=cable.friction)
     body_start = builder.body_count
     bodies, joints = builder.add_rod(
         positions=[wp.vec3(*p) for p in node_positions], radius=cable.radius, cfg=cfg,
         stretch_stiffness=cable.stretch_stiffness, stretch_damping=cable.stretch_damping,
         bend_stiffness=cable.bend_stiffness, bend_damping=cable.bend_damping,
         label="vbd_cable", wrap_in_articulation=True, body_frame_origin="start")
+    _register_material(builder, bodies=bodies, ke=cable.contact_ke, kd=cable.contact_kd, mu=cable.friction)
     return bodies, joints, body_start
 
 
 def add_rigid_box(builder: newton.ModelBuilder, pos, half, cfg: RigidBoxConfig, *,
                   mass: float | None = None, color=(0.18, 0.42, 0.95), label="cube", visible=True):
-    """Single rigid box body. ``half`` is a scalar half-extent (cube). Pass ``mass`` to set an
-    explicit body mass (else it is density-derived from the shape). Returns (body, shape)."""
+    """Single rigid box body. ``half`` is a scalar half-extent (cube). The body mass is ``mass`` if
+    given, else ``cfg.mass`` (the canonical 1 kg cube), else density-derived. Returns (body, shape).
+    Registers the authored contact material for the framework's post-blanket-fill restore."""
+    if mass is None:
+        mass = cfg.mass
     if mass is None:
         body = builder.add_body(xform=wp.transform(wp.vec3(*pos), wp.quat_identity()), label=label)
     else:
@@ -81,7 +102,26 @@ def add_rigid_box(builder: newton.ModelBuilder, pos, half, cfg: RigidBoxConfig, 
         mu=cfg.contact_mu, is_visible=visible)
     shape = builder.add_shape_box(
         body=body, hx=half, hy=half, hz=half, cfg=shape_cfg, color=wp.vec3(*color), label=f"{label}_shape")
+    _register_material(builder, shapes=[shape], ke=cfg.contact_ke, kd=cfg.contact_kd, mu=cfg.contact_mu)
     return body, shape
+
+
+def add_plate(builder: newton.ModelBuilder, pos, cfg: PlateConfig = PLATE):
+    """The centralized presser plate: a thin sheet + a graspable handle on top, ONE rigid body.
+    ``pos`` is the sheet center. Returns (body, [sheet_shape, handle_shape]). Registers the authored
+    firm contact material for the framework's post-blanket-fill restore."""
+    body = builder.add_body(xform=wp.transform(wp.vec3(*pos), wp.quat_identity()), label="plate")
+    shape_cfg = newton.ModelBuilder.ShapeConfig(
+        density=cfg.density, margin=cfg.contact_margin, ke=cfg.contact_ke, kd=cfg.contact_kd, mu=cfg.contact_mu)
+    sheet = builder.add_shape_box(
+        body=body, hx=float(cfg.sheet_half[0]), hy=float(cfg.sheet_half[1]), hz=float(cfg.sheet_half[2]),
+        cfg=shape_cfg, color=wp.vec3(*cfg.sheet_color), label="metal_sheet")
+    handle = builder.add_shape_box(
+        body=body, xform=wp.transform(wp.vec3(*cfg.handle_local_pos), wp.quat_identity()),
+        hx=float(cfg.handle_half[0]), hy=float(cfg.handle_half[1]), hz=float(cfg.handle_half[2]),
+        cfg=shape_cfg, color=wp.vec3(*cfg.handle_color), label="grasp_handle")
+    _register_material(builder, shapes=[sheet, handle], ke=cfg.contact_ke, kd=cfg.contact_kd, mu=cfg.contact_mu)
+    return body, [sheet, handle]
 
 
 def add_rubiks_cube(builder: newton.ModelBuilder, pos, cfg: RigidBoxConfig):

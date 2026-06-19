@@ -120,31 +120,54 @@ class CableConfig:
 
 @dataclass(frozen=True)
 class SoftBlockConfig:
-    """FEM block (add_soft_grid). Stiffness 4×-softened for Newton ≥1.4 visible deformation;
-    k_damp re-tuned to the absolute objective-C=FᵀF metric. Variants below are different blocks."""
+    """FEM block (add_soft_grid). ONE canonical block shared by every soft demo (cable sweep,
+    cube-drop squash, plate compression, pick-and-place) so they are cross-comparable. Medium
+    stiffness (k_mu≈5e2): soft enough to visibly dent/squash, firm enough to grasp and lift
+    without squishing out of the pads. Damping/contact in the absolute objective-C=FᵀF metric."""
     dim: tuple[int, int, int] = (4, 4, 4)
-    cell: float = 0.0125
-    density: float = 100.0
-    k_mu: float = 2.5e3
-    k_lambda: float = 1.25e4
-    k_damp: float = 1.0e4
+    cell: float = 0.0125              # 4 cells × 0.0125 = 0.05 m cube
+    density: float = 150.0
+    k_mu: float = 5.0e2
+    k_lambda: float = 2.5e3
+    k_damp: float = 1.0e1
     particle_radius: float = 0.0035
     contact_margin: float = 0.01
     soft_contact_ke: float = 1.0e5
     soft_contact_kd: float = 1.0e-4
     soft_contact_kf: float = 1.0e3
-    soft_contact_mu: float = 0.3
+    soft_contact_mu: float = 0.8
 
 
 @dataclass(frozen=True)
 class RigidBoxConfig:
-    """Rigid box object."""
+    """Rigid box object. ``mass`` (when not None) is the exact body mass [kg]; otherwise the mass
+    is density-derived from the shape volume (used by the distinct YCB rubik's cube)."""
     half_extent: float = 0.025
-    density: float = 250.0
+    mass: float | None = 1.0          # kg — the canonical rigid cube is 1 kg in every demo
+    density: float = 250.0            # pre-mass seed / used only when ``mass`` is None
     contact_ke: float = 5.0e4
     contact_kd: float = 1.0e2
-    contact_mu: float = 0.6
-    contact_margin: float = 0.0
+    contact_mu: float = 0.8
+    contact_margin: float = 1.0e-3
+
+
+@dataclass(frozen=True)
+class PlateConfig:
+    """A flat rigid plate with a graspable handle on top (sheet + handle, ONE rigid body, two
+    boxes). A distinct centralized presser tool — built by ``add_plate``, never inline in a demo."""
+    sheet_half: tuple[float, float, float] = (0.09, 0.06, 0.004)
+    handle_half: tuple[float, float, float] = (0.016, 0.012, 0.024)
+    density: float = 9300.0           # ~2 kg over the sheet+handle volume (≈2× the rigid cube)
+    contact_ke: float = 1.0e5         # firm plate↔block press
+    contact_kd: float = 1.0e-4
+    contact_mu: float = 0.8
+    contact_margin: float = 1.0e-3
+    sheet_color: tuple[float, float, float] = (0.62, 0.65, 0.68)
+    handle_color: tuple[float, float, float] = (0.40, 0.42, 0.45)
+
+    @property
+    def handle_local_pos(self) -> tuple[float, float, float]:
+        return (0.0, 0.0, self.sheet_half[2] + self.handle_half[2])
 
 
 @dataclass(frozen=True)
@@ -182,19 +205,16 @@ TABLE_YCB = TableConfig(pos=(0.45, 0.0, 0.025), half=(0.35, 0.5, 0.025),
                         object_mu=1.0, color=(0.55, 0.45, 0.32))
 CABLE = CableConfig()
 
-# Soft-block variants (genuinely different physical blocks; parameters never re-derived ad hoc).
-SOFT_BLOCK = SoftBlockConfig()                                            # standard passive/swept block
-SOFT_BLOCK_PILLOW = SoftBlockConfig(k_mu=1.25e2, k_lambda=6.25e2, k_damp=1.0)   # pillow-soft, drop-impact
-SOFT_BLOCK_COMPRESS = SoftBlockConfig(k_damp=1.0)                          # standard stiffness, compression
-SOFT_BLOCK_PICK = SoftBlockConfig(dim=(3, 3, 3), cell=0.011, density=200.0,
-                                  k_mu=5.0e2, k_lambda=2.5e3, k_damp=10.0,
-                                  soft_contact_mu=0.8)                     # small firm block, pick-and-place
+# ONE soft block + ONE rigid cube + ONE plate, shared identically by every non-YCB demo so the
+# demos are cross-comparable (see CLAUDE.md "Code layout"). No per-demo variants.
+SOFT_BLOCK = SoftBlockConfig()
+RIGID_CUBE = RigidBoxConfig()                                             # 1 kg cube, every demo
+PLATE = PlateConfig()
 
-# Rigid-box variants.
-RIGID_CUBE = RigidBoxConfig()                                             # light cube (density 250)
-STEEL_CUBE = RigidBoxConfig(density=7800.0, contact_mu=0.8, contact_margin=0.001)  # heavy, for visible denting
-RUBIKS_CUBE = RigidBoxConfig(half_extent=0.029, density=1025.0, contact_ke=5.0e4,
-                             contact_kd=1.0e2, contact_mu=1.2, contact_margin=0.0)  # YCB rubik's cube
+# The YCB rubik's cube is a DISTINCT object (its own size/mass/material) — no relationship to the
+# canonical RIGID_CUBE. Density-derived mass (mass=None).
+RUBIKS_CUBE = RigidBoxConfig(half_extent=0.029, mass=None, density=1025.0, contact_ke=5.0e4,
+                             contact_kd=1.0e2, contact_mu=1.2, contact_margin=0.0)
 
 # YCB mesh objects (pickplace_ycb). coacd-decomposed for collision; realistic YCB masses.
 BOWL_YCB = YcbMeshConfig(

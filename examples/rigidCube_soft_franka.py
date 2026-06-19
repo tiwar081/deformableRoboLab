@@ -24,7 +24,7 @@ import warp as wp
 import examples
 from robolabViz.scenic import ScenicGraspExample
 from deformableManipulationTools import (
-    GRIP, SOFT_BLOCK_PILLOW, STEEL_CUBE, TABLE, PARTICLE_SOLVER_KWARGS,
+    GRIP, SOFT_BLOCK, RIGID_CUBE, TABLE, PARTICLE_SOLVER_KWARGS,
     add_table, add_soft_block, add_rigid_box, build_gripper_proxies, solve_gripper_ik, wp_smoothstep,
 )
 
@@ -89,19 +89,19 @@ def _set_robot_targets_kernel(
 
 class Example(ScenicGraspExample):
     has_particles = True
-    soft_block = SOFT_BLOCK_PILLOW
+    soft_block = SOFT_BLOCK
 
     def configure(self, args):
         self.table_top_z = TABLE.top_z
-        self.cube_half = STEEL_CUBE.half_extent
+        self.cube_half = RIGID_CUBE.half_extent
         self.cube_start_pos = np.array([0.10, -0.55, self.table_top_z + self.cube_half], dtype=np.float32)
         self.soft_start_pos = np.array([0.28, -0.30, self.table_top_z], dtype=np.float32)
-        self.soft_drop_offset = np.array([0.5 * SOFT_BLOCK_PILLOW.dim[0] * SOFT_BLOCK_PILLOW.cell, 0.0, 0.0],
+        self.soft_drop_offset = np.array([0.5 * SOFT_BLOCK.dim[0] * SOFT_BLOCK.cell, 0.0, 0.0],
                                          dtype=np.float32)
         self.drop_tcp_height = self.table_top_z + 0.19
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
-        self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK_PILLOW.contact_margin}
+        self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK.contact_margin}
 
     def plan(self, ik_model, ik_state):
         def ik_at(pos):
@@ -114,7 +114,7 @@ class Example(ScenicGraspExample):
         self.pregrasp_q = ik_at(pre)
         self.pickup_q = ik_at(pick)
         self.drop_q = ik_at(drop)
-        self.gripper_closed = (self.cube_half + STEEL_CUBE.contact_margin
+        self.gripper_closed = (self.cube_half + RIGID_CUBE.contact_margin
                                + GRIP.proxy_margin - GRIP.grasp_interference)
         kf = lambda a: wp.array(a, dtype=wp.float32, device=ik_model.device)
         self._home_q_wp = kf(self.home_q)
@@ -124,14 +124,10 @@ class Example(ScenicGraspExample):
 
     def build_scene(self, builder, robot_builder):
         self._obj_table_shape = add_table(builder, TABLE)
-        add_soft_block(builder, SOFT_BLOCK_PILLOW, self.soft_start_pos)
+        add_soft_block(builder, SOFT_BLOCK, self.soft_start_pos)
         self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
             builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape, gap=GRIP.proxy_margin * 8)
-        self.cube_body, self.cube_shape = add_rigid_box(builder, self.cube_start_pos, self.cube_half, STEEL_CUBE)
-        # Firm cube<->block contact for a clean dent (match the soft-contact ke).
-        self.material_overrides.append(
-            {"shapes": [self.cube_shape], "ke": SOFT_BLOCK_PILLOW.soft_contact_ke,
-             "kd": SOFT_BLOCK_PILLOW.soft_contact_kd, "mu": STEEL_CUBE.contact_mu})
+        self.cube_body, self.cube_shape = add_rigid_box(builder, self.cube_start_pos, self.cube_half, RIGID_CUBE)
 
     def set_robot_targets(self, substep):
         wp.launch(_set_robot_targets_kernel, dim=9, inputs=[

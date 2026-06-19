@@ -67,7 +67,20 @@
       "Bash(.venv/bin/python -c \"import ast; ast.parse\\(open\\('examples/cable_rigidCube_franka.py'\\).read\\(\\)\\); print\\('parse OK'\\)\")",
       "Bash(PYTHONPATH=. timeout 600 .venv/bin/python -m examples rigidCube_soft_franka_robolab --device cuda:0 --num-frames 2 --output-path outputs/_smoke/x.usd)",
       "Bash(chmod +x /tmp/render_videos.sh)",
-      "Bash(bash /tmp/render_videos.sh)"
+      "Bash(bash /tmp/render_videos.sh)",
+      "Bash(nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv)",
+      "Bash(python -c \"import deformableManipulationTools as d; print\\('SOFT_BLOCK', d.SOFT_BLOCK.k_mu, d.SOFT_BLOCK.cell\\); print\\('RIGID_CUBE mass', d.RIGID_CUBE.mass\\); print\\('PLATE', d.PLATE.density\\); print\\('add_plate', d.add_plate\\); print\\('RUBIKS mass', d.RUBIKS_CUBE.mass\\)\")",
+      "Bash(python3 -c \"import deformableManipulationTools as d; print\\('SOFT_BLOCK k_mu/cell', d.SOFT_BLOCK.k_mu, d.SOFT_BLOCK.cell\\); print\\('RIGID_CUBE mass', d.RIGID_CUBE.mass\\); print\\('PLATE density', d.PLATE.density, 'handle_local', d.PLATE.handle_local_pos\\); print\\('add_plate', d.add_plate.__name__\\); print\\('RUBIKS mass', d.RUBIKS_CUBE.mass\\)\")",
+      "Bash(python3 -m py_compile examples/*.py)",
+      "Bash(.venv/bin/python -c \"import deformableManipulationTools as d; print\\('SOFT_BLOCK k_mu/cell', d.SOFT_BLOCK.k_mu, d.SOFT_BLOCK.cell\\); print\\('RIGID_CUBE mass', d.RIGID_CUBE.mass\\); print\\('PLATE density', d.PLATE.density, 'handle_local', d.PLATE.handle_local_pos\\); print\\('add_plate', d.add_plate.__name__\\); print\\('RUBIKS mass', d.RUBIKS_CUBE.mass\\)\")",
+      "Bash(timeout 900 .venv/bin/python -m examples soft_pickplace_franka --output-style basic --viewer null --test --quiet --device cuda:0)",
+      "Bash(./.venv/bin/python -c \"import warp, newton; print\\('warp', warp.__version__, '| newton', getattr\\(newton,'__version__','?'\\)\\)\")",
+      "Bash(./.venv/bin/python -c ' *)",
+      "Bash(time ./.venv/bin/python -m examples pickplace_ycb_franka --device cuda:0 --output-style basic --viewer null --num-frames 420 --solver-iterations 12 --log-grip --quiet)",
+      "Bash(echo \"EXIT $?\")",
+      "Bash(awk '{split\\($2,a,\"=\"\\); t=a[2]+0; if \\(t>=6.0 && t<=7.0\\) print}')",
+      "Bash(awk '{t=$3+0; if \\(t>=5.6 && t<=6.9\\) printf \"t=%6.3f  left=%8.3f  right=%8.3f  |R-L|=%8.3f\\\\n\", t, $5, $8, \\($8-$5\\)}')",
+      "Bash(time ./.venv/bin/python -m examples pickplace_ycb_franka --device cuda:0 --output-style basic --viewer null --num-frames 420 --solver-iterations 24 --log-grip --quiet)"
     ],
     "additionalDirectories": [
       "/dev",

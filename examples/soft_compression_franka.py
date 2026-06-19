@@ -21,13 +21,11 @@ _terminal_log = install_terminal_log()
 
 import warp as wp
 
-import newton
-
 import examples
 from robolabViz.scenic import ScenicGraspExample
 from deformableManipulationTools import (
-    GRIP, SOFT_BLOCK_COMPRESS, STEEL_CUBE, TABLE, PARTICLE_SOLVER_KWARGS,
-    add_table, add_soft_block, build_gripper_proxies, solve_gripper_ik, wp_smoothstep,
+    GRIP, SOFT_BLOCK, PLATE, TABLE, PARTICLE_SOLVER_KWARGS,
+    add_table, add_soft_block, add_plate, build_gripper_proxies, solve_gripper_ik, wp_smoothstep,
 )
 
 
@@ -91,29 +89,24 @@ def _set_robot_targets_kernel(
 
 class Example(ScenicGraspExample):
     has_particles = True
-    soft_block = SOFT_BLOCK_COMPRESS
+    soft_block = SOFT_BLOCK
 
     def configure(self, args):
         self.table_top_z = TABLE.top_z
-        # A thin plate with a graspable handle on top (an example-specific tool).
-        self.sheet_half = np.array([0.09, 0.06, 0.004], dtype=np.float32)
-        self.handle_half = np.array([0.016, 0.012, 0.024], dtype=np.float32)
-        self.sheet_contact_margin = 0.001
+        # The presser is the centralized PLATE object (sheet + graspable handle); its geometry is
+        # read here only to PLACE it and plan the grasp — the object itself is built by add_plate.
+        self.sheet_half = np.array(PLATE.sheet_half, dtype=np.float32)
+        self.handle_half = np.array(PLATE.handle_half, dtype=np.float32)
         self.sheet_start_pos = np.array([0.10, -0.55, self.table_top_z + self.sheet_half[2]], dtype=np.float32)
-        self.handle_local_pos = np.array([0.0, 0.0, self.sheet_half[2] + self.handle_half[2]], dtype=np.float32)
+        self.handle_local_pos = np.array(PLATE.handle_local_pos, dtype=np.float32)
         self.handle_start_pos = self.sheet_start_pos + self.handle_local_pos
-        # ~2x the steel-cube mass, spread over the plate+handle, so the press is firm.
-        cube_vol = (2.0 * STEEL_CUBE.half_extent) ** 3
-        sheet_vol = float(np.prod(2.0 * self.sheet_half))
-        handle_vol = float(np.prod(2.0 * self.handle_half))
-        self.sheet_density = 2.0 * STEEL_CUBE.density * cube_vol / (sheet_vol + handle_vol)
         self.soft_start_pos = np.array([0.28, -0.30, self.table_top_z], dtype=np.float32)
-        self.soft_drop_offset = np.array([0.5 * SOFT_BLOCK_COMPRESS.dim[0] * SOFT_BLOCK_COMPRESS.cell, 0.0, 0.0],
+        self.soft_drop_offset = np.array([0.5 * SOFT_BLOCK.dim[0] * SOFT_BLOCK.cell, 0.0, 0.0],
                                          dtype=np.float32)
         self.drop_tcp_height = self.table_top_z + 0.19
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
-        self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK_COMPRESS.contact_margin}
+        self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK.contact_margin}
 
     def plan(self, ik_model, ik_state):
         def ik_at(pos):
@@ -126,7 +119,7 @@ class Example(ScenicGraspExample):
         self.pregrasp_q = ik_at(pre)
         self.pickup_q = ik_at(pick)
         self.drop_q = ik_at(drop)
-        self.gripper_closed = (self.handle_half[1] + self.sheet_contact_margin
+        self.gripper_closed = (self.handle_half[1] + PLATE.contact_margin
                                + GRIP.proxy_margin - GRIP.grasp_interference)
         kf = lambda a: wp.array(a, dtype=wp.float32, device=ik_model.device)
         self._home_q_wp = kf(self.home_q)
@@ -136,27 +129,10 @@ class Example(ScenicGraspExample):
 
     def build_scene(self, builder, robot_builder):
         self._obj_table_shape = add_table(builder, TABLE)
-        add_soft_block(builder, SOFT_BLOCK_COMPRESS, self.soft_start_pos)
+        add_soft_block(builder, SOFT_BLOCK, self.soft_start_pos)
         self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
             builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape, gap=GRIP.proxy_margin * 8)
-        # The sheet: thin plate + handle (one rigid body, two boxes).
-        self.sheet_body = builder.add_body(
-            xform=wp.transform(wp.vec3(*self.sheet_start_pos), wp.quat_identity()), label="compression_sheet")
-        sheet_cfg = newton.ModelBuilder.ShapeConfig(
-            density=self.sheet_density, margin=self.sheet_contact_margin,
-            ke=GRIP.proxy_ke, kd=GRIP.object_contact_kd, mu=0.8)
-        self.sheet_shapes = [
-            builder.add_shape_box(body=self.sheet_body, hx=float(self.sheet_half[0]), hy=float(self.sheet_half[1]),
-                                  hz=float(self.sheet_half[2]), cfg=sheet_cfg,
-                                  color=wp.vec3(0.62, 0.65, 0.68), label="metal_sheet"),
-            builder.add_shape_box(body=self.sheet_body, xform=wp.transform(wp.vec3(*self.handle_local_pos), wp.quat_identity()),
-                                  hx=float(self.handle_half[0]), hy=float(self.handle_half[1]), hz=float(self.handle_half[2]),
-                                  cfg=sheet_cfg, color=wp.vec3(0.40, 0.42, 0.45), label="grasp_handle"),
-        ]
-        # Firm sheet<->block contact for a clean compression (match the soft-contact ke).
-        self.material_overrides.append(
-            {"shapes": self.sheet_shapes, "ke": SOFT_BLOCK_COMPRESS.soft_contact_ke,
-             "kd": SOFT_BLOCK_COMPRESS.soft_contact_kd})
+        self.sheet_body, self.sheet_shapes = add_plate(builder, self.sheet_start_pos, PLATE)
 
     def set_robot_targets(self, substep):
         wp.launch(_set_robot_targets_kernel, dim=9, inputs=[
