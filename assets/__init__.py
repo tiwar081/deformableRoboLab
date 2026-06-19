@@ -1,8 +1,8 @@
-"""RoboLab asset package — vendored scene assets plus the shared physics-parameter
-source of truth (:mod:`assets.params`).
+"""RoboLab asset *data* package — vendored scene assets only.
 
 The data subdirectories (robots/, objects/, fixtures/, materials/, backgrounds/) hold USD,
-meshes, and textures; :mod:`assets.params` holds the robot / grip / object physics parameters
-that every example shares so the robot and a given object type have identical properties
-across all demos.
+meshes, and textures referenced by path. The shared physics parameters (robot / grip / object
+properties) and asset builders now live in the :mod:`deformableManipulationTools` package
+(``deformableManipulationTools.params`` / ``.assets``), so every demo has identical, centralized
+physics — see CLAUDE.md.
 """

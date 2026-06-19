@@ -1,4 +1,4 @@
-# RoboLab Graphics (`robolab_viz/`)
+# RoboLab Graphics (`robolabViz/`)
 
 An alternative renderer reproducing NVIDIA RoboLab's look (the DROID rig in
 `_external/RoboLab/examples/run_recorded.py`: home-office dome, sphere key light, maple work
@@ -10,21 +10,29 @@ assume that checkout can be deleted.**
 
 ## Usage
 
-- `examples/example_<name>_robolab.py` subclasses the physics example, reuses its physics
-  verbatim, swaps only the viz (forces `--viewer null`):
-  `python -m examples cable_soft_franka_robolab --device cuda:0`.
-- Customization surface: `robolab_viz/config.py`. `droid_scene_config(table=, background=)`
+- Scenic rendering is built into **every** demo via `--output-style scenic` (the default; the
+  alternative `basic` writes a plain Newton `outputs/<name>.usd`). There are no separate
+  `_robolab` files: `python -m examples cable_soft_franka --device cuda:0` already renders the
+  RoboLab look. Scenic forces `--viewer null` internally.
+- The shared glue is `robolabViz.scenic.ScenicGraspExample` (a `GraspExample` subclass each demo
+  inherits). It reads the robot base pose (`robot_base_xform`), table (`table_pos/table_half`),
+  and optional `soft_start_pos` straight off the physics example, so a new demo needs no
+  per-demo viz config. This is the one place `robolabViz` imports `deformableManipulationTools`
+  (kept out of `robolabViz/__init__.py` so plain `import robolabViz` stays Newton-free).
+- Customization surface: `robolabViz/config.py`. `droid_scene_config(table=, background=)`
   returns RoboLab's DROID values as overridable dataclasses (fixtures, lights, cameras,
   object styles) — where future demos swap table / lights / cameras / styling.
 - `--table {maple,oak,bamboo,black}`, `--background <name>` (e.g. `home_office`, `garage_2k`,
   `machine_shop_01_2k`). `available_tables()/_backgrounds()/_objects()` enumerate the vendored
   sets; `resolve_background` accepts the `_2k`-less stem. Choices render in the raycast
   preview too, not just RTX.
-- Outputs in `outputs/robolab_preview/`: `combined.mp4` (the only kept video) + per-camera PNG
-  frames (`--png-every`) + `wrist_coverage.json`. Opt-in: `--usd` (time-sampled scene USD),
-  `--npz` (state cache + `geometry.pkl` that `robolab_viz.rerender` replays without re-simulating).
-- `--objectview True` adds a fixed `object_view_camera` on the soft body, dumped as PNG stills
-  only (`CameraConfig.in_combined_video=False`, so the kept video is unchanged).
+- Outputs in `outputs/<name>/`: `simulation.mp4` (over-shoulder-left + wrist, side by side) +
+  per-camera PNG frames in `frames/` (`--frames-per-image N`) + `wrist_coverage.json`. Opt-in:
+  `--usd` (time-sampled scene USD at `outputs/<name>/<name>.usd`), `--npz` (state cache +
+  `geometry.pkl` that `robolabViz.rerender` replays without re-simulating).
+- `--objectview True` adds a fixed `object_view_camera` on the soft body (soft demos only),
+  dumped as PNG stills only (`CameraConfig.in_combined_video=False`, so `simulation.mp4` is
+  unchanged).
 
 ## Architecture
 
@@ -66,4 +74,6 @@ assume that checkout can be deleted.**
   ~3.6 s/frame).
 - **Shared `Mesh` BVH segfault:** reusing one `Mesh` across the object AND combined viz model
   crashes (finalizing the viz model rebuilds the shared BVH and frees GPU memory the object
-  pipeline points at). Finalize the viz model BEFORE the object model.
+  pipeline points at). The viz model must finalize BEFORE the object model. This is now enforced
+  **automatically** by `deformableManipulationTools.framework.GraspExample` (it detects mesh shapes
+  and orders the build so the object model owns the live BVH) — no example need handle it.

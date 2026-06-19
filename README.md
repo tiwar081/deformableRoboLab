@@ -64,3 +64,21 @@ reading and accepting the EULA, run Isaac commands with:
 ```bash
 OMNI_KIT_ACCEPT_EULA=yes python -c "import isaaclab; print('isaaclab ok')"
 ```
+
+## Running the demos
+
+Each Franka manipulation demo is a single file in `examples/` (list them with
+`python -m examples --list`). The `--output-style` flag selects how a run is rendered:
+
+```bash
+# scenic (default): RoboLab-look render to outputs/<name>/ —
+#   simulation.mp4 (over-shoulder-left + wrist cameras) + frames/ stills.
+python -m examples cable_soft_franka --device cuda:0
+
+# basic: a plain Newton USD at outputs/<name>.usd (no scene look).
+python -m examples cable_soft_franka --output-style basic --device cuda:0
+```
+
+Add `--test` to run the demo's physics + render assertions. See
+[docs/examples.md](docs/examples.md) for the full demo list and flags, and
+[docs/robolab-graphics.md](docs/robolab-graphics.md) for the scenic renderer.

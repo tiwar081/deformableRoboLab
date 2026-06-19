@@ -58,7 +58,7 @@ class RobotConfig:
 # ---------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
 class GripConfig:
-    """Dynamic finite-mass gripper-proxy contact bridge (examples/grip_coupling.py).
+    """Dynamic finite-mass gripper-proxy contact bridge (deformableManipulationTools/grip.py).
 
     The proxies mirror the fingers as dynamic bodies in the object's VBD model; the object's
     contact reaction is harvested and the net external load fed to the arm/EE. Grip force is the
@@ -147,10 +147,39 @@ class RigidBoxConfig:
     contact_margin: float = 0.0
 
 
+@dataclass(frozen=True)
+class YcbMeshConfig:
+    """A YCB mesh object loaded for Newton collision (deformableManipulationTools/mesh_collision.py).
+
+    The full mesh renders; coacd convex-hull pieces collide (consistent normals, cavity
+    preserved — docs/SOLVERS.md §4: a raw concave mesh ejects the solve). ``target_mass`` is the
+    realistic YCB mass applied after finalize so the body isn't flung (SOLVERS.md §5); ``density``
+    only seeds the pre-rescale inertia shape. ``ke``/``kd`` are the absolute VBD contact material."""
+    usd_subpath: str                  # under assets/objects, e.g. "ycb/bowl.usd"
+    target_mass: float                # kg — exact mass applied post-finalize (realistic YCB object)
+    density: float = 400.0            # pre-rescale seed only
+    ke: float = 5.0e4
+    kd: float = 1.0e2
+    mu: float = 1.0
+    color: tuple[float, float, float] = (0.7, 0.7, 0.7)
+    # coacd convex decomposition (preprocess_mode='on' is forced in the worker — 'auto' segfaults
+    # on raw non-watertight YCB scans).
+    coacd_threshold: float = 0.08
+    coacd_max_convex_hull: int = 12
+    coacd_preprocess_resolution: int = 50
+    coacd_max_ch_vertex: int = 32
+    coacd_seed: int = 0
+    piece_maxhullvert: int = 32       # re-hull cap per piece (convex-preserving small BVH)
+
+
 # ---- Canonical instances (single source of truth) -------------------------------------------
 FRANKA = RobotConfig()
 GRIP = GripConfig()
 TABLE = TableConfig()
+# YCB demo table: its own placement (robot at the origin, table centered at (0.45, 0), top z=0.05)
+# and higher object friction; the robolab view depends on this center/top-z.
+TABLE_YCB = TableConfig(pos=(0.45, 0.0, 0.025), half=(0.35, 0.5, 0.025),
+                        object_mu=1.0, color=(0.55, 0.45, 0.32))
 CABLE = CableConfig()
 
 # Soft-block variants (genuinely different physical blocks; parameters never re-derived ad hoc).
@@ -164,3 +193,13 @@ SOFT_BLOCK_PICK = SoftBlockConfig(dim=(3, 3, 3), cell=0.011, density=200.0,
 # Rigid-box variants.
 RIGID_CUBE = RigidBoxConfig()                                             # light cube (density 250)
 STEEL_CUBE = RigidBoxConfig(density=7800.0, contact_mu=0.8, contact_margin=0.001)  # heavy, for visible denting
+RUBIKS_CUBE = RigidBoxConfig(half_extent=0.029, density=1025.0, contact_ke=5.0e4,
+                             contact_kd=1.0e2, contact_mu=1.2, contact_margin=0.0)  # YCB rubik's cube
+
+# YCB mesh objects (pickplace_ycb). coacd-decomposed for collision; realistic YCB masses.
+BOWL_YCB = YcbMeshConfig(
+    usd_subpath="ycb/bowl.usd", target_mass=0.147, density=400.0, mu=1.0,
+    color=(0.75, 0.22, 0.18), coacd_threshold=0.10, coacd_max_convex_hull=12)   # YCB 024_bowl
+BANANA_YCB = YcbMeshConfig(
+    usd_subpath="ycb/banana.usd", target_mass=0.066, density=300.0, mu=2.0,
+    color=(0.93, 0.82, 0.12), coacd_threshold=0.08, coacd_max_convex_hull=8)    # YCB 011_banana

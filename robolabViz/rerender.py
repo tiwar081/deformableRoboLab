@@ -1,13 +1,13 @@
 """Re-render preview cameras from a recorded state cache, without re-simulating.
 
-Run the example once with ``--npz`` to produce the inputs: ``<output>.state.npz``
-(per-frame link/body/particle state) and ``robolab_preview/geometry.pkl``
-(preview geometry). This CLI then replays any camera configuration against them
-— the fast path for tuning the wrist camera mount:
+Run the example once in scenic mode with ``--npz`` to produce the inputs:
+``outputs/<name>/<name>.state.npz`` (per-frame link/body/particle state) and
+``outputs/<name>/geometry.pkl`` (preview geometry). This CLI then replays any
+camera configuration against them — the fast path for tuning the wrist mount:
 
-    python -m examples cable_soft_franka_robolab --device cuda:0 --npz   # once
-    python -m robolab_viz.rerender outputs/cable_soft_franka_robolab.state.npz \
-        --geometry outputs/robolab_preview/geometry.pkl \
+    python -m examples cable_soft_franka --device cuda:0 --npz   # once
+    python -m robolabViz.rerender outputs/cable_soft_franka/cable_soft_franka.state.npz \
+        --geometry outputs/cable_soft_franka/geometry.pkl \
         --wrist-eye 0.05 0 0.03 --wrist-target 0 0 0.12 \
         --frames 0 170 270 420 600 --output-dir /tmp/wrist_tune
 """
@@ -27,7 +27,7 @@ from .raycast import RaycastPreviewRenderer
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("state_cache", help="<output>.state.npz written by a *_robolab example run.")
+    parser.add_argument("state_cache", help="<name>.state.npz written by a scenic demo run with --npz.")
     parser.add_argument("--geometry", required=True, help="geometry.pkl written next to the preview renders.")
     parser.add_argument("--output-dir", default="/tmp/robolab_rerender")
     parser.add_argument("--cameras", nargs="+", default=["wrist_camera"])
@@ -68,7 +68,7 @@ def main() -> None:
         output_dir=args.output_dir,
         device=wp.get_device(args.device),
         camera_names=args.cameras,
-        png_every=1 if args.frames else 0,
+        frames_per_image=1 if args.frames else 0,
         instances=geom["instances"],
     )
     for frame in frames:

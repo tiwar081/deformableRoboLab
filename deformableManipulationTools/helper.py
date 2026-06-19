@@ -6,9 +6,9 @@ tee below). Two rules:
 1. Each example imports this module BEFORE ``import warp`` (so ``install_terminal_log`` can install
    the tee before Warp's module-load messages are emitted). Therefore keep module-scope imports
    light — **no ``warp``/``newton`` at the top of this file**. If a shared helper needs Warp,
-   import it lazily inside the function, or put it in ``examples/franka_common.py`` (the
-   Warp/Newton-dependent Franka building blocks + the ``GraspExample`` base).
-2. Prefer parameters from ``assets.params`` so behavior stays centralized.
+   import it lazily inside the function, or put it in the ``deformableManipulationTools`` package
+   (the Warp/Newton-dependent building blocks + the ``GraspExample`` base).
+2. Prefer parameters from ``deformableManipulationTools.params`` so behavior stays centralized.
 """
 from __future__ import annotations
 

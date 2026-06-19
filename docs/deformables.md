@@ -1,16 +1,18 @@
 # Deformables (cable, soft FEM block)
 
 These are the tuned values + the reasons behind them — re-derive if Newton is re-pinned
-(see the Newton-version gotcha in CLAUDE.md). **All values now live in `assets/params.py`**
-(`CABLE`, `SOFT_BLOCK`, `SOFT_BLOCK_PILLOW`, `SOFT_BLOCK_COMPRESS`, `SOFT_BLOCK_PICK`) — one
-source of truth shared by every example; edit there, not in the examples.
+(see the Newton-version gotcha in CLAUDE.md). **All values now live in
+`deformableManipulationTools/params.py`** (`CABLE`, `SOFT_BLOCK`, `SOFT_BLOCK_PILLOW`,
+`SOFT_BLOCK_COMPRESS`, `SOFT_BLOCK_PICK`) — one source of truth shared by every example; the cable
+and FEM block are built by `deformableManipulationTools.assets.add_cable` / `add_soft_block`. Edit
+the params/builders, not the examples.
 
 ## Cable (VBD rod)
 
 - `add_rod(..., wrap_in_articulation=True)`: radius 0.008, segment length 0.035, 15 nodes,
   friction 1.5, **density 1200** (realistic jacketed cable; lighter cables turn pinch-contact
   residuals into ejection kicks — see the `η` light-body note in solver-architecture.md).
-- Laid with a **2 cm bow** (`_cable_layout_positions`): a perfectly straight round rod on a
+- Laid with a **2 cm bow** (the cable layout in the example's `plan`): a perfectly straight round rod on a
   flat table has a free rolling mode (VBD has no rolling friction) and rolls off; the bow
   locks it geometrically. The grasp/IK target is the midpoint of nodes 3–4 of the bowed layout.
 - The start-position clamp accounts for the full cable extent so the whole cable rests on the table.
@@ -51,4 +53,4 @@ Target object types beyond the rod/block: **zip-ties, clothing, towels** (cloth)
 Newton is also VBD (`add_cloth_grid`/mesh); expect the same dynamic-proxy two-way bridge +
 light-element `η` stability constraints to dominate, and the same `_sync_viz_state`
 particle-copy rule. A cloth grip would use particle-colliding proxies + the soft harvest, like
-`soft_pickplace`.
+`soft_pickplace`. Start from NVIDIA's cloth-manipulation recipe — [NVIDIA_cloth_manip.md](NVIDIA_cloth_manip.md).

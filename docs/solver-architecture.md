@@ -9,15 +9,18 @@ through the proxy bridge, not a shared contact.
 
 - **Any deformable/soft object present** (cable/rod, cloth, FEM block) → split
   **`SolverMuJoCo` (robot) + `SolverVBD` (all objects)** with the **dynamic gripper-proxy
-  bridge** (`examples/grip_coupling.py`). VBD is the only Newton solver that hosts
-  rigid+cable+soft+their mutual two-way contact in one world, so every object that must touch a
-  deformable lives in the VBD model.
+  bridge** (`deformableManipulationTools/grip.py`, wired in by `framework.py`). VBD is the only
+  Newton solver that hosts rigid+cable+soft+their mutual two-way contact in one world, so every
+  object that must touch a deformable lives in the VBD model.
 - **Rigid-only** → a **single `SolverMuJoCo`** for robot + objects (Newton
   `brick_stacking`/`panda_hydro` pattern): true two-way frictional grasp, MuJoCo's mature
   convex/SDF/hydroelastic mesh contact, none of the VBD-rigid-mesh fragility. Preferred for
   new rigid-only demos.
-- Caveat: `pickplace_ycb_franka` is rigid-only but deliberately kept on VBD as the proof
-  VBD can host arbitrary rigid mesh shapes (so the scene could later gain a soft object).
+- Caveat: `pickplace_ycb_franka` is rigid-only but deliberately kept on VBD as the proof VBD can
+  host arbitrary rigid **mesh** shapes (so the scene could later gain a soft object). Concave
+  meshes (bowl/banana) collide as **coacd convex-hull pieces** built by
+  `deformableManipulationTools.assets.add_ycb_mesh` — a raw concave mesh gives contradictory
+  contact normals and ejects the whole solve (SOLVERS.md §4).
 
 ## Robot side
 

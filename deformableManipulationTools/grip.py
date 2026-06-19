@@ -30,6 +30,76 @@ from __future__ import annotations
 import numpy as np
 import warp as wp
 
+import newton
+
+from .params import GRIP, GripConfig
+
+
+# ---------------------------------------------------------------------------------------------
+# Dynamic finger proxies (the grip contact bridge consumed by TwoWayProxyCoupling below).
+# ---------------------------------------------------------------------------------------------
+def build_gripper_proxies(object_builder, robot_builder, finger_bodies: list[int],
+                          object_table_shape: int | None, gap: float, grip: GripConfig = GRIP,
+                          has_particle_collision: bool = False):
+    """Add the two dynamic finite-mass finger proxies to ``object_builder`` (collision shapes
+    copied from the robot fingers), filtered against the object-model table. Set
+    ``has_particle_collision=True`` to also grip FEM-particle objects (soft blocks). Returns
+    (proxy_bodies, proxy_shapes)."""
+    proxy_cfg = newton.ModelBuilder.ShapeConfig(
+        density=0.0, is_visible=False, has_shape_collision=True,
+        has_particle_collision=has_particle_collision,
+        margin=grip.proxy_margin, gap=gap, ke=grip.proxy_ke, kd=grip.proxy_kd, mu=grip.proxy_mu,
+    )
+    proxy_bodies, proxy_shapes = [], []
+    inertia = wp.mat33(grip.proxy_inertia, 0.0, 0.0, 0.0, grip.proxy_inertia, 0.0, 0.0, 0.0, grip.proxy_inertia)
+    for label, finger_body in zip(("left_gripper_contact_proxy", "right_gripper_contact_proxy"),
+                                  finger_bodies, strict=True):
+        body = object_builder.add_body(
+            xform=wp.transform(wp.vec3(0.0, 0.0, 0.0), wp.quat_identity()),
+            is_kinematic=False, mass=grip.proxy_mass, inertia=inertia,
+            com=wp.vec3(0.0, 0.0, 0.0), lock_inertia=True, label=label,
+        )
+        proxy_bodies.append(body)
+        n = 0
+        for shape_idx, shape_body in enumerate(robot_builder.shape_body):
+            if shape_body != finger_body:
+                continue
+            if not (robot_builder.shape_flags[shape_idx] & int(newton.ShapeFlags.COLLIDE_SHAPES)):
+                continue
+            shape = object_builder.add_shape(
+                body=body, type=robot_builder.shape_type[shape_idx],
+                xform=robot_builder.shape_transform[shape_idx], cfg=proxy_cfg,
+                scale=robot_builder.shape_scale[shape_idx], src=robot_builder.shape_source[shape_idx],
+                label=f"{label}_shape_{n}",
+            )
+            proxy_shapes.append(shape)
+            n += 1
+        if n == 0:
+            raise RuntimeError(f"No colliding shapes on Franka finger body {finger_body}.")
+    # A dynamic proxy re-pinned against the static table resolves explosively; the robot-side
+    # table already stops the real fingers, so this object-model contact is redundant.
+    if object_table_shape is not None:
+        for shape in proxy_shapes:
+            object_builder.add_shape_collision_filter_pair(object_table_shape, shape)
+    return proxy_bodies, proxy_shapes
+
+
+def restore_proxy_materials(object_model, proxy_shapes: list[int], grip: GripConfig = GRIP):
+    """Re-apply proxy contact material after any blanket ``shape_material_*.fill_`` (which would
+    clobber it). Must run after finalize."""
+    if not proxy_shapes:
+        return
+    mu = object_model.shape_material_mu.numpy()
+    ke = object_model.shape_material_ke.numpy()
+    kd = object_model.shape_material_kd.numpy()
+    for shape in proxy_shapes:
+        mu[shape] = grip.proxy_mu
+        ke[shape] = grip.proxy_ke
+        kd[shape] = grip.proxy_kd
+    object_model.shape_material_mu.assign(mu)
+    object_model.shape_material_ke.assign(ke)
+    object_model.shape_material_kd.assign(kd)
+
 
 @wp.kernel
 def _apply_coupling_to_ee_kernel(

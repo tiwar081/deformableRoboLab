@@ -1,18 +1,18 @@
 # Gripper & contact bridge
 
-The grip is **centralized**: one implementation (`examples/grip_coupling.py` +
-`examples/franka_common.py`) and one parameter set (`assets/params.py`) are shared by every
-example, so the same robot grips every object the same way. Physical, bounded force; **no force
-cap, no post-hoc clamp**.
+The grip is **centralized**: one implementation (`deformableManipulationTools/grip.py`, built into
+the run by `deformableManipulationTools/framework.py`) and one parameter set
+(`deformableManipulationTools/params.py`) are shared by every example, so the same robot grips
+every object the same way. Physical, bounded force; **no force cap, no post-hoc clamp**.
 
 ## Dynamic finite-mass proxy bridge
 
 Objects live only in the VBD object model, so nothing in the robot (MuJoCo) model stops the
 fingers. The bridge is two **dynamic finite-mass finger proxies** in the object model
-(`franka_common.build_gripper_proxies`): invisible bodies with the imported finger collision
+(`grip.build_gripper_proxies`): invisible bodies with the imported finger collision
 shapes, mass `GRIP.proxy_mass` (10 kg, ≈ the reflected articulated-chain inertia).
 
-Each substep (`grip_coupling.TwoWayProxyCoupling`, NVIDIA's recipe — staggered one-step lag):
+Each substep (`grip.TwoWayProxyCoupling`, NVIDIA's recipe — staggered one-step lag):
 
 1. `apply_to_robot` — feed the previous step's harvested object reaction onto the **arm/EE**.
 2. robot solves; swap.
@@ -41,10 +41,11 @@ lost (grip → 0). Keep the fingers position-controlled and feed the **net** rea
 The grip force is **emergent and physical** — the position-controlled squeeze against bounded
 contact (NVIDIA default-hard contacts + re-derived physical damping), not a clamp. Typical
 operating point ≈ **30–90 N** for the cable, comparable for the rigid/soft grips; aim for
-**~10–30 N** by adjusting the knobs below. **All knobs are centralized in `assets/params.py`**, so
+**~10–30 N** by adjusting the knobs below. **All knobs are centralized in
+`deformableManipulationTools/params.py`**, so
 changing them changes every demo identically (same robot, same grip).
 
-Knobs (most-used first), all in `assets.params.GRIP` unless noted:
+Knobs (most-used first), all in `deformableManipulationTools.params.GRIP` unless noted:
 
 - **`grasp_interference`** (default 1 mm) — how far past the object surface the close target bites.
   The per-example close target is `gripper_closed = object_half_width + object_margin +
@@ -60,19 +61,30 @@ Knobs (most-used first), all in `assets.params.GRIP` unless noted:
 - **`proxy_mass`** (10 kg) — heavier → the proxy resists being pushed off the object (maintains
   penetration); too light loses the grip. 10 kg is a stable default.
 
-To target a specific force: tweak `grasp_interference` first (it's roughly linear in the steady
-grip), verify with `CABLE_DIAG=1` (prints per-pad `grip=(left,right)N`), then `--test`.
+**Contact geometry sets the force scale, not just the knobs.** The emergent force ≈ `ke · penetration`
+summed over every contact point, so at the *same* `grasp_interference` a flat box face gripped by
+the flat pads makes a large multi-point patch and reads high (the rubik's cube ~155 N), while a
+curved or small object (the banana) makes a tiny patch, reads low, and can be marginal/slip. It's
+bounded and net-to-EE ≈ 0 either way (not a divergence). If a box grip is uncomfortably hard, give
+it a hair of pad clearance (raise `gripper_closed`); don't expect a curved object to hold as firmly
+at the same bite.
 
-## grip_force.py (legacy)
+To target a specific force: tweak `grasp_interference` first (it's roughly linear in the steady
+grip), verify with an instrumented headless run logging `GraspExample.grip_force_norms()` (per-pad
+`[left, right]` N), then `--test`.
+
+## Legacy clamp — fully retired
 
 The old post-hoc **0→15 N capped-Coulomb clamp / squeeze-to-force** (`GripForceClamp`,
-`RigidGripWidth`, `SoftGripWidth`) is retired from the migrated examples. It survives only for
-`pickplace_ycb_franka` (the one example **not** yet on the dynamic proxy — it has a pre-existing
-object fly-away that is out of scope; see ONGOING.md). Remove `grip_force.py` once ycb migrates.
+`RigidGripWidth`, the old `examples/grip_force.py`) is **gone**. Every example — including
+`pickplace_ycb_franka` — now uses the dynamic finite-mass proxy. ycb's old object fly-away was the
+raw-concave-bowl-mesh ejection, fixed by coacd convex-hull collision (see SOLVERS.md §4 /
+deformables.md); the grip is genuine contact friction, so an object drops physically when the pads
+open (no spring/latch holding it).
 
 ## Obstacle (table) non-penetration
 
 The robot-side hidden `robot_contact_table` collider stops the gripper at the table surface; the
 object-model table is filtered against the dynamic proxies (a dynamic proxy re-pinned against the
-static table resolves explosively). Both come from `assets.params.TABLE` /
-`franka_common.build_franka_robot` / `build_gripper_proxies`.
+static table resolves explosively). Both come from `deformableManipulationTools.params.TABLE` /
+`deformableManipulationTools.robot.build_franka_robot` / `build_gripper_proxies`.

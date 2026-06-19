@@ -2,9 +2,11 @@
 
 `SolverVBD` is built for deformables (cloth, FEM, rods, particles). In this repo we
 also run the *object side* of every demo through it — rigid cube/sheet/cable/bowl,
-plus the kinematic gripper "proxy" bodies — so the robot (MuJoCo) and the objects
+plus the **dynamic finite-mass** gripper "proxy" bodies — so the robot (MuJoCo) and the objects
 share one contact world. That works, but rigid bodies in VBD have a row of sharp
-edges. Recording them here so the next person doesn't relearn them.
+edges. Recording them here so the next person doesn't relearn them. (Troubles #1–3 are the
+*kinematic*-proxy era; the proxies are now dynamic finite-mass — see "How object↔gripper two-way
+physics is implemented" below.)
 
 ### 1. VBD won't hand you forces on a kinematic body
 
@@ -101,52 +103,31 @@ concave mesh, keep mesh BVHs small and unshared, and use realistic masses. The
 public API is enough (`collect_rigid_contact_forces`, `soft_contact_*`,
 `State.body_f` on the MuJoCo side) — we never modified or imported `newton._src`.
 
-## How object↔gripper two-way physics is implemented
+## How object↔gripper two-way physics is implemented (current: dynamic proxy)
 
-The robot (MuJoCo) and the objects (VBD) are *separate* solvers; the only bridge is
-the pair of **kinematic gripper-proxy bodies** in the object model that mirror the
-real Franka fingers. The arm side stays one-way (objects can't push the arm — a
-deliberate choice; the whole-arm version was reverted). But the **gripper itself is
-genuinely two-way with the object** — implemented as a per-substep *forward drive*
-plus a *force-triggered latch* back-channel, not a continuous force loop.
+The robot (MuJoCo) and the objects (VBD) are *separate* solvers; the bridge is a pair of
+**DYNAMIC finite-mass gripper-proxy bodies** in the object model that mirror the real Franka
+fingers (`deformableManipulationTools.grip.TwoWayProxyCoupling`, wired in by `framework.py`). The
+authoritative description is [gripper.md](gripper.md); the essentials:
 
-**Forward — gripper → object (every substep).** `_sync_gripper_proxies_kernel`
-writes each proxy body's pose to the matching finger's current world pose (on both
-VBD states; VBD finite-differences `body_q_prev` for the contact friction velocity,
-matching its kinematic-driving protocol). The proxies carry copies of the finger
-collision geometry, so as the fingers close the proxies close, and the object
-collides against them. The squeeze is a *real* VBD contact: a normal penalty force
-(≈ stiffness × penetration) plus Coulomb friction (≤ `mu·normal`) — that friction is
-what actually carries the object against gravity through the lift.
+**Forward — gripper → object (every substep).** Each proxy is re-pinned to its finger's
+pose+velocity with the gravity + lagged-contact-wrench velocity deltas pre-subtracted
+(momentum-consistent undo), so it stays slaved to the finger *yet participates as a finite-mass
+contact body* in the VBD solve. The squeeze is a real VBD contact (penalty normal + Coulomb
+friction) — the friction carries the object through the lift. The close target is position-
+controlled (`object_half + margins − grasp_interference`); there is **no force-triggered latch**.
 
-**Backward — object → gripper (every substep).** Read the reaction the object exerts
-on the proxies and let it decide when the gripper stops closing:
+**Backward — object → arm/EE (every substep, net).** The object→proxy reaction is harvested (rigid
+via `SolverVBD.collect_rigid_contact_forces`; soft via recomputed `ke·penetration` over the public
+`soft_contact_*` geometry) and the **NET** of the two pads (internal squeeze cancels, external load
+remains) is fed onto the **arm/EE** one substep later — so the arm DOES feel the payload. Per-pad
+reaction is never fed to the gripper DOFs (that pushes the pads open and loses the grasp).
 
-- rigid object: `SolverVBD.collect_rigid_contact_forces` → per-contact force on the
-  proxy, projected onto the finger closing axis and summed per finger;
-- soft object: no public soft-force readback, so recompute `ke·penetration` per
-  proxy↔particle contact from the public `soft_contact_*` geometry + `particle_q`.
-
-A device-side controller (`_update_grip_target_kernel`) creeps the gripper target
-closed at a fixed rate while the reaction is below a threshold, and the instant the
-reaction crosses it, **latches** the current width and holds it under position
-control. So the object's resistance sets where the gripper stops — that *is* the
-back-coupling — but it enters as a discrete trigger, never as a force injected into
-the dynamics. (Injecting the reaction continuously into the gripper DOF, or the arm,
-across the one-substep solver lag was unstable against the stiff penalty contact —
-chatter and ejection, Troubles #2 — which is exactly why this is a latch.)
-
-Emergent behavior falls straight out of the contact stiffness:
-
-- **rigid** object → the reaction jumps the instant the pads touch (near-rigid
-  contact), so the latch fires at the surface — "stop at contact";
-- **soft** object → the reaction grows gradually with compression, so the gripper
-  keeps squeezing until the threshold — "compress to a target force."
-
-Caveat to keep straight: the grip force on the object is a real force *in the object
-solve* (proxy penetration → penalty), but it is **not** fed back into the robot's
-MuJoCo dynamics, so the arm does not feel the payload. Two-way at the gripper,
-one-way at the arm.
+This **supersedes** the earlier *kinematic*-proxy + force-triggered-latch design (Troubles #1–3
+below were its symptoms). A kinematic proxy can't return body forces and, with `alpha=0`+history,
+accumulated the ALM multiplier into a 1e4–1e6 N phantom grip; the dynamic proxy with NVIDIA
+default-hard contacts and re-derived physical `kd` is stable and gives a bounded ~10–90 N grip.
+Full analysis in [ONGOING.md](ONGOING.md).
 
 # Newton Example Reference
 
@@ -786,7 +767,7 @@ Sim**, whose physics engine is **PhysX (GPU)**. There is no `SolverMuJoCo` / `So
 nothing). The "solver" in RoboLab is PhysX's TGS rigid-body solver, configured ONCE and
 reused through-and-through. So this repo's split SolverMuJoCo+SolverVBD design and the
 upstream RoboLab benchmark share only assets/look-and-feel, not physics — the
-`robolab_viz/` integration borrows RoboLab's DROID rendering + asset library, never its
+`robolabViz/` integration borrows RoboLab's DROID rendering + asset library, never its
 simulation.
 
 The single shared physics config (`robolab/core/environments/base.py`, applied to every

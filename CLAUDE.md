@@ -28,7 +28,8 @@ Two-way contact only happens inside one solver; the MuJoCo↔VBD bridge is one-w
   in one world.
 - **Rigid-only** → a single `SolverMuJoCo` for robot + objects (true two-way grasp, mature
   mesh contact). Preferred for new rigid-only demos.
-- `pickplace_ycb_franka` is rigid-only but kept on VBD on purpose (proof VBD hosts rigid meshes).
+- `pickplace_ycb_franka` is rigid-only but runs on the split VBD path on purpose — proof VBD hosts
+  rigid **meshes** (bowl/banana as coacd convex-hull pieces) with the centralized dynamic-proxy grip.
 
 Details: [docs/solver-architecture.md](docs/solver-architecture.md).
 
@@ -48,26 +49,40 @@ Details: [docs/solver-architecture.md](docs/solver-architecture.md).
 - **Never read or depend on `_external/` at runtime.** Import or copy what you need; assume
   `_external/` (newton, RoboLab) can be deleted and the codebase must still run.
 
-## Code layout (centralized — change shared behavior in ONE place)
+## Code layout — physics is centralized in `deformableManipulationTools/`
 
-The robot, the grip, and the per-frame loop are shared; only the **object** and the **motion**
-are per-example. Edit the shared bits here, not in the examples:
+**Requirement (governs the structure of every change): all physics, robot, and asset properties
+live in the `deformableManipulationTools/` package, never inline in an example.** An `examples/`
+script declares ONLY (1) the **scene** (which objects, where; table/background) and (2) the
+**policy** (the robot motion). If a change touches the solver loop, robot, grip, contact materials,
+masses, or how an object's collision/viz geometry is built, it goes in the package so every demo —
+and every *future* demo — inherits it and cannot reintroduce a per-object bug (e.g. the ycb
+raw-concave-mesh ejection). If a new demo needs a knob the package doesn't expose, add the knob to
+the package, don't special-case it in the example.
 
-- **`assets/params.py`** — single source of truth for ALL physics parameters (frozen dataclasses):
-  `FRANKA` (actuators, home_q, MuJoCo solver), `GRIP` (proxy mass/contact, `grasp_interference`,
-  damping), `TABLE`, `CABLE`, `SOFT_BLOCK*`, `RIGID_CUBE`/`STEEL_CUBE`. Same robot/object props
-  across every demo. (`assets/` is an importable package: `from assets.params import …`.)
-- **`examples/franka_common.py`** — shared helpers + the `GraspExample` base (the identical
-  `simulate()` substep loop, CUDA-graph `step()`, viz build/sync): `build_franka_robot`,
-  `make_robot_solver`, `solve_gripper_ik`, `build_gripper_proxies`, `restore_proxy_materials`,
-  `build_viz_model`, and `quat_rotate_xyzw`/`find_body`/`wp_smoothstep`.
-- **`examples/grip_coupling.py`** — `TwoWayProxyCoupling`, the one grip implementation (dynamic
-  finite-mass proxy, net-to-EE feedback, rigid + soft-particle harvest, no cap).
-- An example = `class Example(GraspExample)` that builds its object (`_build_object_builder`),
-  its keyframe motion kernel (`_set_robot_targets`), and `test_final`. 5 of 6 examples use this;
-  `pickplace_ycb` still uses the legacy `grip_force.py` (fly-away, out of scope).
+- **`params.py`** — single source of truth for ALL physics parameters (frozen dataclasses):
+  `FRANKA`, `GRIP`, `TABLE`/`TABLE_YCB`, `CABLE`, `SOFT_BLOCK*`, `RIGID_CUBE`/`STEEL_CUBE`/`RUBIKS_CUBE`,
+  `BOWL_YCB`/`BANANA_YCB`.
+- **`framework.py`** — `GraspExample`: owns the entire build (robot+solver, object-model assembly,
+  finalize ordering, materials, masses, coupling) + the substep loop + CUDA-graph capture + viz.
+  A demo subclass implements `configure`/`plan`/`build_scene`/`set_robot_targets`/`test_final`.
+- **`robot.py`** — Franka builder, MuJoCo solver, yaw-aware gripper IK (`solve_gripper_ik`).
+- **`grip.py`** — dynamic finite-mass proxies (`build_gripper_proxies`) + `TwoWayProxyCoupling`
+  (the one grip: net-to-EE feedback, rigid + soft-particle harvest, no cap).
+- **`assets.py`** — object builders that encapsulate the collision/viz NUANCES: `add_table`,
+  `add_cable`, `add_soft_block`, `add_rigid_box`, `add_rubiks_cube`, `add_ycb_mesh`.
+- **`mesh_collision.py` + `coacd_worker.py`** — concave meshes COLLIDE as coacd convex-hull pieces
+  while the full mesh RENDERS (a raw concave mesh ejects the VBD solve — SOLVERS.md §4). coacd
+  segfaults if co-loaded with Newton, so decomposition runs in a subprocess and is disk-cached.
 
-Grip-force tuning lives in [docs/gripper.md](docs/gripper.md) (knobs in `GRIP`/`FRANKA`).
+`examples/` keeps only the thin demo scripts + the run harness (`__init__.py`); the shared terminal
+helper lives in `deformableManipulationTools/helper.py`. Each demo is **one file** `<name>.py` (no
+separate `_robolab` files); it subclasses `robolabViz.scenic.ScenicGraspExample` and `--output-style`
+picks the renderer — `scenic` (default: `outputs/<name>/{frames/, simulation.mp4}`, both policy
+cameras) or `basic` (`outputs/<name>.usd`). The scenic glue (`robolabViz/scenic.py`) reads the robot
+base pose / table / soft-object position off the physics example, so a new demo gets the RoboLab look
+for free. Import the public API with `from deformableManipulationTools import …`.
+Grip-force tuning: [docs/gripper.md](docs/gripper.md).
 
 ## Newton version (environment gotcha)
 
@@ -116,19 +131,20 @@ This repo's own docs:
   VBD object solver config + the `alpha=0`/ALM rationale, CUDA-graph capture rules, the viz
   particle-copy bug, the verification standard.
 - [docs/gripper.md](docs/gripper.md) — the **centralized** dynamic finite-mass proxy grip
-  (`grip_coupling.py` + `franka_common.build_gripper_proxies`, params in `assets/params.py`):
-  net-to-EE feedback, rigid + soft-particle harvest, the no-per-finger-feedback stability
-  invariant, and **how the grip force is tuned** (`grasp_interference` / `proxy_ke` /
-  `finger_effort`, ~10–90 N, no cap). `grip_force.py` survives only for `pickplace_ycb`.
+  (`deformableManipulationTools/grip.py`, params in `params.py`): net-to-EE feedback, rigid +
+  soft-particle harvest, the no-per-finger-feedback stability invariant, and **how the grip force
+  is tuned** (`grasp_interference` / `proxy_ke` / `finger_effort`, ~10–90 N, no cap).
 - [docs/deformables.md](docs/deformables.md) — cable (rod) and soft-FEM-block tuned parameters
   + reasons; notes on future cloth/zip-tie deformables.
 - [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.
-- [docs/robolab-graphics.md](docs/robolab-graphics.md) — the `robolab_viz/` RoboLab-look
+- [docs/robolab-graphics.md](docs/robolab-graphics.md) — the `robolabViz/` RoboLab-look
   renderer (raycast + offline RTX), customization surface, vendored assets, render gotchas.
 - [docs/ONGOING.md](docs/ONGOING.md) — the **live log of in-flight work + recent changes**
   (volatile, changes often). Always read it for the current state before editing active areas
   (e.g. the cable coupling / gripper). Its own header lists what's currently unresolved — trust
   the file, not a summary here.
+- When asked to create/improve this CLAUDE.md → [docs/howToWriteCLAUDE.md](docs/howToWriteCLAUDE.md)
+  (the working procedure: keep it short, universal, point-don't-paste, "if X then Y").
 
 External references (large; consult on demand, don't read up front):
 
@@ -138,6 +154,9 @@ External references (large; consult on demand, don't read up front):
   step), plus the Isaac Lab Franka-cube physics config (`impratio=1000`, `iterations=20`, …),
   Kamino closed-chain, and hydroelastic-SDF contact. Primary source for the coupling work and
   the Isaac Lab / high-fidelity path.
+- [docs/NVIDIA_cloth_manip.md](docs/NVIDIA_cloth_manip.md) — NVIDIA's Isaac Lab + Newton **cloth /
+  deformable manipulation** blog extract (VBD for thin deformables, Franka cloth grasp). Read when
+  starting the cloth/towel/zip-tie deformables on the project roadmap.
 - [docs/SOLVERS.md](docs/SOLVERS.md) — deep solver reference: why `SolverVBD` is fragile for
   *rigid* objects (the basis of the framework rule), how the object↔gripper two-way physics is
   wired, and an annotated catalog of Newton's upstream examples (cable, cloth, mpm, kamino,

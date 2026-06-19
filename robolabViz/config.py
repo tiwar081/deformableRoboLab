@@ -84,7 +84,7 @@ class CameraConfig:
     focus_distance: float = 28.0
     clipping: tuple[float, float] = (0.01, 1.0e4)
     # When False the camera is still rendered (and dumped as PNG frames) but is
-    # left out of the side-by-side combined.mp4 — e.g. an extra object-inspection
+    # left out of the side-by-side simulation.mp4 — e.g. an extra object-inspection
     # still view that should not change the kept observation video.
     in_combined_video: bool = True
 
@@ -108,7 +108,7 @@ class WristCameraConfig:
     exist here and its numbers don't transfer. We keep RoboLab's mount *concept*
     (rigidly fixed near the gripper, looking down over the fingers toward the
     grasp) and solve the concrete fr3_hand-frame pose ourselves via raycast
-    occlusion sweeps (see ``robolab_viz.rerender``): in the fr3_hand frame
+    occlusion sweeps (see ``robolabViz.rerender``): in the fr3_hand frame
     (+z toward the fingertips, +x the hand's front face), the eye sits 8 cm in
     front of the housing just above its top edge — high enough to see over the
     housing, low enough that the fat fr3_link7/link8 wrist cylinders stay out of

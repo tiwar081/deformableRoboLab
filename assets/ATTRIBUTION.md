@@ -38,5 +38,5 @@ nothing here breaks. Only a curated subset is vendored.
   RoboLab's catalog (name / usd_path / dims / class) for these objects.
 
 `robots/` contains USD conversions of robot URDFs generated locally by
-`python -m robolab_viz.robot_usd` (source URDF: Newton's
+`python -m robolabViz.robot_usd` (source URDF: Newton's
 `franka_emika_panda` asset pack, BSD-licensed by Franka Robotics).

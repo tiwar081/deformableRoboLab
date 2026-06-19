@@ -5,7 +5,7 @@ vendored RoboLab fixture assets, the converted robot USD, auto-generated prims
 for the Newton object model (cable capsules, rigid shapes), and a deforming
 mesh for the soft body. Each rendered physics frame becomes one USD time
 sample, so the result plays back in usdview / Omniverse / Isaac Sim and can be
-RTX-rendered offline on an RTX-capable machine (``robolab_viz.isaac_render``).
+RTX-rendered offline on an RTX-capable machine (``robolabViz.isaac_render``).
 
 Cameras are authored as USD Camera prims with RoboLab's intrinsics; the wrist
 camera is a child of the robot's hand link prim, so it follows the puppeteered
@@ -244,7 +244,7 @@ class RoboLabStageWriter:
             mesh.CreateFaceVertexCountsAttr(Vt.IntArray.FromNumpy(np.full(len(tris), 3, dtype=np.int32)))
             mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.none)
             return mesh
-        print(f"[robolab_viz] Skipping shape {name}: unsupported geo type {shape_type}.")
+        print(f"[robolabViz] Skipping shape {name}: unsupported geo type {shape_type}.")
         return None
 
     def _author_objects(self, model: newton.Model) -> None:
@@ -335,4 +335,4 @@ class RoboLabStageWriter:
         if self._frames_written:
             self.stage.SetEndTimeCode(self._frames_written - 1)
         self.stage.GetRootLayer().Save()
-        print(f"[robolab_viz] Saved {self._frames_written} frames to {self.output_path}")
+        print(f"[robolabViz] Saved {self._frames_written} frames to {self.output_path}")

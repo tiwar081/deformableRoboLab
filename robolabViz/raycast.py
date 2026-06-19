@@ -285,14 +285,14 @@ class RaycastPreviewRenderer:
         device,
         camera_names: list[str] | None = None,
         video_fps: float | None = None,
-        png_every: int = 0,
+        frames_per_image: int = 0,
         instances: list[_Instance] | None = None,
     ):
         self.scene = scene
         self.device = device
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.png_every = png_every
+        self.frames_per_image = frames_per_image
         self.video_fps = video_fps if video_fps is not None else scene.fps
 
         self._soft_start = 0
@@ -612,7 +612,7 @@ class RaycastPreviewRenderer:
             rgb = self._imgs[name].numpy()
             frame_rgbs[name] = rgb
             # Per-camera PNG frames (full resolution) into a frames/ subdir.
-            if self.png_every and self._frame_idx % self.png_every == 0:
+            if self.frames_per_image and self._frame_idx % self.frames_per_image == 0:
                 frames_dir = self.output_dir / "frames"
                 frames_dir.mkdir(exist_ok=True)
                 cv2.imwrite(
@@ -625,7 +625,7 @@ class RaycastPreviewRenderer:
                 cov["frame"] = self._frame_idx
                 self.wrist_coverage.append(cov)
 
-        # The only video kept (RoboLab-style combined observation video):
+        # The simulation video (RoboLab-style combined observation video):
         # cameras concatenated horizontally at half scale, or the single camera
         # full-frame when only one is previewed. Cameras flagged
         # in_combined_video=False (e.g. an object-inspection still view) are
@@ -643,14 +643,14 @@ class RaycastPreviewRenderer:
                 ]
                 target_h = min(h.shape[0] for h in halves)
                 combined = np.concatenate([h[:target_h] for h in halves], axis=1)
-            if "combined" not in self._writers:
-                self._writers["combined"] = VideoWriter(str(self.output_dir / "combined.mp4"), self.video_fps)
-            self._writers["combined"].write(combined)
+            if "simulation" not in self._writers:
+                self._writers["simulation"] = VideoWriter(str(self.output_dir / "simulation.mp4"), self.video_fps)
+            self._writers["simulation"].write(combined)
 
         self._frame_idx += 1
 
     def export_instances(self, path: Path | str) -> None:
-        """Serialize the preview geometry so ``robolab_viz.rerender`` can re-render
+        """Serialize the preview geometry so ``robolabViz.rerender`` can re-render
         cameras from a state cache without rebuilding the Newton model."""
         import pickle
 
@@ -678,5 +678,5 @@ class RaycastPreviewRenderer:
             }
             with open(self.output_dir / "wrist_coverage.json", "w") as f:
                 json.dump({"per_frame": self.wrist_coverage, "summary": summary}, f, indent=2)
-        print(f"[robolab_viz] Preview renders written to {self.output_dir}")
+        print(f"[robolabViz] Preview renders written to {self.output_dir}")
         return summary

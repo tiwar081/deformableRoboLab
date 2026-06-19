@@ -16,7 +16,7 @@ The output is cached: examples call :func:`ensure_robot_usd` which converts
 once and reuses ``assets/robots/<name>/<name>.usd`` afterwards, so a normal
 run never needs kit at all.
 
-CLI: ``python -m robolab_viz.robot_usd <urdf_path> <output_usd_path>``
+CLI: ``python -m robolabViz.robot_usd <urdf_path> <output_usd_path>``
 """
 
 from __future__ import annotations
@@ -36,10 +36,10 @@ def ensure_robot_usd(urdf_path: Path | str, name: str = "fr3_franka_hand", robot
         return out_path
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"[robolab_viz] Converting {urdf_path} -> {out_path} (one-time, via Isaac Sim URDF importer)...")
+    print(f"[robolabViz] Converting {urdf_path} -> {out_path} (one-time, via Isaac Sim URDF importer)...")
     env = dict(os.environ, OMNI_KIT_ALLOW_ROOT="1")
     result = subprocess.run(
-        [sys.executable, "-m", "robolab_viz.robot_usd", str(urdf_path), str(out_path)],
+        [sys.executable, "-m", "robolabViz.robot_usd", str(urdf_path), str(out_path)],
         cwd=Path(__file__).resolve().parent.parent,
         env=env,
         capture_output=True,
@@ -114,7 +114,7 @@ def fix_dae_visual_orientation(robot_usd_path: Path | str, urdf_path: Path | str
                     fixed += 1
     if fixed:
         stage.GetRootLayer().Save()
-    print(f"[robolab_viz] Fixed DAE up-axis orient on {fixed} visual mesh prims in {base_layer.name}")
+    print(f"[robolabViz] Fixed DAE up-axis orient on {fixed} visual mesh prims in {base_layer.name}")
     return fixed
 
 
@@ -171,7 +171,7 @@ def _convert(urdf_path: str, dest_path: str) -> None:
         import_config=cfg,
         dest_path=dest_path,
     )
-    print(f"[robolab_viz] import status={status} prim={prim_path}")
+    print(f"[robolabViz] import status={status} prim={prim_path}")
 
     from pxr import Usd
 
@@ -183,5 +183,5 @@ def _convert(urdf_path: str, dest_path: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        raise SystemExit("usage: python -m robolab_viz.robot_usd <urdf_path> <output_usd_path>")
+        raise SystemExit("usage: python -m robolabViz.robot_usd <urdf_path> <output_usd_path>")
     _convert(sys.argv[1], sys.argv[2])

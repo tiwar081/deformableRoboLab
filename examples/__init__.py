@@ -2,6 +2,14 @@
 demo itself). Each example script in this package opens with its motion summary
 and run command.
 
+Every demo is a single file ``<name>.py``. The ``--output-style`` flag selects
+how a run is rendered:
+
+- ``scenic`` (default) — robolabViz renders ``outputs/<name>/`` with a ``frames/``
+  folder (a still every ``--frames-per-image`` frames) and ``simulation.mp4``
+  (over-shoulder-left + wrist cameras, side by side), on any CUDA GPU.
+- ``basic`` — the Newton USD viewer writes ``outputs/<name>.usd`` (no scene look).
+
 Run: python -m examples <name> --device cuda:0   (list: python -m examples --list)
 """
 from __future__ import annotations
@@ -17,47 +25,80 @@ os.environ.setdefault("WARP_CACHE_PATH", "/tmp/warp-cache")
 
 USD_EXTENSIONS = {".usd", ".usda", ".usdc"}
 
+# The single-file demos in this package (each defines `Example` + a `__main__`).
+EXAMPLE_NAMES = (
+    "cable_rigidCube_franka",
+    "cable_soft_franka",
+    "rigidCube_soft_franka",
+    "soft_compression_franka",
+    "soft_pickplace_franka",
+    "pickplace_ycb_franka",
+)
+
 
 def get_examples() -> dict[str, str]:
     examples_dir = Path(__file__).resolve().parent
-    example_map: dict[str, str] = {}
-    for path in sorted(examples_dir.glob("example_*.py")):
-        example_name = path.stem.removeprefix("example_")
-        example_map[example_name] = f"examples.{path.stem}"
-    for example_name in (
-        "cable_rigidCube_franka",
-        "cable_soft_franka",
-        "rigidCube_soft_franka",
-        "soft_compression_franka",
-        "soft_pickplace_franka",
-        "pickplace_ycb_franka",
-    ):
-        if (examples_dir / f"{example_name}.py").exists():
-            example_map[example_name] = f"examples.{example_name}"
-    return example_map
+    return {
+        name: f"examples.{name}"
+        for name in EXAMPLE_NAMES
+        if (examples_dir / f"{name}.py").exists()
+    }
+
+
+def _str2bool(value: str) -> bool:
+    return str(value).strip().lower() in ("1", "true", "yes", "y", "t", "on")
 
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--device", type=str, default=None, help="Override the default Warp device.")
     parser.add_argument(
+        "--output-style",
+        type=str,
+        default="scenic",
+        choices=["basic", "scenic"],
+        help="scenic: robolabViz frames/ + simulation.mp4 in outputs/<name>/. "
+             "basic: a plain Newton USD at outputs/<name>.usd.",
+    )
+    parser.add_argument(
         "--viewer",
         type=str,
         default="usd",
         choices=["gl", "usd", "null"],
-        help="Viewer to use.",
+        help="Viewer for --output-style basic (scenic forces null).",
     )
     parser.add_argument(
         "--output-path",
         type=str,
         default=None,
-        help="USD file or output directory. Directories receive <example>.usd.",
+        help="basic: USD file/dir (dirs receive <name>.usd). scenic: output dir (default outputs/<name>).",
     )
     parser.add_argument("--num-frames", type=int, default=240, help="Total number of frames.")
     parser.add_argument("--headless", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--paused", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--test", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--quiet", action=argparse.BooleanOptionalAction, default=False)
+
+    # ---- scenic (--output-style scenic) rendering options ----
+    scenic = parser.add_argument_group("scenic rendering (--output-style scenic)")
+    scenic.add_argument("--frames-per-image", type=int, default=30,
+                        help="Dump a per-camera still into frames/ every N frames (0 = off).")
+    scenic.add_argument("--table", default="maple",
+                        help="Vendored work-table texture (e.g. maple; see robolabViz.config.available_tables).")
+    scenic.add_argument("--background", default="home_office",
+                        help="Vendored dome background (e.g. home_office, garage_2k; "
+                             "see robolabViz.config.available_backgrounds).")
+    scenic.add_argument("--usd", type=_str2bool, nargs="?", const=True, default=False,
+                        help="Also write the full time-sampled RoboLab USD scene to outputs/<name>/<name>.usd.")
+    scenic.add_argument("--npz", type=_str2bool, nargs="?", const=True, default=False,
+                        help="Also write the per-frame state cache + geometry.pkl for robolabViz.rerender.")
+    scenic.add_argument("--objectview", type=_str2bool, nargs="?", const=True, default=False,
+                        help="Add a fixed object-inspection camera (soft demos only); its frames go to "
+                             "frames/ but it is kept out of simulation.mp4.")
+    scenic.add_argument("--wrist-eye", type=float, nargs=3, default=None,
+                        help="Override wrist camera eye in the hand frame (x y z).")
+    scenic.add_argument("--wrist-target", type=float, nargs=3, default=None,
+                        help="Override wrist camera look-at target in the hand frame (x y z).")
     return parser
 
 
@@ -76,7 +117,20 @@ def init(parser: argparse.ArgumentParser | None = None, example_name: str = "exa
 
     parser = parser or create_parser()
     args = parser.parse_args()
-    args.output_path = _resolve_output_path(args.output_path, example_name)
+
+    if getattr(args, "output_style", "scenic") == "scenic":
+        # scenic renders through robolabViz; everything lands in outputs/<name>/.
+        args.viewer = "null"
+        out_dir = Path(args.output_path) if args.output_path else Path("outputs") / example_name
+        if out_dir.suffix.lower() in USD_EXTENSIONS:
+            out_dir = out_dir.parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+        args.output_dir = str(out_dir)
+        # Used only by the opt-in --usd / --npz outputs.
+        args.output_path = str(out_dir / f"{example_name}.usd")
+    else:
+        args.output_dir = None
+        args.output_path = _resolve_output_path(args.output_path, example_name)
 
     if args.quiet:
         wp.config.log_level = max(wp.config.log_level, wp.LOG_WARNING)

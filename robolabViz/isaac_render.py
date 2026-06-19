@@ -2,10 +2,11 @@
 
 Run this on an RTX-capable machine (RT cores required — the Omniverse RTX
 renderer does not run on A100/H100/H200; on those GPUs use the warp raycast
-preview that the demo writes alongside the USD):
+preview the demo writes alongside the USD, i.e. the default scenic output). The
+USD is produced by running a demo in scenic mode with ``--usd``:
 
-    OMNI_KIT_ALLOW_ROOT=1 python -m robolab_viz.isaac_render \
-        outputs/cable_soft_franka_robolab.usd \
+    OMNI_KIT_ALLOW_ROOT=1 python -m robolabViz.isaac_render \
+        outputs/cable_soft_franka/cable_soft_franka.usd \
         --cameras over_shoulder_left_camera wrist_camera \
         --output-dir outputs/robolab_rtx
 
@@ -24,7 +25,7 @@ import sys
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("usd_path", help="Time-sampled USD produced by a *_robolab example.")
+    parser.add_argument("usd_path", help="Time-sampled USD produced by a scenic demo run with --usd.")
     parser.add_argument("--cameras", nargs="+", default=["over_shoulder_left_camera", "wrist_camera"])
     parser.add_argument("--output-dir", default="outputs/robolab_rtx")
     parser.add_argument("--rt-subframes", type=int, default=8, help="RTX accumulation subframes per frame.")
@@ -72,7 +73,7 @@ def main() -> None:
     timeline.set_start_time(start / fps)
     timeline.set_end_time(end / fps)
 
-    from robolab_viz.video import VideoWriter
+    from robolabViz.video import VideoWriter
 
     for frame in range(start, end + 1):
         timeline.set_current_time(frame / fps)
@@ -85,11 +86,11 @@ def main() -> None:
                 writers[name] = VideoWriter(os.path.join(args.output_dir, f"{name}.mp4"), fps)
             writers[name].write(data[..., :3])
         if frame % 60 == 0:
-            print(f"[robolab_viz] rendered frame {frame}/{end}")
+            print(f"[robolabViz] rendered frame {frame}/{end}")
 
     for w in writers.values():
         w.release()
-    print(f"[robolab_viz] RTX renders written to {args.output_dir}")
+    print(f"[robolabViz] RTX renders written to {args.output_dir}")
     app.close()
 
 
