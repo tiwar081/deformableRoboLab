@@ -19,17 +19,26 @@ Priorities, in order: **1) physics fidelity → 2) render quality → 3) speed.*
 
 ## Solver framework rule
 
-Two-way contact only happens inside one solver; the MuJoCo↔VBD bridge is one-way.
+Two-way contact only happens inside one solver; the MuJoCo↔VBD bridge is one-way. The framework
+chooses the object solver **CENTRALLY** in `GraspExample.__init__`: a deformable is present iff
+`object_builder.particle_count > 0` **OR** a `CABLE` joint exists (FEM/cloth create particles; a
+rod/cable is capsule bodies + `CABLE` joints with NO particles, so it is detected by joint type —
+else a cable-only scene misroutes to MuJoCo, whose FK skips `CABLE` joints; rigid boxes/meshes have
+neither). An example only declares its scene; it never picks the solver.
 
-- **Any deformable/soft object present** → split `SolverMuJoCo` (robot) + `SolverVBD` (all
-  objects) + **dynamic finite-mass gripper-proxy bridge** (NVIDIA recipe: proxies mirror the
-  fingers, the cable's contact reaction is harvested and the net external load fed to the arm/EE
-  one step later). VBD is the only Newton solver hosting rigid+cable+soft+mutual two-way contact
-  in one world.
-- **Rigid-only** → a single `SolverMuJoCo` for robot + objects (true two-way grasp, mature
-  mesh contact). Preferred for new rigid-only demos.
-- `pickplace_ycb_franka` is rigid-only but runs on the split VBD path on purpose — proof VBD hosts
-  rigid **meshes** (bowl/banana as coacd convex-hull pieces) with the centralized dynamic-proxy grip.
+- **Any deformable present** → split `SolverMuJoCo` (robot) + `SolverVBD` (ALL objects) + **dynamic
+  finite-mass gripper-proxy bridge** (NVIDIA recipe: proxies mirror the fingers, the object's contact
+  reaction is harvested and the net external load fed to the arm/EE one step later). VBD is the only
+  Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here gripper widths
+  are PRESET** (`gripper_closed = object_half + GRIP.proxy_margin − GRIP.grasp_interference`) — the
+  proxy contact engages at a precise finger width.
+- **Rigid-only** → robot AND objects in ONE `SolverMuJoCo` (objects merged into the robot builder via
+  `add_builder`), true two-way grasp, **CCD on** (`make_robot_solver`). The gripper closes to a FIXED
+  target (`MUJOCO_GRIP.close_target`; no object-size preset width — contact + actuator effort hold it,
+  cf. `_external/RoboLab`). No proxies/coupling; the single MuJoCo model is also the viz model.
+- `pickplace_ycb_franka` (rigid meshes) auto-routes to MuJoCo; `pickplace_ycb_vbd_franka` is the same
+  scene **plus a token soft cube**, which auto-routes it to VBD — the A/B twin proving the routing.
+  (MuJoCo rigid-only ≈ 2.2× faster than the VBD+proxy path on the same ycb scene.)
 
 Details: [docs/solver-architecture.md](docs/solver-architecture.md).
 

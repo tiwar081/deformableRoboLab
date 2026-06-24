@@ -287,6 +287,7 @@ class RaycastPreviewRenderer:
         video_fps: float | None = None,
         frames_per_image: int = 0,
         instances: list[_Instance] | None = None,
+        object_body_min: int | None = None,
     ):
         self.scene = scene
         self.device = device
@@ -295,6 +296,10 @@ class RaycastPreviewRenderer:
         self.frames_per_image = frames_per_image
         self.video_fps = video_fps if video_fps is not None else scene.fps
 
+        # On the rigid-only path the "object model" is the robot model (objects merged into it); only
+        # bodies at/after this index are the objects (earlier ones are the robot's own links, rendered
+        # via FK). None = render every body (the VBD path's separate object model).
+        self._object_body_min = object_body_min
         self._soft_start = 0
         self._soft_count = 0
         if instances is not None:
@@ -349,6 +354,10 @@ class RaycastPreviewRenderer:
             if not (int(shape_flags[s]) & int(newton.ShapeFlags.VISIBLE)):
                 continue
             if any(label.startswith(p) for p in self.scene.skip_shape_label_prefixes):
+                continue
+            # Rigid-only path: this model is the robot model; render only the merged object bodies, not
+            # the robot's own visual links (those are rendered from the URDF/USD via FK).
+            if self._object_body_min is not None and int(shape_body[s]) < self._object_body_min:
                 continue
 
             stype, scale = int(shape_type[s]), shape_scale[s]

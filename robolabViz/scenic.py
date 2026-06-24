@@ -129,23 +129,31 @@ class ScenicGraspExample(GraspExample):
         # The output directory examples.init resolved for scenic runs (outputs/<name>/).
         self._scenic_dir = Path(getattr(args, "output_dir", None) or Path(args.output_path).parent)
 
+        # Rigid-only routing: there is no VBD object model — the objects are merged into the robot's
+        # MuJoCo model (from object_body_start on). Render them from there (posed by the robot state),
+        # skipping the robot's own links (those render from the URDF/USD via FK).
+        self._rigid_only = self.object_model is None
+        viz_obj_model = self.robot_model if self._rigid_only else self.object_model
+        object_body_min = self.object_body_start if self._rigid_only else None
+
         # The full time-sampled USD scene is an opt-in output (--usd).
         self.stage_writer: RoboLabStageWriter | None = None
         if args.usd:
             self.stage_writer = RoboLabStageWriter(
                 output_path=args.output_path,
                 scene=scene,
-                object_model=self.object_model,
+                object_model=viz_obj_model,
                 num_frames=args.num_frames,
             )
         self.preview = RaycastPreviewRenderer(
             scene=scene,
-            object_model=self.object_model,
+            object_model=viz_obj_model,
             robot_link_names=self.viz_fk.link_names,
             output_dir=self._scenic_dir,
             device=self.robot_model.device,
             camera_names=preview_cameras,
             frames_per_image=args.frames_per_image,
+            object_body_min=object_body_min,
         )
         # geometry.pkl is only useful alongside the state cache (rerender needs both).
         if args.npz:
@@ -166,9 +174,12 @@ class ScenicGraspExample(GraspExample):
             return
 
         link_tfs = self.viz_fk.link_world_transforms(self.robot_state_0.joint_q)
-        object_body_q = self.object_state_0.body_q.numpy()
-        # particle_q is None for rigid-only scenes (cable_rigidCube, pickplace_ycb).
-        particle_q = self.object_state_0.particle_q
+        # Object body poses: the VBD object state, or the robot state when objects are merged into the
+        # MuJoCo model (rigid-only). The instance keys are body indices into this same body_q.
+        obj_state = self.robot_state_0 if self._rigid_only else self.object_state_0
+        object_body_q = obj_state.body_q.numpy()
+        # particle_q is None for rigid-only scenes (no deformables).
+        particle_q = None if self._rigid_only else self.object_state_0.particle_q
         particle_q_np = particle_q.numpy() if particle_q is not None else np.zeros((0, 3), dtype=np.float32)
 
         if self.stage_writer is not None:

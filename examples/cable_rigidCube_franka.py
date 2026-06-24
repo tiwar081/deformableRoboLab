@@ -24,27 +24,25 @@ import warp as wp
 import examples
 from robolabViz.scenic import ScenicGraspExample
 from deformableManipulationTools import (
-    CABLE, GRIP, RIGID_CUBE, TABLE,
+    CABLE, FRANKA, RIGID_CUBE, TABLE, GraspWindow,
     add_table, add_cable, add_rigid_box, build_gripper_proxies, solve_gripper_ik, wp_smoothstep,
 )
 
 
 @wp.kernel
-def _set_robot_targets_kernel(
+def _set_arm_targets_kernel(
     t_frame: wp.array(dtype=float),
     substep: int,
     sim_dt: float,
     home_q: wp.array(dtype=float),
     pickup_q: wp.array(dtype=float),
-    gripper_open: float,
-    gripper_closed: float,
     joint_target_q: wp.array(dtype=float),
 ):
+    # ARM DOFs only (0..n_arm_dof-1); the fingers are owned by the centralized force-stop GripController.
     i = wp.tid()
     t = t_frame[0] + float(substep) * sim_dt
 
     close_start = 2.8
-    hold_start = 4.0
     lift_start = 4.8
     sweep_start = 6.8
 
@@ -67,15 +65,6 @@ def _set_robot_targets_kernel(
         elif i == 5:
             q -= 0.20 * ramp * wp.sin(phase)
 
-    if i >= 7:
-        if t < close_start:
-            q = gripper_open
-        elif t < hold_start:
-            alpha = wp_smoothstep((t - close_start) / (hold_start - close_start))
-            q = (1.0 - alpha) * gripper_open + alpha * gripper_closed
-        else:
-            q = gripper_closed
-
     joint_target_q[i] = q
 
 
@@ -85,6 +74,10 @@ class Example(ScenicGraspExample):
         self.cube_half = RIGID_CUBE.half_extent
         self.cube_start_pos = np.array([0.28, -0.30, self.table_top_z + self.cube_half], dtype=np.float32)
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048}
+        # Force-stop grasp (no preset width): close on the cable from t=2.8 and FREEZE the finger
+        # target when the harvested grip force reaches force_target; hold for the rest of the run
+        # (the sweep never releases). Replaces gripper_closed = radius + margins − grasp_interference.
+        self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6, force_target=10.0)]
 
     def _cable_layout(self, start_pos):
         direction = np.array([1.0, 0.05, 0.0], dtype=np.float32)
@@ -110,7 +103,6 @@ class Example(ScenicGraspExample):
         grasp = 0.5 * (self.cable_node_positions[3] + self.cable_node_positions[4])
         grasp[2] = self.table_top_z
         self.pickup_q = solve_gripper_ik(ik_model, ik_state, self.ee_body, self.ee_offset, grasp, self.gripper_open)
-        self.gripper_closed = CABLE.radius + CABLE.contact_margin + GRIP.proxy_margin - GRIP.grasp_interference
         self._home_q_wp = wp.array(self.home_q, dtype=wp.float32, device=ik_model.device)
         self._pickup_q_wp = wp.array(self.pickup_q, dtype=wp.float32, device=ik_model.device)
 
@@ -118,15 +110,14 @@ class Example(ScenicGraspExample):
         self._obj_table_shape = add_table(builder, TABLE)
         self.cube_body, _ = add_rigid_box(builder, self.cube_start_pos, self.cube_half, RIGID_CUBE)
         self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
-            builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape, gap=CABLE.radius)
+            builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape)
         self.cable_body_start = builder.body_count
         self.cable_bodies, _, _ = add_cable(builder, self.cable_node_positions)
         self.cable_body_count = len(self.cable_bodies)
 
-    def set_robot_targets(self, substep):
-        wp.launch(_set_robot_targets_kernel, dim=9, inputs=[
+    def set_arm_targets(self, substep):
+        wp.launch(_set_arm_targets_kernel, dim=FRANKA.n_arm_dof, inputs=[
             self._t_frame, substep, self.sim_dt, self._home_q_wp, self._pickup_q_wp,
-            self.gripper_open, self.gripper_closed,
         ], outputs=[self.robot_control.joint_target_q], device=self.robot_control.joint_target_q.device)
 
     def check_physics(self):

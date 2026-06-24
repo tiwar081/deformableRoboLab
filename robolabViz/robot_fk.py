@@ -32,10 +32,15 @@ class RobotVisualFK:
             force_show_colliders=False,
         )
         self.model = builder.finalize(device=device)
-        if self.model.joint_coord_count != expected_joint_coords:
+        # The URDF FK coords must be a PREFIX of the simulated robot's coords. They match exactly for a
+        # plain robot; the hybrid path appends free rigid bodies (each a 6-DOF free joint) AFTER the
+        # arm/finger joints, so the simulated robot has MORE coords — the FK mirror uses only the URDF
+        # prefix (the appended bodies are rendered from the object model, not puppeteered here).
+        self._n_fk = self.model.joint_coord_count
+        if expected_joint_coords < self._n_fk:
             raise ValueError(
-                f"FK mirror has {self.model.joint_coord_count} joint coords, "
-                f"but the simulated robot has {expected_joint_coords}; the URDFs do not match."
+                f"FK mirror has {self._n_fk} joint coords, but the simulated robot has only "
+                f"{expected_joint_coords}; the URDFs do not match."
             )
         self.state = self.model.state()
         # Newton prefixes body labels with the import root (e.g. "fr3/fr3_hand");
@@ -45,8 +50,9 @@ class RobotVisualFK:
             raise ValueError(f"Duplicate link names after prefix strip: {self.link_names}")
 
     def link_world_transforms(self, joint_q: wp.array) -> dict[str, np.ndarray]:
-        """FK from the simulated joint coordinates -> {link_name: (px,py,pz,qx,qy,qz,qw)} in sim frame."""
-        wp.copy(self.model.joint_q, joint_q)
+        """FK from the simulated joint coordinates -> {link_name: (px,py,pz,qx,qy,qz,qw)} in sim frame.
+        Uses the URDF-prefix coords; any extra simulated coords (appended free bodies) are ignored."""
+        wp.copy(self.model.joint_q, joint_q if joint_q.shape[0] == self._n_fk else joint_q[: self._n_fk])
         newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state)
         body_q = self.state.body_q.numpy()
         return {name: body_q[i] for i, name in enumerate(self.link_names)}

@@ -1,20 +1,14 @@
-"""Franka picks a rubik's cube and a banana and drops them into a bowl tray.
+"""The pickplace_ycb scene, but with a token soft FEM cube parked in a far table corner — so the
+CENTRALIZED routing sees a deformable (particle_count > 0) and runs the workspace on the VBD path
+(all objects in SolverVBD + dynamic gripper proxies, preset interference-fit gripper widths) instead
+of the single-MuJoCo path that pickplace_ycb_franka (rigid-only) takes. The soft cube is never
+touched; its mere presence flips the solver. This is the A/B twin that demonstrates the routing
+decision: identical rigid manipulation, deformable-driven solver choice.
 
-A rigid-only workspace, so the framework routes robot AND objects into ONE SolverMuJoCo: the gripper
-holds each object by TRUE two-way MuJoCo contact (fingers close to a FIXED target — no object-size
-preset width — and contact + actuator effort hold it), and drops it when the pads open. CCD is on.
-The bowl and banana collide as coacd convex-hull pieces (MuJoCo convex colliders) while their full
-meshes render; the cube is a box rendered as a rubik's cube. (Add any deformable to the scene and the
-framework would instead route to VBD + dynamic proxies — see pickplace_ycb_vbd_franka.)
+Pure SCENE + POLICY (cf. pickplace_ycb_franka). The gripper holds each object by the genuine
+dynamic finite-mass proxy grip (preset closed widths give the squeeze); opening the pads drops it.
 
-This file is pure SCENE + POLICY: every physics/robot/asset detail comes from
-:mod:`deformableManipulationTools`, all rendering from :class:`robolabViz.scenic.ScenicGraspExample`.
-The robot is at the origin with its own table (centered at (0.45, 0), top z=0.05) — the scenic
-view reads that placement straight off the physics example.
-
-Run: python -m examples pickplace_ycb_franka --device cuda:0
-  (scenic by default -> outputs/pickplace_ycb_franka/{frames/, simulation.mp4};
-   --output-style basic writes outputs/pickplace_ycb_franka.usd instead.)
+Run: python -m examples pickplace_ycb_vbd_franka --device cuda:0
 """
 from __future__ import annotations
 
@@ -33,15 +27,16 @@ import warp as wp
 import examples
 from robolabViz.scenic import ScenicGraspExample
 from deformableManipulationTools import (
-    MUJOCO_GRIP, TABLE_YCB, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB,
-    add_ycb_mesh, add_rubiks_cube, load_usd_mesh,
+    FRANKA, SOFT_BLOCK, TABLE_YCB, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB, PARTICLE_SOLVER_KWARGS, GraspWindow,
+    add_table, add_soft_block, add_ycb_mesh, add_rubiks_cube, build_gripper_proxies, load_usd_mesh,
     solve_gripper_ik, wp_smoothstep, OBJECTS_DIR,
 )
 
-# Recorded start poses from RoboLab's RubiksCubeAndBananaTask (world frame, robot at origin).
 CUBE_XY = (0.431, -0.097)
 BANANA_XY = (0.539, -0.076)
 TRAY_XY = (0.443, 0.127)
+SOFT_XY = (0.55, -0.28)       # token deformable, ON the visible work table & clear of the objects —
+                              # forces the VBD routing, never touched (the DROID table spans y∈[-0.35,0.35])
 BANANA_USD = OBJECTS_DIR / BANANA_YCB.usd_subpath
 
 
@@ -50,17 +45,8 @@ def _lerp(a: wp.array(dtype=float), b: wp.array(dtype=float), s: float, i: int) 
     return (1.0 - s) * a[i] + s * b[i]
 
 
-@wp.func
-def _ss_lerp(a: float, b: float, s: float) -> float:
-    w = wp_smoothstep(s)
-    return (1.0 - w) * a + w * b
-
-
-# Two pick-and-place cycles. Each: approach above object, descend, [close], lift, move over the
-# tray, [open]. Arm waypoints are 9-vectors; the gripper DOFs follow an explicit open/closed
-# schedule (genuine contact holds the object; opening the pads drops it — no spring/latch).
 @wp.kernel
-def _set_robot_targets_kernel(
+def _set_arm_targets_kernel(
     t_frame: wp.array(dtype=float),
     substep: int,
     sim_dt: float,
@@ -73,11 +59,10 @@ def _set_robot_targets_kernel(
     b_grasp: wp.array(dtype=float),
     b_lift: wp.array(dtype=float),
     b_drop: wp.array(dtype=float),
-    gripper_open: float,
-    cube_closed: float,
-    banana_closed: float,
     joint_target_q: wp.array(dtype=float),
 ):
+    # ARM DOFs only (0..n_arm_dof-1); the fingers are owned by the centralized force-stop GripController
+    # (TWO grasp windows: rubik's cube then banana).
     i = wp.tid()
     t = t_frame[0] + float(substep) * sim_dt
 
@@ -86,85 +71,77 @@ def _set_robot_targets_kernel(
     elif t < 2.6:
         q = _lerp(a_pre, a_grasp, wp_smoothstep((t - 1.6) / 1.0), i)
     elif t < 4.0:
-        q = a_grasp[i]                                                   # grasp + hold (gripper closes)
+        q = a_grasp[i]
     elif t < 4.8:
         q = _lerp(a_grasp, a_lift, wp_smoothstep((t - 4.0) / 0.8), i)
     elif t < 6.0:
         q = _lerp(a_lift, a_drop, wp_smoothstep((t - 4.8) / 1.2), i)
     elif t < 7.0:
-        q = a_drop[i]                                                   # hold over tray (gripper opens)
+        q = a_drop[i]
     elif t < 8.6:
-        q = _lerp(a_drop, b_pre, wp_smoothstep((t - 7.0) / 1.6), i)     # move above banana
+        q = _lerp(a_drop, b_pre, wp_smoothstep((t - 7.0) / 1.6), i)
     elif t < 10.2:
-        q = _lerp(b_pre, b_grasp, wp_smoothstep((t - 8.6) / 1.6), i)    # descend slowly to the table
+        q = _lerp(b_pre, b_grasp, wp_smoothstep((t - 8.6) / 1.6), i)
     elif t < 12.2:
-        q = b_grasp[i]                                                  # stop, grasp + hold
+        q = b_grasp[i]
     elif t < 16.2:
-        q = _lerp(b_grasp, b_lift, wp_smoothstep((t - 12.2) / 4.0), i)  # slow ascent — don't rush
+        q = _lerp(b_grasp, b_lift, wp_smoothstep((t - 12.2) / 4.0), i)
     elif t < 17.8:
-        q = _lerp(b_lift, b_drop, wp_smoothstep((t - 16.2) / 1.6), i)   # carry to the bowl
+        q = _lerp(b_lift, b_drop, wp_smoothstep((t - 16.2) / 1.6), i)
     elif t < 18.6:
-        q = b_drop[i]                                                   # hold (release)
+        q = b_drop[i]
     else:
         q = _lerp(b_drop, home, wp_smoothstep((t - 18.6) / 2.0), i)
-
-    if i >= 7:
-        if t < 2.6:
-            q = gripper_open
-        elif t < 3.0:
-            q = _ss_lerp(gripper_open, cube_closed, (t - 2.6) / 0.4)
-        elif t < 6.2:
-            q = cube_closed
-        elif t < 6.8:
-            q = _ss_lerp(cube_closed, gripper_open, (t - 6.2) / 0.6)
-        elif t < 10.2:
-            q = gripper_open
-        elif t < 10.8:
-            q = _ss_lerp(gripper_open, banana_closed, (t - 10.2) / 0.6)
-        elif t < 17.8:
-            q = banana_closed
-        elif t < 18.4:
-            q = _ss_lerp(banana_closed, gripper_open, (t - 17.8) / 0.6)
-        else:
-            q = gripper_open
 
     joint_target_q[i] = q
 
 
 class Example(ScenicGraspExample):
-    # TABLE_YCB is an oversized contact slab (1.0 m deep); the DROID maple table
-    # need not span it — every object rests near center, on the visible surface.
     scenic_check_table = False
+    has_particles = True          # the token soft cube -> particles -> VBD routing
+    soft_block = SOFT_BLOCK
 
     def configure(self, args):
         self.table_top_z = TABLE_YCB.top_z
-        self.robot_base_xform = wp.transform((0.0, 0.0, 0.0), wp.quat_identity())  # FR3 at the origin
+        self.robot_base_xform = wp.transform((0.0, 0.0, 0.0), wp.quat_identity())
         self.robot_table = TABLE_YCB
-        self.blanket_fill = False                # per-shape materials from the YCB/box configs
-        self.has_particles = False
+        self.blanket_fill = False
         self.camera = (wp.vec3(1.1, 0.55, 0.6), -25.0, -130.0)
-        self.robot_contact_max = 32768           # ycb coacd pieces generate many MuJoCo contacts
+        self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 16384,
+                                     "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
+        self.object_pipeline_kwargs = {"rigid_contact_max": 100000, "max_triangle_pairs": 1_048_576,
+                                       "reduce_contacts": True, "soft_contact_margin": SOFT_BLOCK.contact_margin}
         self.cube_half = RUBIKS_CUBE.half_extent
         self.cube_pos = np.array([CUBE_XY[0], CUBE_XY[1], self.table_top_z + self.cube_half], np.float32)
         self.banana_pos = np.array([BANANA_XY[0], BANANA_XY[1], self.table_top_z + 0.02], np.float32)
         self.tray_pos = np.array([TRAY_XY[0], TRAY_XY[1], self.table_top_z], np.float32)
+        self.soft_start_pos = np.array([SOFT_XY[0], SOFT_XY[1], self.table_top_z], np.float32)
         self.drop_height = self.table_top_z + 0.16
         self.bowl_mass = args.bowl_mass
         self.banana_mass = args.banana_mass
+        # Force-stop grasp, TWO windows (no preset interference-fit widths): rubik's cube
+        # close [2.6, 3.0] / release [6.2, 6.8], then banana close [10.2, 10.8] / release [17.8, 18.4].
+        # The rubik's CUBE is a flat box gripped by flat pads → large multi-point patch → near-zero
+        # bite (latch at first solid contact) or the force runs to kN. The BANANA is curved/thin (a
+        # small patch), so it tolerates a small bite for a firmer hold; its grasp pose was raised to
+        # table + 1 cm (see plan()) so the pads clear the table and can close onto it.
+        self.grasp_windows = [
+            GraspWindow(close_start=2.6, close_end=3.8, release_start=6.2, release_end=6.8,
+                        force_target=12.0, grip_bite=0.0),
+            GraspWindow(close_start=10.2, close_end=11.6, release_start=17.8, release_end=18.4,
+                        force_target=4.0, grip_bite=0.0015),
+        ]
 
     def plan(self, ik_model, ik_state):
         def ik_at(xy, z, yaw=0.0):
             return solve_gripper_ik(ik_model, ik_state, self.ee_body, self.ee_offset,
                                     np.array([xy[0], xy[1], z], np.float32), self.gripper_open, yaw=yaw)
 
-        # Cube: drop off-center over the bowl rim so it strikes at an angle and knocks the (dynamic) bowl.
         cube_drop_xy = (self.tray_pos[0] + 0.06, self.tray_pos[1])
         self.a_pre = ik_at(CUBE_XY, self.table_top_z + 0.14)
         self.a_grasp = ik_at(CUBE_XY, self.table_top_z + self.cube_half)
         self.a_lift = ik_at(CUBE_XY, self.drop_height)
         self.a_drop = ik_at(cube_drop_xy, self.drop_height)
-        # Banana: grasp a quarter down from one end at the centerline (curved); yaw 90 closes the pads
-        # across its narrow width.
         bv = np.asarray(load_usd_mesh(BANANA_USD).vertices)
         gy = bv[:, 1].min() + 0.25 * (bv[:, 1].max() - bv[:, 1].min())
         band = np.abs(bv[:, 1] - gy) < 0.012
@@ -173,46 +150,48 @@ class Example(ScenicGraspExample):
         self.banana_half = float(np.max(np.abs(bv[band, 0] - gx)))
         yaw = np.pi / 2
         self.b_pre = ik_at(grasp_xy, self.table_top_z + 0.14, yaw=yaw)
-        # Raised from table − 1 cm: the sub-table pose jammed the finger pads against the table
-        # collider so they could not close onto the banana. At table + 1 cm the pads clear the table.
+        # Raised from table − 1 cm: the sub-table pose jammed the finger pads against the robot-side
+        # table collider so they could not close to reach the banana (the force-stop found no contact).
+        # At table + 1 cm the pads clear the table and close onto the banana.
         self.b_grasp = ik_at(grasp_xy, self.table_top_z + 0.01, yaw=yaw)
         self.b_lift = ik_at(grasp_xy, self.drop_height, yaw=yaw)
         self.b_drop = ik_at((self.tray_pos[0], self.tray_pos[1]), self.drop_height, yaw=yaw)
-        # MuJoCo grasp: close the pads to a FIXED target (no object-size preset width); two-way contact
-        # stops them at each object's surface and the actuator effort holds it (cf. _external/RoboLab).
-        self.cube_closed = MUJOCO_GRIP.close_target
-        self.banana_closed = MUJOCO_GRIP.close_target
-
         kf = lambda a: wp.array(a, dtype=wp.float32, device=ik_model.device)
         self._home_wp = kf(self.home_q)
         self._a = [kf(x) for x in (self.a_pre, self.a_grasp, self.a_lift, self.a_drop)]
         self._b = [kf(x) for x in (self.b_pre, self.b_grasp, self.b_lift, self.b_drop)]
 
     def build_scene(self, builder, robot_builder):
-        # Rigid-only: objects are declared here and merged into the robot's MuJoCo model by the
-        # framework. No object-side table — they rest on the robot-side TABLE_YCB (already in the
-        # MuJoCo model). No gripper proxies — the fingers grasp by true two-way MuJoCo contact.
-        # Bowl: dynamic, rests on the table; coacd convex pieces + realistic mass.
+        self._obj_table_shape = add_table(builder, TABLE_YCB)
         self.bowl_body, _ = add_ycb_mesh(builder, BOWL_YCB,
                                          (self.tray_pos[0], self.tray_pos[1], 0.0), rest_on_z=self.table_top_z)
         self.mass_overrides.append((self.bowl_body, self.bowl_mass))
+        self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
+            builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape)
         self.cube_body = add_rubiks_cube(builder, self.cube_pos, RUBIKS_CUBE)
         self.banana_body, self.banana_mesh = add_ycb_mesh(builder, BANANA_YCB, self.banana_pos)
         self.mass_overrides.append((self.banana_body, self.banana_mass))
+        # The token deformable — its particles route the whole workspace to VBD. Never manipulated.
+        add_soft_block(builder, SOFT_BLOCK, self.soft_start_pos)
 
-    def set_robot_targets(self, substep):
-        wp.launch(_set_robot_targets_kernel, dim=9, inputs=[
+    def set_arm_targets(self, substep):
+        wp.launch(_set_arm_targets_kernel, dim=FRANKA.n_arm_dof, inputs=[
             self._t_frame, substep, self.sim_dt, self._home_wp,
             self._a[0], self._a[1], self._a[2], self._a[3],
             self._b[0], self._b[1], self._b[2], self._b[3],
-            self.gripper_open, self.cube_closed, self.banana_closed,
         ], outputs=[self.robot_control.joint_target_q], device=self.robot_control.joint_target_q.device)
 
     def check_physics(self):
-        bq = self.object_body_q()   # routing-agnostic (objects live in the MuJoCo model here)
+        bq = self.object_body_q()
         if not np.all(np.isfinite(bq)):
             raise ValueError("Non-finite body transform.")
-        # Gravity guardrail: at rest (end of run) no object hangs in mid-air.
+        pq = self.object_state_0.particle_q.numpy()
+        if pq.size and not np.all(np.isfinite(pq)):
+            raise ValueError("Non-finite soft-body particle position detected.")
+        # Gravity guardrail (at rest, end of run): nothing hangs in mid-air. The soft block is never
+        # grasped, so it must rest on the table; the rigid objects must end settled near the table/bowl.
+        if pq.size and pq[:, 2].min() > self.table_top_z + 0.08:
+            raise ValueError("The soft block is floating above the table — gravity/contact not settling it.")
         for name, body in (("cube", self.cube_body), ("banana", self.banana_body), ("bowl", self.bowl_body)):
             if bq[body][2] < self.table_top_z - 0.05:
                 raise ValueError(f"The {name} fell through the table/world.")
@@ -232,5 +211,5 @@ class Example(ScenicGraspExample):
 
 if __name__ == "__main__":
     parser = Example.create_parser()
-    viewer, args = examples.init(parser, example_name="pickplace_ycb_franka")
+    viewer, args = examples.init(parser, example_name="pickplace_ycb_vbd_franka")
     examples.run(Example(viewer, args), args)

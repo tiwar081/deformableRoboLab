@@ -15,9 +15,9 @@ from __future__ import annotations
 
 # Parameters (single source of truth).
 from .params import (
-    RobotConfig, GripConfig, TableConfig, CableConfig, SoftBlockConfig, RigidBoxConfig, PlateConfig,
-    YcbMeshConfig,
-    FRANKA, GRIP, TABLE, TABLE_YCB, CABLE,
+    RobotConfig, GripConfig, MujocoGripConfig, GraspWindow, TableConfig, CableConfig, SoftBlockConfig,
+    RigidBoxConfig, PlateConfig, YcbMeshConfig,
+    FRANKA, GRIP, MUJOCO_GRIP, TABLE, TABLE_YCB, CABLE,
     SOFT_BLOCK, RIGID_CUBE, PLATE, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB,
 )
 # Math helpers.
@@ -25,9 +25,10 @@ from .mathutils import quat_rotate_xyzw, find_body, smoothstep, wp_smoothstep, q
 # Robot.
 from .robot import (
     build_franka_robot, add_robot_table_box, make_robot_solver, solve_gripper_ik, finger_body_indices,
+    set_mujoco_grip_controller,
 )
 # Grip (proxies + coupling).
-from .grip import build_gripper_proxies, restore_proxy_materials, TwoWayProxyCoupling
+from .grip import build_gripper_proxies, restore_proxy_materials, TwoWayProxyCoupling, GripController
 # Asset builders.
 from .assets import (
     add_table, add_soft_block, add_cable, add_rigid_box, add_plate, add_rubiks_cube, add_ycb_mesh,
@@ -41,12 +42,14 @@ from .mesh_collision import (
 from .framework import GraspExample, build_viz_model
 
 __all__ = [
-    "RobotConfig", "GripConfig", "TableConfig", "CableConfig", "SoftBlockConfig", "RigidBoxConfig",
-    "PlateConfig", "YcbMeshConfig", "FRANKA", "GRIP", "TABLE", "TABLE_YCB", "CABLE", "SOFT_BLOCK",
-    "RIGID_CUBE", "PLATE", "RUBIKS_CUBE", "BOWL_YCB", "BANANA_YCB",
+    "RobotConfig", "GripConfig", "MujocoGripConfig", "GraspWindow", "TableConfig", "CableConfig",
+    "SoftBlockConfig",
+    "RigidBoxConfig", "PlateConfig", "YcbMeshConfig", "FRANKA", "GRIP", "MUJOCO_GRIP", "TABLE",
+    "TABLE_YCB", "CABLE", "SOFT_BLOCK", "RIGID_CUBE", "PLATE", "RUBIKS_CUBE", "BOWL_YCB", "BANANA_YCB",
     "quat_rotate_xyzw", "find_body", "smoothstep", "wp_smoothstep", "quat_to_vec4",
     "build_franka_robot", "add_robot_table_box", "make_robot_solver", "solve_gripper_ik",
-    "finger_body_indices", "build_gripper_proxies", "restore_proxy_materials", "TwoWayProxyCoupling",
+    "finger_body_indices", "set_mujoco_grip_controller",
+    "build_gripper_proxies", "restore_proxy_materials", "TwoWayProxyCoupling", "GripController",
     "add_table", "add_soft_block", "add_cable", "add_rigid_box", "add_plate", "add_rubiks_cube",
     "add_ycb_mesh", "PARTICLE_SOLVER_KWARGS",
     "OBJECTS_DIR", "load_usd_mesh", "decimate_mesh", "convex_decompose", "add_collision_pieces",

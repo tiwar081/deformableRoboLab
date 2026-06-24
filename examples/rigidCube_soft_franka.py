@@ -24,13 +24,13 @@ import warp as wp
 import examples
 from robolabViz.scenic import ScenicGraspExample
 from deformableManipulationTools import (
-    GRIP, SOFT_BLOCK, RIGID_CUBE, TABLE, PARTICLE_SOLVER_KWARGS,
+    FRANKA, SOFT_BLOCK, RIGID_CUBE, TABLE, PARTICLE_SOLVER_KWARGS, GraspWindow,
     add_table, add_soft_block, add_rigid_box, build_gripper_proxies, solve_gripper_ik, wp_smoothstep,
 )
 
 
 @wp.kernel
-def _set_robot_targets_kernel(
+def _set_arm_targets_kernel(
     t_frame: wp.array(dtype=float),
     substep: int,
     sim_dt: float,
@@ -38,19 +38,16 @@ def _set_robot_targets_kernel(
     pregrasp_q: wp.array(dtype=float),
     pickup_q: wp.array(dtype=float),
     drop_q: wp.array(dtype=float),
-    gripper_open: float,
-    gripper_closed: float,
     joint_target_q: wp.array(dtype=float),
 ):
+    # ARM DOFs only (0..n_arm_dof-1); the fingers are owned by the centralized force-stop GripController.
     i = wp.tid()
     t = t_frame[0] + float(substep) * sim_dt
 
     descend_start = 2.2
     close_start = 3.2
-    hold_start = 4.4
     carry_start = 5.0
     settle_start = 7.0
-    release_start = 8.0
     retreat_start = 8.6
 
     if t < descend_start:
@@ -70,20 +67,6 @@ def _set_robot_targets_kernel(
         alpha = wp_smoothstep((t - retreat_start) / 2.0)
         q = (1.0 - alpha) * drop_q[i] + alpha * home_q[i]
 
-    if i >= 7:
-        if t < close_start:
-            q = gripper_open
-        elif t < hold_start:
-            alpha = wp_smoothstep((t - close_start) / (hold_start - close_start))
-            q = (1.0 - alpha) * gripper_open + alpha * gripper_closed
-        elif t < release_start:
-            q = gripper_closed
-        elif t < retreat_start:
-            alpha = wp_smoothstep((t - release_start) / (retreat_start - release_start))
-            q = (1.0 - alpha) * gripper_closed + alpha * gripper_open
-        else:
-            q = gripper_open
-
     joint_target_q[i] = q
 
 
@@ -102,6 +85,11 @@ class Example(ScenicGraspExample):
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
         self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK.contact_margin}
+        # Force-stop grasp on the rigid cube: close [3.2, 4.4], hold through the carry, release [8.0, 8.6].
+        # Flat box gripped by flat pads = a large multi-point contact patch, so force ≈ ke·bite·points
+        # is steep — use a near-zero bite (latch at first solid contact) or it over-grips (kN).
+        self.grasp_windows = [GraspWindow(close_start=3.2, close_end=4.4, release_start=8.0,
+                                          release_end=8.6, force_target=12.0, grip_bite=0.0)]
 
     def plan(self, ik_model, ik_state):
         def ik_at(pos):
@@ -114,8 +102,6 @@ class Example(ScenicGraspExample):
         self.pregrasp_q = ik_at(pre)
         self.pickup_q = ik_at(pick)
         self.drop_q = ik_at(drop)
-        self.gripper_closed = (self.cube_half + RIGID_CUBE.contact_margin
-                               + GRIP.proxy_margin - GRIP.grasp_interference)
         kf = lambda a: wp.array(a, dtype=wp.float32, device=ik_model.device)
         self._home_q_wp = kf(self.home_q)
         self._pregrasp_q_wp = kf(self.pregrasp_q)
@@ -126,13 +112,13 @@ class Example(ScenicGraspExample):
         self._obj_table_shape = add_table(builder, TABLE)
         add_soft_block(builder, SOFT_BLOCK, self.soft_start_pos)
         self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
-            builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape, gap=GRIP.proxy_margin * 8)
+            builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape)
         self.cube_body, self.cube_shape = add_rigid_box(builder, self.cube_start_pos, self.cube_half, RIGID_CUBE)
 
-    def set_robot_targets(self, substep):
-        wp.launch(_set_robot_targets_kernel, dim=9, inputs=[
+    def set_arm_targets(self, substep):
+        wp.launch(_set_arm_targets_kernel, dim=FRANKA.n_arm_dof, inputs=[
             self._t_frame, substep, self.sim_dt, self._home_q_wp, self._pregrasp_q_wp,
-            self._pickup_q_wp, self._drop_q_wp, self.gripper_open, self.gripper_closed,
+            self._pickup_q_wp, self._drop_q_wp,
         ], outputs=[self.robot_control.joint_target_q], device=self.robot_control.joint_target_q.device)
 
     def check_physics(self):

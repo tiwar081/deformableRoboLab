@@ -1,26 +1,37 @@
 # Solver Architecture
 
-## Solver framework selection (the rule)
+## Solver framework selection (the rule — CENTRALIZED & automatic)
 
-Full two-way contact only happens *inside one solver* (VBD); the MuJoCo↔VBD bridge crosses
-solvers via dynamic finite-mass finger proxies that mirror the fingers in the VBD model and feed
-the net object reaction back to the arm/EE (one-step lag) — so the arm DOES feel the object, but
-through the proxy bridge, not a shared contact.
+The framework chooses the object solver **centrally** in `GraspExample.__init__`: it builds the scene
+into a neutral `ModelBuilder`, then routes — a deformable is present iff `object_builder.particle_count
+> 0` **OR** a `CABLE` joint exists. FEM/cloth create particles; a rod/cable (`add_rod`) is capsule
+bodies coupled by `CABLE` joints and carries **NO** particles, so it must be detected by joint type —
+otherwise a cable-only scene (e.g. `cable_rigidCube`) misroutes to MuJoCo, whose forward kinematics
+skips `CABLE` joints and fails to build the articulation. Rigid boxes/meshes have neither. An example
+only declares its scene + policy; it never selects the solver.
 
-- **Any deformable/soft object present** (cable/rod, cloth, FEM block) → split
-  **`SolverMuJoCo` (robot) + `SolverVBD` (all objects)** with the **dynamic gripper-proxy
-  bridge** (`deformableManipulationTools/grip.py`, wired in by `framework.py`). VBD is the only
-  Newton solver that hosts rigid+cable+soft+their mutual two-way contact in one world, so every
-  object that must touch a deformable lives in the VBD model.
-- **Rigid-only** → a **single `SolverMuJoCo`** for robot + objects (Newton
-  `brick_stacking`/`panda_hydro` pattern): true two-way frictional grasp, MuJoCo's mature
-  convex/SDF/hydroelastic mesh contact, none of the VBD-rigid-mesh fragility. Preferred for
-  new rigid-only demos.
-- Caveat: `pickplace_ycb_franka` is rigid-only but deliberately kept on VBD as the proof VBD can
-  host arbitrary rigid **mesh** shapes (so the scene could later gain a soft object). Concave
-  meshes (bowl/banana) collide as **coacd convex-hull pieces** built by
-  `deformableManipulationTools.assets.add_ycb_mesh` — a raw concave mesh gives contradictory
-  contact normals and ejects the whole solve (SOLVERS.md §4).
+- **Any deformable present** (cable/rod, cloth, FEM block) → split **`SolverMuJoCo` (robot) +
+  `SolverVBD` (all objects)** with the **dynamic gripper-proxy bridge** (`grip.py`, wired by
+  `framework._build_split_mujoco_vbd`). Full two-way contact only happens inside VBD; the MuJoCo↔VBD
+  bridge crosses solvers via dynamic finite-mass finger proxies that mirror the fingers in the VBD
+  model and feed the net object reaction back to the arm/EE (one-step lag) — the arm feels the object
+  through the proxy bridge, not a shared contact. Every object that must touch a deformable lives in
+  the VBD model. **Gripper widths are PRESET** here (`gripper_closed = object_half + GRIP.proxy_margin
+  − GRIP.grasp_interference`): the proxy contact engages at a precise finger width.
+- **Rigid-only** → robot AND objects in **one `SolverMuJoCo`** (`framework._build_rigid_only_mujoco`
+  merges the objects into the robot `ModelBuilder` via `add_builder`; Newton `brick_stacking`/`panda`
+  pattern): true two-way frictional grasp, MuJoCo's mature convex/mesh contact, **CCD on**
+  (`make_robot_solver` passes `ccd_iterations`/`ccd_tolerance`/`enable_multiccd`), none of the
+  VBD-rigid-mesh fragility. The gripper closes to a FIXED target (`MUJOCO_GRIP.close_target`; **no
+  object-size preset width** — contact + the finger actuator effort hold the object, cf.
+  `_external/RoboLab`); `set_mujoco_grip_controller` stiffens the fingers for the real grasp. No VBD
+  model/proxies/coupling; demos read object poses via `self.object_body_q()` (routing-agnostic; objects
+  sit after `object_body_start` in the robot model). ≈ **2.2× faster** than the VBD+proxy path (ycb).
+- `pickplace_ycb_franka` (rigid coacd-mesh bowl/banana + a box cube) auto-routes to MuJoCo;
+  `pickplace_ycb_vbd_franka` is the SAME scene **plus a token soft cube** in a table corner, whose
+  particles auto-route the whole workspace to VBD — the A/B twin demonstrating the centralized
+  decision. Concave meshes (bowl/banana) collide as **coacd convex-hull pieces**
+  (`assets.add_ycb_mesh`) in either solver — a raw concave mesh gives contradictory normals (SOLVERS §4).
 
 ## Robot side
 

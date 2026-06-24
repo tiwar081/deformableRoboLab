@@ -33,6 +33,7 @@ EXAMPLE_NAMES = (
     "soft_compression_franka",
     "soft_pickplace_franka",
     "pickplace_ycb_franka",
+    "pickplace_ycb_vbd_franka",
 )
 
 
@@ -78,10 +79,6 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--paused", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--test", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--quiet", action=argparse.BooleanOptionalAction, default=False)
-    # Diagnostic only: print per-pad grip force [left, right] N each frame. OFF by default (it forces
-    # a host readback every frame); enabling it does NOT change the simulation, only observes it.
-    parser.add_argument("--log-grip", action=argparse.BooleanOptionalAction, default=False,
-                        help="Print per-pad grip force [left, right] N each frame (diagnostic; no physics change).")
 
     # ---- scenic (--output-style scenic) rendering options ----
     scenic = parser.add_argument_group("scenic rendering (--output-style scenic)")
@@ -155,15 +152,9 @@ def init(parser: argparse.ArgumentParser | None = None, example_name: str = "exa
 
 def run(example, args) -> None:
     viewer = example.viewer
-    log_grip = getattr(args, "log_grip", False) and hasattr(example, "grip_force_norms")
     while viewer.is_running():
         if viewer.should_step():
             example.step()
-            if log_grip:
-                # Read-only diagnostic: per-pad grip force [left, right] N (the harvested object
-                # reaction). Does not feed back into the sim — purely observes the contact balance.
-                left, right = example.grip_force_norms()
-                print(f"[grip] t={example.sim_time:6.3f}  left={left:8.3f} N  right={right:8.3f} N", flush=True)
         example.render()
 
     if args.test:

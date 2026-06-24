@@ -33,22 +33,32 @@ import warp as wp
 import newton
 
 from .params import GRIP, GripConfig
+from .mathutils import wp_smoothstep, quat_rotate_xyzw
 
 
 # ---------------------------------------------------------------------------------------------
 # Dynamic finger proxies (the grip contact bridge consumed by TwoWayProxyCoupling below).
 # ---------------------------------------------------------------------------------------------
 def build_gripper_proxies(object_builder, robot_builder, finger_bodies: list[int],
-                          object_table_shape: int | None, gap: float, grip: GripConfig = GRIP,
-                          has_particle_collision: bool = False):
-    """Add the two dynamic finite-mass finger proxies to ``object_builder`` (collision shapes
-    copied from the robot fingers), filtered against the object-model table. Set
-    ``has_particle_collision=True`` to also grip FEM-particle objects (soft blocks). Returns
-    (proxy_bodies, proxy_shapes)."""
+                          object_table_shape: int | None, grip: GripConfig = GRIP):
+    """Add the CENTRALIZED dynamic-proxy gripper collision to ``object_builder`` — IDENTICAL for every
+    VBD demo, with NO per-demo knobs. The geometry is fixed in :data:`GRIP`:
+
+      * two finger proxies, each ONE box = the AABB of the Franka finger's 4 sparse collision boxes
+        (pad + edges + knuckle). The sparse boxes are smaller than the rendered finger with gaps a
+        swept cable clips through; the AABB fills them and presents a solid finger. Its grasp-facing
+        (max-y) face equals the pad's outer face, so the grip geometry is unchanged. These two are the
+        GRIP pads (``proxy_bodies[:2]`` — harvested, in the grip signal) and grip FEM particles too.
+      * a THIRD palm/EE "blocker" proxy: one synthetic box (``grip.palm_box_*``, EE/link7 frame) that
+        stops a swept cable passing through the gripper palm / wrist (the hand collider is collapsed
+        into link7 and lives only in MuJoCo). The caller pins it to the EE via the coupling's mirror
+        list; it is NEVER harvested or in the grip signal.
+
+    Returns ``(proxy_bodies, proxy_shapes)`` with the two finger proxies FIRST and the palm proxy LAST.
+    """
     proxy_cfg = newton.ModelBuilder.ShapeConfig(
-        density=0.0, is_visible=False, has_shape_collision=True,
-        has_particle_collision=has_particle_collision,
-        margin=grip.proxy_margin, gap=gap, ke=grip.proxy_ke, kd=grip.proxy_kd, mu=grip.proxy_mu,
+        density=0.0, is_visible=False, has_shape_collision=True, has_particle_collision=True,
+        margin=grip.proxy_margin, gap=grip.proxy_gap, ke=grip.proxy_ke, kd=grip.proxy_kd, mu=grip.proxy_mu,
     )
     proxy_bodies, proxy_shapes = [], []
     inertia = wp.mat33(grip.proxy_inertia, 0.0, 0.0, 0.0, grip.proxy_inertia, 0.0, 0.0, 0.0, grip.proxy_inertia)
@@ -60,22 +70,46 @@ def build_gripper_proxies(object_builder, robot_builder, finger_bodies: list[int
             com=wp.vec3(0.0, 0.0, 0.0), lock_inertia=True, label=label,
         )
         proxy_bodies.append(body)
-        n = 0
-        for shape_idx, shape_body in enumerate(robot_builder.shape_body):
-            if shape_body != finger_body:
-                continue
-            if not (robot_builder.shape_flags[shape_idx] & int(newton.ShapeFlags.COLLIDE_SHAPES)):
-                continue
-            shape = object_builder.add_shape(
-                body=body, type=robot_builder.shape_type[shape_idx],
-                xform=robot_builder.shape_transform[shape_idx], cfg=proxy_cfg,
-                scale=robot_builder.shape_scale[shape_idx], src=robot_builder.shape_source[shape_idx],
-                label=f"{label}_shape_{n}",
-            )
-            proxy_shapes.append(shape)
-            n += 1
-        if n == 0:
+        fshapes = [s for s, fb in enumerate(robot_builder.shape_body)
+                   if fb == finger_body
+                   and (robot_builder.shape_flags[s] & int(newton.ShapeFlags.COLLIDE_SHAPES))]
+        if not fshapes:
             raise RuntimeError(f"No colliding shapes on Franka finger body {finger_body}.")
+        # SOLID finger: ONE box = the AABB (in the finger frame) of the finger's collision boxes.
+        corners = []
+        for s in fshapes:
+            h = np.asarray(robot_builder.shape_scale[s], dtype=float)[:3]
+            t = np.asarray(robot_builder.shape_transform[s], dtype=float)
+            pos, quat = t[:3], t[3:7]
+            for sx in (-1.0, 1.0):
+                for sy in (-1.0, 1.0):
+                    for sz in (-1.0, 1.0):
+                        corners.append(pos + quat_rotate_xyzw(quat, np.array([sx * h[0], sy * h[1], sz * h[2]])))
+        lo, hi = np.min(corners, axis=0), np.max(corners, axis=0)
+        center, half = (lo + hi) * 0.5, (hi - lo) * 0.5
+        shape = object_builder.add_shape_box(
+            body=body, xform=wp.transform(wp.vec3(*center), wp.quat_identity()),
+            hx=float(half[0]), hy=float(half[1]), hz=float(half[2]), cfg=proxy_cfg, label=f"{label}_solid")
+        proxy_shapes.append(shape)
+    finger_shapes = list(proxy_shapes)
+    # Palm/EE blocker proxy: one box (EE/link7 frame) stopping the swept cable through the palm/wrist
+    # (rigid-shape collision only — cheap). Pinned to the EE by the coupling; never harvested.
+    palm_cfg = newton.ModelBuilder.ShapeConfig(
+        density=0.0, is_visible=False, has_shape_collision=True, has_particle_collision=False,
+        margin=grip.proxy_margin, ke=grip.proxy_ke, kd=grip.proxy_kd, mu=grip.proxy_mu)
+    palm_body = object_builder.add_body(
+        xform=wp.transform(wp.vec3(0.0, 0.0, 0.0), wp.quat_identity()),
+        is_kinematic=False, mass=grip.proxy_mass, inertia=inertia,
+        com=wp.vec3(0.0, 0.0, 0.0), lock_inertia=True, label="palm_ee_blocker_proxy")
+    hx, hy, hz = grip.palm_box_half
+    palm_shape = object_builder.add_shape_box(
+        body=palm_body, xform=wp.transform(wp.vec3(*grip.palm_box_offset), wp.quat_identity()),
+        hx=hx, hy=hy, hz=hz, cfg=palm_cfg, label="palm_ee_blocker_shape")
+    proxy_bodies.append(palm_body)
+    proxy_shapes.append(palm_shape)
+    # The palm box sits just behind the fingers; filter it against the finger proxy shapes.
+    for fs in finger_shapes:
+        object_builder.add_shape_collision_filter_pair(palm_shape, fs)
     # A dynamic proxy re-pinned against the static table resolves explosively; the robot-side
     # table already stops the real fingers, so this object-model contact is redundant.
     if object_table_shape is not None:
@@ -238,10 +272,28 @@ def _harvest_soft_wrench_kernel(
     pen = -(wp.dot(n, particle_q[pid] - bx) - particle_radius[pid])
     if pen <= 0.0:
         return
-    f = n * (soft_contact_ke * pen)
+    # ``soft_contact_normal`` points OUT of the shape toward the particle, so n·ke·pen is the force on
+    # the PARTICLE; the REACTION on the proxy/pad (what feeds the arm) is the opposite. Largely cancels
+    # in the two-pad net + the arm is position-controlled, so this corrects the EE force-feedback sign
+    # without changing the visible grasp.
+    f = -n * (soft_contact_ke * pen)
     com = wp.transform_get_translation(object_body_q[body])
     wp.atomic_add(proxy_force, body, f)
     wp.atomic_add(proxy_torque, body, wp.cross(bx - com, f))
+
+
+@wp.kernel
+def _reduce_grip_signal_kernel(
+    force_lag: wp.array(dtype=wp.vec3),
+    left_proxy: int,
+    right_proxy: int,
+    grip_force_signal: wp.array(dtype=wp.float32),
+):
+    # dim=1. The both-pads-engaged grip force = min of the two per-pad reaction magnitudes (min, not
+    # sum, so the latch needs BOTH pads pressing). Read by GripController one substep later.
+    fl = wp.length(force_lag[left_proxy])
+    fr = wp.length(force_lag[right_proxy])
+    grip_force_signal[0] = wp.min(fl, fr)
 
 
 class TwoWayProxyCoupling:
@@ -250,8 +302,13 @@ class TwoWayProxyCoupling:
     the proxy↔FEM-particle reaction."""
 
     def __init__(self, robot_model, object_model, object_solver, object_contacts, object_state,
-                 robot_finger_bodies, proxy_bodies, ee_body, sim_dt,
+                 mirror_bodies, proxy_bodies, ee_body, sim_dt,
                  gravity=(0.0, 0.0, -9.81), soft_contact_ke=None):
+        # ``mirror_bodies[i]`` is the ROBOT body that ``proxy_bodies[i]`` is re-pinned to each substep.
+        # The first TWO proxies are the grip PADS (fingers) — the only ones harvested and reduced
+        # into the grip signal; any extra proxies (e.g. the palm/EE blocker, mirrored to the EE) are
+        # synced + summed-to-EE generically but contribute no harvested wrench (so they are inert
+        # blockers that don't perturb the force-stop grip).
         device = object_state.body_q.device
         self.object_model = object_model
         self.object_solver = object_solver
@@ -262,9 +319,9 @@ class TwoWayProxyCoupling:
         self._robot_body_com = robot_model.body_com
         self._body_inv_mass = object_model.body_inv_mass
         self._body_inv_inertia = object_model.body_inv_inertia
-        self._finger_bodies = wp.array(robot_finger_bodies, dtype=wp.int32, device=device)
+        self._finger_bodies = wp.array(mirror_bodies, dtype=wp.int32, device=device)
         self._proxy_bodies = wp.array(proxy_bodies, dtype=wp.int32, device=device)
-        self.left_proxy, self.right_proxy = (int(b) for b in proxy_bodies)
+        self.left_proxy, self.right_proxy = int(proxy_bodies[0]), int(proxy_bodies[1])
         self._n = len(proxy_bodies)
         # When set, the proxies carry has_particle_collision=True and we also harvest the
         # body↔particle reaction (recomputed) so the soft block's squeeze is fed back too.
@@ -278,6 +335,11 @@ class TwoWayProxyCoupling:
         self._force_lag = wp.zeros(nb, dtype=wp.vec3, device=device)
         self._torque_lag = wp.zeros(nb, dtype=wp.vec3, device=device)
         self._obj_body_q_prev = wp.zeros(nb, dtype=wp.transform, device=device)
+        # Device-side grip-force signal the force-stop GripController reads next substep (one-step
+        # stale, like the wrench feedback): the both-pads-engaged squeeze magnitude
+        # min(|f_left|, |f_right|) [N]. min (not sum) requires BOTH pads pressing, so a single-pad
+        # graze can't trip the latch. Recomputed at the end of harvest(), so it is graph-capturable.
+        self.grip_force_signal = wp.zeros(1, dtype=wp.float32, device=device)
 
     def apply_to_robot(self, robot_state):
         wp.launch(_apply_coupling_to_ee_kernel, dim=1, inputs=[
@@ -314,9 +376,169 @@ class TwoWayProxyCoupling:
                 self.object_model.particle_radius, self.object_model.shape_body,
                 object_state_0.body_q, self.soft_contact_ke, self.left_proxy, self.right_proxy,
             ], outputs=[self._force_lag, self._torque_lag], device=self._force_lag.device)
+        wp.launch(_reduce_grip_signal_kernel, dim=1, inputs=[
+            self._force_lag, self.left_proxy, self.right_proxy,
+        ], outputs=[self.grip_force_signal], device=self._force_lag.device)
 
     def raw_force_norms(self):
         """Per-proxy |force| [N] of the harvested object reaction — the physical grip force on each
         pad (raw, un-clamped). Finite and bounded (not the old kinematic 1e4-1e6 N)."""
         f = self._force_lag.numpy()
         return [float(np.linalg.norm(f[p])) for p in (self.left_proxy, self.right_proxy)]
+
+
+# ---------------------------------------------------------------------------------------------
+# Force-feedback finger controller (replaces the per-demo geometric preset close width).
+# ---------------------------------------------------------------------------------------------
+@wp.kernel
+def _grip_force_stop_kernel(
+    t_frame: wp.array(dtype=wp.float32),
+    substep: int,
+    sim_dt: float,
+    windows: wp.array(dtype=wp.float32),        # flat [close_start, close_end, release_start, release_end, ft]*n
+    n_windows: int,
+    gripper_open: float,
+    close_target: float,                        # ramp/fully-closed target (min_close_width or mujoco close_target)
+    force_target_default: float,
+    grip_bite: float,                           # inward squeeze past the discovered contact (sets firmness)
+    force_stop_enabled: int,                    # 1 = VBD force-stop; 0 = rigid-only smoothstep, no latch
+    latch_arm_margin: float,
+    latch_debounce: int,
+    grip_signal: wp.array(dtype=wp.float32),
+    finger_q: wp.array(dtype=wp.float32),       # measured robot joint positions (read the finger DOFs)
+    finger_dof0: int,
+    finger_dof1: int,
+    latch_state: wp.array(dtype=wp.float32),    # flat [latched, latched_w, current_w, debounce]*n (in/out)
+    joint_target_q: wp.array(dtype=wp.float32),
+):
+    # dim=1, single thread owns the shared per-window latch state (no intra-launch race). The latch
+    # state persists across substeps AND frames inside the replayed CUDA graph; runtime branches on
+    # the device t_frame / grip_signal work on replay (capture bakes launches, not branch outcomes).
+    t = t_frame[0] + float(substep) * sim_dt
+    sig = grip_signal[0]
+    out = gripper_open                          # default (before/between/after all windows): open
+    for w in range(n_windows):
+        wb = 6 * w
+        cs = windows[wb + 0]
+        ce = windows[wb + 1]
+        rs = windows[wb + 2]
+        re = windows[wb + 3]
+        ft = windows[wb + 4]
+        if ft < 0.0:
+            ft = force_target_default
+        bite_w = windows[wb + 5]                 # per-window grip_bite, else the controller default
+        if bite_w < 0.0:
+            bite_w = grip_bite
+        sb = 4 * w
+        if t < cs:
+            # before this grasp: open, (re)arm the latch state for a clean cycle
+            latch_state[sb + 0] = 0.0           # latched flag
+            latch_state[sb + 1] = close_target  # latched width
+            latch_state[sb + 2] = gripper_open  # current commanded width
+            latch_state[sb + 3] = 0.0           # debounce counter
+        elif t < re:
+            latched = latch_state[sb + 0]
+            latched_w = latch_state[sb + 1]
+            current_w = latch_state[sb + 2]
+            debounce = latch_state[sb + 3]
+            width = current_w
+            if t < ce:                          # CLOSING: velocity-limited (smoothstep) ramp toward close_target
+                if latched > 0.5:
+                    width = latched_w
+                else:
+                    alpha = wp_smoothstep((t - cs) / (ce - cs))
+                    current_w = (1.0 - alpha) * gripper_open + alpha * close_target
+                    width = current_w
+                    if force_stop_enabled == 1:
+                        hit = float(0.0)        # arming guard + threshold (no boolean `and` in Warp)
+                        if current_w < (gripper_open - latch_arm_margin):
+                            if sig >= ft:
+                                hit = 1.0
+                        if hit > 0.5:
+                            debounce = debounce + 1.0
+                        else:
+                            debounce = 0.0
+                        if debounce >= float(latch_debounce):
+                            latched = 1.0
+                            # FREEZE at the MEASURED finger position minus a small inward bite, NOT the
+                            # open-loop command: the command ramps far ahead of the effort-limited (20 N)
+                            # fingers (fingers ~11 mm at contact while the command raced to ~3 mm), so
+                            # latching the command leaves the fingers straining inward → huge dynamic
+                            # spikes under load. The measured position IS the contact width; biting a
+                            # fixed grip_bite past it gives a firm but bounded squeeze (≈ ke·bite) that
+                            # holds the object through motion without over-penetrating.
+                            measured = 0.5 * (finger_q[finger_dof0] + finger_q[finger_dof1])
+                            latched_w = wp.max(measured - bite_w, close_target)
+                            width = latched_w
+            elif t < rs:                        # HOLD: keep the frozen squeeze (or fully closed if never latched)
+                if latched > 0.5:
+                    width = latched_w
+                else:
+                    width = close_target
+            else:                               # RELEASE: smoothstep reopen, clear the latch
+                base = close_target
+                if latched > 0.5:
+                    base = latched_w
+                alpha = wp_smoothstep((t - rs) / (re - rs))
+                width = (1.0 - alpha) * base + alpha * gripper_open
+                latched = 0.0
+            latch_state[sb + 0] = latched
+            latch_state[sb + 1] = latched_w
+            latch_state[sb + 2] = current_w
+            latch_state[sb + 3] = debounce
+            out = width
+    joint_target_q[finger_dof0] = out
+    joint_target_q[finger_dof1] = out
+
+
+class GripController:
+    """Centralized force-feedback finger controller — the legal place to "close until force" given
+    that the position-controlled fingers feel nothing in their own (MuJoCo) solver. It DERIVES a
+    finger POSITION command from the harvested grip-force READING (``coupling.grip_force_signal``),
+    never injecting force on the finger DOF (the no-per-finger-feedback invariant is untouched).
+
+    Per grasp window it closes the fingers (velocity-limited smoothstep) toward ``close_target`` and
+    FREEZES the target the moment the min-of-both-pads grip force crosses the window's force_target
+    (debounced) — "specify force, get emergent geometry". The frozen width holds the squeeze for the
+    lift exactly as the old preset width did, but discovered online. On the rigid-only MuJoCo path
+    (no coupling) ``force_stop_enabled=0``: it degrades to a plain smoothstep close to ``close_target``
+    (= MUJOCO_GRIP.close_target) and lets true two-way contact stop the pads — today's behavior."""
+
+    def __init__(self, robot_control, t_frame, sim_dt, finger_dofs, gripper_open, grasp_windows,
+                 grip_force_signal=None, close_target=None, grip: GripConfig = GRIP):
+        device = robot_control.joint_target_q.device
+        self.joint_target_q = robot_control.joint_target_q
+        self._t_frame = t_frame
+        self.sim_dt = float(sim_dt)
+        self.finger_dof0, self.finger_dof1 = int(finger_dofs[0]), int(finger_dofs[1])
+        self.gripper_open = float(gripper_open)
+        self.force_stop_enabled = 1 if grip_force_signal is not None else 0
+        self.grip_signal = (grip_force_signal if grip_force_signal is not None
+                            else wp.zeros(1, dtype=wp.float32, device=device))
+        self.close_target = float(close_target if close_target is not None else grip.min_close_width)
+        self.force_target_default = float(grip.force_target)
+        self.grip_bite = float(grip.grip_bite)
+        self.latch_arm_margin = float(grip.latch_arm_margin)
+        self.latch_debounce = int(grip.latch_debounce)
+        self.n_windows = len(grasp_windows)
+        flat: list[float] = []
+        for win in grasp_windows:
+            ft = -1.0 if win.force_target is None else float(win.force_target)
+            bite = -1.0 if win.grip_bite is None else float(win.grip_bite)
+            flat += [float(win.close_start), float(win.close_end),
+                     float(win.release_start), float(win.release_end), ft, bite]
+        self._windows = wp.array(flat, dtype=wp.float32, device=device)
+        self._latch_state = wp.zeros(self.n_windows * 4, dtype=wp.float32, device=device)
+
+    def step(self, substep: int, finger_q) -> None:
+        wp.launch(_grip_force_stop_kernel, dim=1, inputs=[
+            self._t_frame, int(substep), self.sim_dt, self._windows, self.n_windows,
+            self.gripper_open, self.close_target, self.force_target_default, self.grip_bite,
+            self.force_stop_enabled, self.latch_arm_margin, self.latch_debounce,
+            self.grip_signal, finger_q, self.finger_dof0, self.finger_dof1,
+        ], outputs=[self._latch_state, self.joint_target_q], device=self.joint_target_q.device)
+
+    def latch_widths(self):
+        """Host readout (debug): per-window [latched_flag, latched_width, current_width, debounce]."""
+        s = self._latch_state.numpy().reshape(self.n_windows, 4)
+        return s

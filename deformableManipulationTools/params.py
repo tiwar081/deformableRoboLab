@@ -51,6 +51,12 @@ class RobotConfig:
     solver_iterations: int = 20
     solver_ls_iterations: int = 100
     solver_impratio: float = 1000.0
+    # Continuous collision detection — robust contacts for fast grasp/impact (off by MuJoCo default
+    # unless passed). Beneficial for every demo's robot contacts; essential when MuJoCo also hosts the
+    # objects (rigid-only path). enable_multiccd gives up to 4 contacts/pair (single if either margin>0).
+    ccd_iterations: int = 50
+    ccd_tolerance: float = 1.0e-6
+    enable_multiccd: bool = True
 
 
 # ---------------------------------------------------------------------------------------------
@@ -70,9 +76,66 @@ class GripConfig:
     proxy_kd: float = 1.0e2           # proxy contact damping [N·s/m] (absolute; re-derived, was 5e6 ~1e4x critical)
     proxy_mu: float = 1.0             # proxy/pad friction
     proxy_margin: float = 0.001       # contact margin [m]
-    grasp_interference: float = 0.001  # commanded pad bite past the object surface [m]; sets the squeeze
+    proxy_gap: float = 0.008          # centralized proxy contact gap [m] (was per-demo; same for all)
+    grasp_interference: float = 0.001  # LEGACY preset-width knob (object_half + margins − this); the
+                                       # VBD finger path now force-stops instead (force_target below).
     # Contact damping applied to the *gripped object's* shapes (cable/box) — physical, re-derived.
     object_contact_kd: float = 1.0e2
+    # ---- Force-feedback grasp (replaces the geometric preset width on the VBD/proxy path) ----
+    # The controller closes the fingers and FREEZES the target when the (already-harvested) per-pad
+    # grip force crosses force_target — "specify force, get emergent geometry". See grip.GripController.
+    force_target: float = 8.0         # grip-force threshold [N] (min of both pads) that signals "contact
+                                       # made — both pads engaged"; demo-overridable per GraspWindow
+    grip_bite: float = 0.0025         # inward squeeze [m] past the force-DISCOVERED contact position the
+                                       # latch freezes at (geometry-independent, unlike the old preset
+                                       # object_half − margins). Sets grip firmness ≈ ke·bite, bounded.
+    min_close_width: float = 0.001    # fully-closed finger floor [m] if the grasp never reaches force_target
+    # Hand/palm "blocker" proxy (CENTRALIZED — every VBD demo's gripper gets it; not demo-tweakable).
+    # The two finger proxies already carry the finger collision geometry, but the Franka hand is
+    # collapsed into link7 and its collider lives only in MuJoCo, so the VBD world has NO collider for
+    # the palm/wrist — a swept cable passes straight through the gripper PALM and the EE. A single box
+    # mirroring the EE (link7) blocks it. It is a BLOCKER only: re-pinned to the EE each substep, NOT
+    # harvested and NOT in the grip signal. Box dims are in the link7/EE frame (z grows wrist→fingertip):
+    # it spans the wrist→hand region up to just below the finger origins (~z=0.165) and stays 6 cm clear
+    # of the fingertip grasp zone (TCP at z=0.22). Cheap: rigid-shape collision only (no particle).
+    palm_box_half: tuple[float, float, float] = (0.05, 0.05, 0.08)    # half-extents [m], EE(link7) frame
+    palm_box_offset: tuple[float, float, float] = (0.0, 0.0, 0.08)    # box center in the EE(link7) frame [m]
+    latch_debounce: int = 2           # consecutive substeps above force_target before latching (kills the
+                                       # proxy_kd·v damping spike at first contact)
+    latch_arm_margin: float = 0.003   # only latch once the jaws have closed this far below gripper_open [m]
+                                       # (guards against latching while still wide open)
+
+
+@dataclass(frozen=True)
+class GraspWindow:
+    """One grasp episode declared by a demo's POLICY for the force-stop GripController (grip.py):
+    close the fingers over ``[close_start, close_end]``, hold until ``release_start``, reopen by
+    ``release_end``. ``force_target`` overrides ``GRIP.force_target`` for this grasp (``None`` = use
+    the global default — a compliant object wants a lower threshold than a rigid one). For a grasp
+    held to the end of the demo (no release, e.g. the cable sweep), leave the +inf defaults. All
+    times are in seconds of sim time, on the same clock the arm-target kernel uses."""
+    close_start: float
+    close_end: float
+    release_start: float = float("inf")
+    release_end: float = float("inf")
+    force_target: float | None = None   # None → GRIP.force_target
+    grip_bite: float | None = None      # inward squeeze past the discovered contact [m]; None →
+                                        # GRIP.grip_bite. A flat/solid object (big multi-point contact
+                                        # patch) needs a much SMALLER bite than a thin loose-cage rod —
+                                        # force ≈ ke·bite·(patch points), so the same bite over-grips a
+                                        # flat box (e.g. 4 kN). Set per object.
+
+
+@dataclass(frozen=True)
+class MujocoGripConfig:
+    """Franka finger control for a TRUE two-way MuJoCo grasp (the rigid-only path, where robot AND
+    objects share one SolverMuJoCo). The gripper closes to a FIXED target and contact + the actuator
+    effort hold the object — NO object-size preset width (cf. _external/RoboLab). Stiffer/stronger than
+    the default finger gains, which in the VBD-proxy path only POSITION the fingers (the proxies grip)."""
+    finger_target_ke: float = 2.0e3   # finger position-actuator gain [N/m]
+    finger_target_kd: float = 1.0e2
+    finger_effort: float = 200.0      # finger grip force cap [N]
+    close_target: float = 0.0         # fully-closed finger target [m]; contact stops the pads at the object
 
 
 # ---------------------------------------------------------------------------------------------
@@ -198,6 +261,7 @@ class YcbMeshConfig:
 # ---- Canonical instances (single source of truth) -------------------------------------------
 FRANKA = RobotConfig()
 GRIP = GripConfig()
+MUJOCO_GRIP = MujocoGripConfig()   # finger control for the rigid-only single-MuJoCo grasp
 TABLE = TableConfig()
 # YCB demo table: its own placement (robot at the origin, table centered at (0.45, 0), top z=0.05)
 # and higher object friction; the robolab view depends on this center/top-z.

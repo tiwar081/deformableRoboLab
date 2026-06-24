@@ -12,7 +12,7 @@ import newton.ik as ik
 import newton.utils
 from newton import JointTargetMode
 
-from .params import FRANKA, RobotConfig, TableConfig, TABLE
+from .params import FRANKA, RobotConfig, TableConfig, TABLE, MUJOCO_GRIP, MujocoGripConfig
 from .mathutils import find_body, quat_to_vec4
 
 
@@ -85,6 +85,17 @@ def add_robot_table_box(builder: newton.ModelBuilder, center_xy, top_z: float,
         hx=half[0], hy=half[1], hz=half[2], cfg=cfg, label="robot_contact_table")
 
 
+def set_mujoco_grip_controller(builder: newton.ModelBuilder, cfg: MujocoGripConfig = MUJOCO_GRIP,
+                               robot: RobotConfig = FRANKA) -> None:
+    """Stiffen the finger position actuators for a TRUE two-way MuJoCo grasp (rigid-only path), so the
+    fingers closing to a fixed target develop a real holding force against contact. Call on the robot
+    builder BEFORE finalize. Not used by the VBD-proxy path (there the proxies grip)."""
+    for dof in range(robot.n_arm_dof, robot.n_dof):          # finger DOFs (7, 8)
+        builder.joint_target_ke[dof] = cfg.finger_target_ke
+        builder.joint_target_kd[dof] = cfg.finger_target_kd
+        builder.joint_effort_limit[dof] = cfg.finger_effort
+
+
 def finger_body_indices(model_or_labels, robot: RobotConfig = FRANKA) -> list[int]:
     labels = list(model_or_labels.body_label) if hasattr(model_or_labels, "body_label") else list(model_or_labels)
     return [find_body(labels, robot.left_finger_suffix), find_body(labels, robot.right_finger_suffix)]
@@ -96,6 +107,8 @@ def make_robot_solver(model, contact_max: int, robot: RobotConfig = FRANKA):
         iterations=robot.solver_iterations, ls_iterations=robot.solver_ls_iterations,
         nconmax=contact_max, njmax=contact_max * 2, cone=robot.cone,
         impratio=robot.solver_impratio, use_mujoco_contacts=False,
+        ccd_iterations=robot.ccd_iterations, ccd_tolerance=robot.ccd_tolerance,
+        enable_multiccd=robot.enable_multiccd,
     )
 
 
