@@ -96,11 +96,12 @@ class Example(ScenicGraspExample):
         self.soft_start_pos = np.array([self.pick_xy[0], self.pick_xy[1], self.table_top_z], dtype=np.float32)
         self.grasp_tcp_height = self.table_top_z + self.block_half
         self.lift_height = self.table_top_z + 0.16
-        # Force-stop grasp (no preset width): close on the compliant block from t=3.2 and FREEZE when
-        # the harvested squeeze reaches force_target (low — the block is compliant), hold through the
-        # carry, release [8.0, 8.6]. Replaces the old geometric gripper_closed = block_half − 5 mm.
-        self.grasp_windows = [GraspWindow(close_start=3.2, close_end=4.4,
-                                          release_start=8.0, release_end=8.6, force_target=8.0)]
+        # Force-stop grasp on the COMPRESSIBLE block: close from t=3.2 and FREEZE when the harvested
+        # squeeze reaches GRIP.force_target, biting ZERO past it (any inward bite crushes the already-
+        # deforming block); hold through the carry, release [8.0, 8.6]. compressible=True selects this
+        # mode centrally — replaces the old geometric gripper_closed = block_half − 5 mm.
+        self.grasp_windows = [GraspWindow(close_start=3.2, close_end=4.4, release_start=8.0,
+                                          release_end=8.6, compressible=True)]
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
         self.object_pipeline_kwargs = {"soft_contact_margin": soft.contact_margin}

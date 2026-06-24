@@ -119,17 +119,14 @@ class Example(ScenicGraspExample):
         self.drop_height = self.table_top_z + 0.16
         self.bowl_mass = args.bowl_mass
         self.banana_mass = args.banana_mass
-        # Force-stop grasp, TWO windows (no preset interference-fit widths): rubik's cube
-        # close [2.6, 3.0] / release [6.2, 6.8], then banana close [10.2, 10.8] / release [17.8, 18.4].
-        # The rubik's CUBE is a flat box gripped by flat pads → large multi-point patch → near-zero
-        # bite (latch at first solid contact) or the force runs to kN. The BANANA is curved/thin (a
-        # small patch), so it tolerates a small bite for a firmer hold; its grasp pose was raised to
-        # table + 1 cm (see plan()) so the pads clear the table and can close onto it.
+        # Force-stop grasp, TWO windows (both incompressible → latch at FIRST contact + a fixed
+        # GRIP.grasp_interference bite, the geometry-free equivalent of the old preset interference-fit
+        # widths): rubik's cube close [2.6, 3.8] / release [6.2, 6.8], then banana close [10.2, 11.6] /
+        # release [17.8, 18.4]. The banana's grasp pose was raised to table + 1 cm (see plan()) so the
+        # pads clear the table and can close onto it.
         self.grasp_windows = [
-            GraspWindow(close_start=2.6, close_end=3.8, release_start=6.2, release_end=6.8,
-                        force_target=12.0, grip_bite=0.0),
-            GraspWindow(close_start=10.2, close_end=11.6, release_start=17.8, release_end=18.4,
-                        force_target=4.0, grip_bite=0.0015),
+            GraspWindow(close_start=2.6, close_end=3.8, release_start=6.2, release_end=6.8),
+            GraspWindow(close_start=10.2, close_end=11.6, release_start=17.8, release_end=18.4),
         ]
 
     def plan(self, ik_model, ik_state):

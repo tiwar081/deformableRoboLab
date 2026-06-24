@@ -1,0 +1,420 @@
+"""Visualize the VBD gripper + palm contact proxies overlaid on the Franka robot.
+
+The proxies are invisible finite-mass bodies that live only in the VBD *object* model
+(``deformableManipulationTools.grip.build_gripper_proxies``); at runtime each substep they are
+re-pinned to a robot body (``TwoWayProxyCoupling.sync_proxies``):
+
+  * two FINGER proxies  -> the left/right Franka finger bodies (one box each = the AABB of the
+    finger's 4 sparse collision boxes), the GRIP pads that are harvested into the grip signal;
+  * one PALM/EE blocker -> the EE (link7) body (a synthetic box spanning wrist->hand), a blocker
+    only (never harvested), stopping a swept cable passing through the gripper palm.
+
+This script reconstructs exactly that: it builds the real Franka model, runs FK at the home pose,
+asks ``build_gripper_proxies`` for the proxy geometry, pins each proxy to its mirror body, and
+ghost-renders the boxes over the robot with a small self-contained Warp raycaster (headless, no
+display / RT cores needed). Output PNGs land in ``outputs/``.
+
+Run:  python visualizations/franka_vbd_proxies.py
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+import warp as wp
+
+# Make the repo importable when run directly (visualizations/<this> -> repo root).
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+OUTPUT_DIR = REPO_ROOT / "outputs"
+
+import newton  # noqa: E402
+
+from deformableManipulationTools.robot import build_franka_robot, finger_body_indices  # noqa: E402
+from deformableManipulationTools.grip import build_gripper_proxies  # noqa: E402
+from deformableManipulationTools.params import FRANKA, TABLE  # noqa: E402
+from deformableManipulationTools.mathutils import find_body  # noqa: E402
+
+# Proxy overlay colours (RGB 0..1): finger pads warm orange, palm/EE blocker cyan.
+FINGER_COLOR = (0.95, 0.45, 0.10)
+PALM_COLOR = (0.15, 0.70, 0.95)
+ROBOT_LINK_COLOR = (0.82, 0.82, 0.85)
+ROBOT_FINGER_COLOR = (0.28, 0.28, 0.31)
+PROXY_ALPHA = 0.45          # fill opacity of the proxy boxes (tint; the outline guarantees the extent)
+ROBOT_ALPHA = 0.55          # opacity of the robot itself (low: ghosted so proxies show through it fully)
+OUTLINE_THICKNESS = 2        # proxy bounding-box wireframe thickness [px] (always drawn on top)
+SSAA = 2                     # supersample factor (rendered at SSAA x, box-filtered down)
+
+# 12 edges of a box, indexing the 8 corners as 4*ix+2*iy+iz (ix/iy/iz in {0,1}) — matches _box_tris.
+_BOX_EDGES = ((0, 4), (1, 5), (2, 6), (3, 7), (0, 2), (1, 3), (4, 6), (5, 7),
+              (0, 1), (2, 3), (4, 5), (6, 7))
+
+
+# ---------------------------------------------------------------------------------------------
+# Small numpy transform helpers (pos + quat xyzw, the Newton/warp convention).
+# ---------------------------------------------------------------------------------------------
+def quat_rotate(q, v):
+    q = np.asarray(q, dtype=np.float64)
+    v = np.asarray(v, dtype=np.float64)
+    t = 2.0 * np.cross(q[:3], v)
+    return v + q[3] * t + np.cross(q[:3], t)
+
+
+def quat_mul(a, b):
+    ax, ay, az, aw = a
+    bx, by, bz, bw = b
+    return np.array([
+        aw * bx + ax * bw + ay * bz - az * by,
+        aw * by - ax * bz + ay * bw + az * bx,
+        aw * bz + ax * by - ay * bx + az * bw,
+        aw * bw - ax * bx - ay * by - az * bz,
+    ])
+
+
+def tf_compose(parent, local):
+    """Compose two (pos, quat_xyzw) transforms: world = parent o local."""
+    pp, pq = np.asarray(parent[:3], float), np.asarray(parent[3:7], float)
+    lp, lq = np.asarray(local[:3], float), np.asarray(local[3:7], float)
+    return np.concatenate([pp + quat_rotate(pq, lp), quat_mul(pq, lq)])
+
+
+# ---------------------------------------------------------------------------------------------
+# Geometry extraction: world-frame triangle soup for the robot, world-frame boxes for proxies.
+# ---------------------------------------------------------------------------------------------
+def _box_tris(center, half, quat, color):
+    """8 world-frame corners + 12 triangles + per-face colour for an oriented box."""
+    corners = []
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            for sz in (-1.0, 1.0):
+                corners.append(np.asarray(center) + quat_rotate(quat, [sx * half[0], sy * half[1], sz * half[2]]))
+    verts = np.asarray(corners, dtype=np.float32)
+    # corner index = (sx,sy,sz) -> 4*ix+2*iy+iz, ix/iy/iz in {0,1}
+    tris = np.array([
+        [0, 1, 3], [0, 3, 2], [4, 6, 7], [4, 7, 5],
+        [0, 4, 5], [0, 5, 1], [2, 3, 7], [2, 7, 6],
+        [0, 2, 6], [0, 6, 4], [1, 5, 7], [1, 7, 3],
+    ], dtype=np.int32)
+    face_color = np.tile(np.asarray(color, dtype=np.float32), (len(tris), 1))
+    return verts, tris, face_color
+
+
+def build_robot_meshes(model, body_q):
+    """World-frame (verts, tris, face_color) for every VISIBLE robot shape at the given FK pose."""
+    st = model.shape_type.numpy()
+    sf = model.shape_flags.numpy()
+    sb = model.shape_body.numpy()
+    s_tf = model.shape_transform.numpy()
+    s_scale = model.shape_scale.numpy()
+    labels = list(model.shape_label)
+    blabels = list(model.body_label)
+    VIS = int(newton.ShapeFlags.VISIBLE)
+
+    all_v, all_t, all_c = [], [], []
+    offset = 0
+    for s in range(model.shape_count):
+        if not (int(sf[s]) & VIS):
+            continue
+        if int(st[s]) != int(newton.GeoType.MESH):
+            continue
+        src = model.shape_source[s]
+        if src is None:
+            continue
+        v_local = np.asarray(src.vertices, dtype=np.float64) * np.asarray(s_scale[s], dtype=np.float64)[None, :]
+        tris = np.asarray(src.indices, dtype=np.int32).reshape(-1, 3)
+        body = int(sb[s])
+        world_tf = tf_compose(body_q[body], s_tf[s]) if body >= 0 else s_tf[s]
+        wp_pos, wp_q = world_tf[:3], world_tf[3:7]
+        v_world = (quat_rotate(wp_q, v_local) + wp_pos).astype(np.float32)
+        bname = blabels[body] if body >= 0 else ""
+        color = ROBOT_FINGER_COLOR if "finger" in bname else ROBOT_LINK_COLOR
+        all_v.append(v_world)
+        all_t.append(tris + offset)
+        all_c.append(np.tile(np.asarray(color, dtype=np.float32), (len(tris), 1)))
+        offset += len(v_world)
+    return (np.concatenate(all_v), np.concatenate(all_t).astype(np.int32), np.concatenate(all_c))
+
+
+def current_proxy_boxes(robot_builder, robot_model, body_q):
+    """World-frame proxy boxes for the CURRENT grip (2 finger AABB boxes + 1 palm/EE blocker).
+
+    Builds the real proxies via ``build_gripper_proxies`` (the same call the framework makes), then
+    pins each proxy body to its mirror robot body exactly as ``TwoWayProxyCoupling.sync_proxies``
+    does at runtime: finger proxies -> finger bodies, palm proxy -> EE (link7)."""
+    finger_bodies = finger_body_indices(robot_model)
+    ee_body = find_body(list(robot_model.body_label), FRANKA.ee_link_suffix)
+
+    ob = newton.ModelBuilder()
+    proxy_bodies, proxy_shapes = build_gripper_proxies(
+        ob, robot_builder, finger_bodies, object_table_shape=None)
+    # proxy_bodies order: [left finger, right finger, palm/EE]; mirror to robot bodies accordingly.
+    mirror = {proxy_bodies[0]: finger_bodies[0], proxy_bodies[1]: finger_bodies[1],
+              proxy_bodies[2]: ee_body}
+    palm_pb = proxy_bodies[2]
+
+    boxes = []
+    for s in proxy_shapes:
+        pb = ob.shape_body[s]
+        local_tf = np.asarray(ob.shape_transform[s], dtype=np.float64)
+        half = np.asarray(ob.shape_scale[s], dtype=np.float64)[:3]
+        world_tf = tf_compose(body_q[mirror[pb]], local_tf)
+        color = PALM_COLOR if pb == palm_pb else FINGER_COLOR
+        boxes.append((world_tf[:3], half, world_tf[3:7], color))
+    return boxes
+
+
+# ---------------------------------------------------------------------------------------------
+# Self-contained Warp raycaster with a ghosted (alpha) proxy overlay layer.
+# ---------------------------------------------------------------------------------------------
+@wp.func
+def _shade(n: wp.vec3, d: wp.vec3) -> float:
+    key = wp.normalize(wp.vec3(0.35, -0.45, -0.82))
+    return 0.40 + 0.45 * wp.max(wp.dot(n, -key), 0.0) + 0.15 * wp.max(wp.dot(n, -d), 0.0)
+
+
+@wp.func
+def _bg(d: wp.vec3) -> wp.vec3:
+    g = 0.60 + 0.30 * wp.max(d[2], 0.0)
+    return wp.vec3(g * 0.93, g * 0.95, g)
+
+
+@wp.kernel
+def _render_kernel(
+    robot_mesh: wp.uint64,
+    prox_mesh: wp.uint64,
+    has_prox: int,
+    cam_pos: wp.vec3,
+    cam_quat: wp.quat,
+    tan_w: float,
+    tan_h: float,
+    width: int,
+    height: int,
+    robot_fcolor: wp.array(dtype=wp.vec3),
+    prox_fcolor: wp.array(dtype=wp.vec3),
+    prox_alpha: float,
+    robot_alpha: float,
+    img: wp.array(dtype=wp.uint8, ndim=3),
+):
+    px, py = wp.tid()
+    u = (float(px) + 0.5) / float(width) * 2.0 - 1.0
+    v = 1.0 - (float(py) + 0.5) / float(height) * 2.0
+    d_cam = wp.normalize(wp.vec3(u * tan_w, v * tan_h, -1.0))
+    d = wp.quat_rotate(cam_quat, d_cam)
+    bg = _bg(d)
+
+    # nearest robot surface (translucent shell) ...
+    col_r = wp.vec3(0.0, 0.0, 0.0)
+    t_r = 1.0e6
+    qr = wp.mesh_query_ray(robot_mesh, cam_pos, d, 100.0)
+    has_r = qr.result
+    if has_r:
+        n = qr.normal
+        if wp.dot(n, d) > 0.0:
+            n = -n
+        col_r = robot_fcolor[qr.face] * _shade(n, d)
+        t_r = qr.t
+
+    # ... and nearest proxy surface.
+    col_p = wp.vec3(0.0, 0.0, 0.0)
+    t_p = 1.0e6
+    has_p = False
+    if has_prox == 1:
+        qp = wp.mesh_query_ray(prox_mesh, cam_pos, d, 100.0)
+        if qp.result:
+            has_p = True
+            n = qp.normal
+            if wp.dot(n, d) > 0.0:
+                n = -n
+            col_p = prox_fcolor[qp.face] * _shade(n, d)
+            t_p = qp.t
+
+    # Back-to-front alpha composite of the (up to two) surfaces over the background, so a proxy box
+    # BEHIND a robot surface still shows through the ghosted robot (robot_alpha < 1).
+    c = bg
+    if has_r and has_p:
+        if t_r >= t_p:                       # robot farther -> robot first, then proxy
+            c = col_r * robot_alpha + bg * (1.0 - robot_alpha)
+            c = col_p * prox_alpha + c * (1.0 - prox_alpha)
+        else:                                # proxy farther -> proxy first, then robot
+            c = col_p * prox_alpha + bg * (1.0 - prox_alpha)
+            c = col_r * robot_alpha + c * (1.0 - robot_alpha)
+    elif has_r:
+        c = col_r * robot_alpha + bg * (1.0 - robot_alpha)
+    elif has_p:
+        c = col_p * prox_alpha + bg * (1.0 - prox_alpha)
+
+    img[py, px, 0] = wp.uint8(wp.clamp(c[0], 0.0, 1.0) * 255.0)
+    img[py, px, 1] = wp.uint8(wp.clamp(c[1], 0.0, 1.0) * 255.0)
+    img[py, px, 2] = wp.uint8(wp.clamp(c[2], 0.0, 1.0) * 255.0)
+
+
+def look_at_quat(eye, target, up=(0.0, 0.0, 1.0)):
+    """Quaternion (xyzw) for a camera at ``eye`` looking at ``target`` (camera looks down -z, +y up)."""
+    eye, target, up = map(lambda a: np.asarray(a, dtype=np.float64), (eye, target, up))
+    f = target - eye
+    f /= np.linalg.norm(f)
+    right = np.cross(f, up)
+    right /= np.linalg.norm(right)
+    true_up = np.cross(right, f)
+    R = np.column_stack([right, true_up, -f])  # camera x,y,z axes in world
+    tr = np.trace(R)
+    if tr > 0:
+        s = np.sqrt(tr + 1.0) * 2
+        w = 0.25 * s
+        x = (R[2, 1] - R[1, 2]) / s
+        y = (R[0, 2] - R[2, 0]) / s
+        z = (R[1, 0] - R[0, 1]) / s
+    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+        s = np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2
+        w = (R[2, 1] - R[1, 2]) / s
+        x = 0.25 * s
+        y = (R[0, 1] + R[1, 0]) / s
+        z = (R[0, 2] + R[2, 0]) / s
+    elif R[1, 1] > R[2, 2]:
+        s = np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2
+        w = (R[0, 2] - R[2, 0]) / s
+        x = (R[0, 1] + R[1, 0]) / s
+        y = 0.25 * s
+        z = (R[1, 2] + R[2, 1]) / s
+    else:
+        s = np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2
+        w = (R[1, 0] - R[0, 1]) / s
+        x = (R[0, 2] + R[2, 0]) / s
+        y = (R[1, 2] + R[2, 1]) / s
+        z = 0.25 * s
+    return np.array([x, y, z, w])
+
+
+class Raycaster:
+    def __init__(self, robot, proxy_boxes, device):
+        self.device = device
+        self._boxes = list(proxy_boxes)
+        rv, rt, rc = robot
+        with wp.ScopedDevice(device):
+            self._robot_pts = wp.array(rv.astype(np.float32), dtype=wp.vec3)
+            self._robot_tris = wp.array(rt.flatten().astype(np.int32), dtype=wp.int32)
+            self._robot_mesh = wp.Mesh(points=self._robot_pts, indices=self._robot_tris)
+            self._robot_fcolor = wp.array(rc.astype(np.float32), dtype=wp.vec3)
+
+            if proxy_boxes:
+                pv, pt, pc, off = [], [], [], 0
+                for center, half, quat, color in proxy_boxes:
+                    v, t, c = _box_tris(center, half, quat, color)
+                    pv.append(v)
+                    pt.append(t + off)
+                    pc.append(c)
+                    off += len(v)
+                self._prox_pts = wp.array(np.concatenate(pv).astype(np.float32), dtype=wp.vec3)
+                self._prox_tris = wp.array(np.concatenate(pt).flatten().astype(np.int32), dtype=wp.int32)
+                self._prox_mesh = wp.Mesh(points=self._prox_pts, indices=self._prox_tris)
+                self._prox_fcolor = wp.array(np.concatenate(pc).astype(np.float32), dtype=wp.vec3)
+                self._has_prox = 1
+            else:
+                self._prox_mesh = self._robot_mesh
+                self._prox_fcolor = self._robot_fcolor
+                self._has_prox = 0
+
+    def render(self, eye, target, out_path, width=1400, height=1050, fov_deg=38.0):
+        W, H = width * SSAA, height * SSAA
+        cam_quat = look_at_quat(eye, target)
+        tan_h = np.tan(np.radians(fov_deg) * 0.5)
+        tan_w = tan_h * (W / H)
+        with wp.ScopedDevice(self.device):
+            img = wp.zeros((H, W, 3), dtype=wp.uint8)
+            wp.launch(_render_kernel, dim=(W, H), inputs=[
+                self._robot_mesh.id, self._prox_mesh.id, self._has_prox,
+                wp.vec3(*np.asarray(eye, np.float32)), wp.quat(*cam_quat.astype(np.float32)),
+                float(tan_w), float(tan_h), W, H,
+                self._robot_fcolor, self._prox_fcolor, float(PROXY_ALPHA), float(ROBOT_ALPHA),
+            ], outputs=[img])
+        rgb = img.numpy()
+        # box-filter supersample down to the requested resolution
+        rgb = rgb.reshape(height, SSAA, width, SSAA, 3).mean(axis=(1, 3)).astype(np.uint8)
+        # crisp proxy bounding-box wireframe ON TOP (always visible, depth-independent)
+        _draw_box_outlines(rgb, self._boxes, eye, cam_quat, tan_w, tan_h, width, height)
+        _save_png(rgb, out_path)
+        print(f"[franka_vbd_proxies] wrote {out_path}")
+
+
+def _project(points_world, eye, cam_quat, tan_w, tan_h, width, height):
+    """Project world points to pixel coords using the same pinhole model as _render_kernel.
+    Returns a list of (px, py) or None (point behind the camera)."""
+    conj = np.array([-cam_quat[0], -cam_quat[1], -cam_quat[2], cam_quat[3]])  # inverse of the unit quat
+    eye = np.asarray(eye, dtype=np.float64)
+    out = []
+    for P in points_world:
+        pc = quat_rotate(conj, np.asarray(P, dtype=np.float64) - eye)         # world -> camera frame
+        if pc[2] >= -1e-6:                                                    # at/behind the image plane
+            out.append(None)
+            continue
+        u = -pc[0] / (pc[2] * tan_w)
+        v = -pc[1] / (pc[2] * tan_h)
+        out.append(((u + 1.0) * 0.5 * width, (1.0 - v) * 0.5 * height))
+    return out
+
+
+def _draw_box_outlines(rgb, boxes, eye, cam_quat, tan_w, tan_h, width, height):
+    """Draw each proxy box's 12-edge wireframe over the rendered image (depth-independent, so the
+    full bounding box is visible no matter what occludes it)."""
+    try:
+        import cv2
+    except Exception:
+        return
+    for center, half, quat, color in boxes:
+        corners = [np.asarray(center) + quat_rotate(quat, [sx * half[0], sy * half[1], sz * half[2]])
+                   for sx in (-1.0, 1.0) for sy in (-1.0, 1.0) for sz in (-1.0, 1.0)]
+        pts = _project(corners, eye, cam_quat, tan_w, tan_h, width, height)
+        col = tuple(int(round(c * 255)) for c in color)                       # RGB (rgb array is RGB)
+        for a, b in _BOX_EDGES:
+            if pts[a] is None or pts[b] is None:
+                continue
+            p0 = (int(round(pts[a][0])), int(round(pts[a][1])))
+            p1 = (int(round(pts[b][0])), int(round(pts[b][1])))
+            cv2.line(rgb, p0, p1, col, OUTLINE_THICKNESS, cv2.LINE_AA)
+
+
+def _save_png(rgb, path):
+    try:
+        import cv2
+        cv2.imwrite(str(path), cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+    except Exception:
+        from PIL import Image
+        Image.fromarray(rgb).save(str(path))
+
+
+# ---------------------------------------------------------------------------------------------
+def main():
+    wp.init()
+    device = wp.get_device("cuda:0") if wp.is_cuda_available() else wp.get_device("cpu")
+
+    robot_xform = wp.transform((-0.45, -0.45, TABLE.top_z), wp.quat_identity())
+    robot_builder = build_franka_robot(xform=robot_xform, table=TABLE)
+    model = robot_builder.finalize(device=device)
+    state = model.state()
+    newton.eval_fk(model, model.joint_q, model.joint_qd, state)
+    body_q = state.body_q.numpy()
+
+    robot = build_robot_meshes(model, body_q)
+    boxes = current_proxy_boxes(robot_builder, model, body_q)
+
+    # Frame the gripper: target = midpoint of the two finger bodies.
+    fb = finger_body_indices(model)
+    grip_center = 0.5 * (body_q[fb[0]][:3] + body_q[fb[1]][:3])
+    base = body_q[0][:3]
+    robot_mid = 0.5 * (base + grip_center) + np.array([0.0, 0.0, 0.10])
+
+    rc = Raycaster(robot, boxes, device)
+    # 1) whole-robot 3/4 view with the proxies in context
+    rc.render(eye=robot_mid + np.array([0.85, -0.75, 0.45]), target=robot_mid,
+              out_path=OUTPUT_DIR / "franka_vbd_proxies_full.png", fov_deg=40.0)
+    # 2) gripper close-up, 3/4 front (finger AABB pads + palm/EE blocker clearly visible)
+    rc.render(eye=grip_center + np.array([0.40, -0.34, 0.18]), target=grip_center + np.array([0.0, 0.0, -0.02]),
+              out_path=OUTPUT_DIR / "franka_vbd_proxies_gripper.png", fov_deg=40.0)
+    # 3) gripper close-up, side view (shows the palm/EE blocker depth behind the fingers)
+    rc.render(eye=grip_center + np.array([0.34, 0.02, 0.06]), target=grip_center,
+              out_path=OUTPUT_DIR / "franka_vbd_proxies_side.png", fov_deg=34.0)
+
+
+if __name__ == "__main__":
+    main()

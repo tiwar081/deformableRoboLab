@@ -77,18 +77,18 @@ class GripConfig:
     proxy_mu: float = 1.0             # proxy/pad friction
     proxy_margin: float = 0.001       # contact margin [m]
     proxy_gap: float = 0.008          # centralized proxy contact gap [m] (was per-demo; same for all)
-    grasp_interference: float = 0.001  # LEGACY preset-width knob (object_half + margins − this); the
-                                       # VBD finger path now force-stops instead (force_target below).
     # Contact damping applied to the *gripped object's* shapes (cable/box) — physical, re-derived.
     object_contact_kd: float = 1.0e2
-    # ---- Force-feedback grasp (replaces the geometric preset width on the VBD/proxy path) ----
+    # ---- Force-stop grasp (replaces the geometric preset width on the VBD/proxy path) ----
     # The controller closes the fingers and FREEZES the target when the (already-harvested) per-pad
     # grip force crosses force_target — "specify force, get emergent geometry". See grip.GripController.
-    force_target: float = 8.0         # grip-force threshold [N] (min of both pads) that signals "contact
-                                       # made — both pads engaged"; demo-overridable per GraspWindow
-    grip_bite: float = 0.0025         # inward squeeze [m] past the force-DISCOVERED contact position the
-                                       # latch freezes at (geometry-independent, unlike the old preset
-                                       # object_half − margins). Sets grip firmness ≈ ke·bite, bounded.
+    # The grasp MODE is per-GraspWindow (``compressible``); these two constants are its endpoints:
+    force_target: float = 8.0         # COMPRESSIBLE (soft FEM) grip-force threshold [N] (min of both
+                                       # pads) — the squeeze the latch waits for on a compliant block.
+                                       # Incompressible objects latch at first contact (force_target=0).
+    grasp_interference: float = 0.001  # INCOMPRESSIBLE inward bite [m] past the force-discovered first
+                                       # contact (== the old preset object_half + margins − this). Sets
+                                       # grip firmness ≈ ke·bite, bounded. Compressible objects bite 0.
     min_close_width: float = 0.001    # fully-closed finger floor [m] if the grasp never reaches force_target
     # Hand/palm "blocker" proxy (CENTRALIZED — every VBD demo's gripper gets it; not demo-tweakable).
     # The two finger proxies already carry the finger collision geometry, but the Franka hand is
@@ -110,20 +110,30 @@ class GripConfig:
 class GraspWindow:
     """One grasp episode declared by a demo's POLICY for the force-stop GripController (grip.py):
     close the fingers over ``[close_start, close_end]``, hold until ``release_start``, reopen by
-    ``release_end``. ``force_target`` overrides ``GRIP.force_target`` for this grasp (``None`` = use
-    the global default — a compliant object wants a lower threshold than a rigid one). For a grasp
-    held to the end of the demo (no release, e.g. the cable sweep), leave the +inf defaults. All
-    times are in seconds of sim time, on the same clock the arm-target kernel uses."""
+    ``release_end``. For a grasp held to the end of the demo (no release, e.g. the cable sweep),
+    leave the +inf defaults. All times are in seconds of sim time, on the same clock the arm-target
+    kernel uses.
+
+    The ONLY physics knob is ``compressible`` — it selects the centralized grasp MODE; the actual
+    force threshold / inward bite are derived in GripController from :data:`GRIP` (never per-demo):
+
+      * ``compressible=False`` (rigid bodies + the cable — NO particles, incompressible): latch at
+        FIRST contact (``force_target = 0`` → the moment both pads register force) and bite a fixed
+        ``GRIP.grasp_interference`` past it — the geometry-independent equivalent of the old preset
+        ``object_half + margins − grasp_interference`` close width. A firm, bounded squeeze.
+      * ``compressible=True`` (soft FEM block): close until the harvested squeeze reaches
+        ``GRIP.force_target`` (the compliant block needs a real threshold), then bite ZERO past it
+        (any extra bite crushes the already-deforming block). "Specify force, get emergent geometry"."""
     close_start: float
     close_end: float
     release_start: float = float("inf")
     release_end: float = float("inf")
-    force_target: float | None = None   # None → GRIP.force_target
-    grip_bite: float | None = None      # inward squeeze past the discovered contact [m]; None →
-                                        # GRIP.grip_bite. A flat/solid object (big multi-point contact
-                                        # patch) needs a much SMALLER bite than a thin loose-cage rod —
-                                        # force ≈ ke·bite·(patch points), so the same bite over-grips a
-                                        # flat box (e.g. 4 kN). Set per object.
+    compressible: bool = False           # the grasped object deforms (soft FEM) vs. rigid/cable
+    grip_bite: float | None = None       # OVERRIDE the mode's default inward bite [m]; None → mode default
+                                         # (0 for compressible, GRIP.grasp_interference for incompressible).
+                                         # Only the CABLE needs this: its loose LINE-contact cage (static
+                                         # force ~0, unlike a solid box's firm multi-point patch) must
+                                         # over-close MORE than grasp_interference or it slips on the sweep.
 
 
 @dataclass(frozen=True)
@@ -179,6 +189,11 @@ class CableConfig:
     contact_kd: float = 1.0e2         # absolute; re-derived (was 20·ke=4e5, ~1e4x critical)
     contact_margin: float = 0.001
     bow: float = 0.02                 # geometric layout bow that locks the free rolling mode
+    grip_bite: float = 0.003          # inward finger bite [m] past first contact for the force-stop grasp
+                                       # (GraspWindow.grip_bite override). The cable is a LOOSE line-contact
+                                       # cage whose static grip force decays to ~0, so first-contact + the
+                                       # default 1 mm grasp_interference is too open and it slips on the
+                                       # sweep; ~3 mm reproduces the firm cage of the old preset close width.
 
 
 @dataclass(frozen=True)

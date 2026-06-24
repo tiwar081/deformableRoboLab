@@ -111,7 +111,16 @@
       "Bash(GRASP_NO_CAPTURE=1 WARP_CACHE_PATH=/tmp/warp-cache .venv/bin/python /tmp/cnt.py)",
       "Bash(WARP_CACHE_PATH=/tmp/warp-cache .venv/bin/python /tmp/verify_demo.py cable_soft_franka 720)",
       "Bash(GRASP_NO_CAPTURE=1 WARP_CACHE_PATH=/tmp/warp-cache .venv/bin/python /tmp/verify_demo.py cable_soft_franka 720)",
-      "Bash(grep -rn -A1 \"build_gripper_proxies\\($\" examples/)"
+      "Bash(grep -rn -A1 \"build_gripper_proxies\\($\" examples/)",
+      "Bash(git ls-tree *)",
+      "Bash(WARP_CACHE_PATH=/tmp/warp-cache GRASP_NO_CAPTURE=1 timeout 560 .venv/bin/python /tmp/verify_grasp.py cable_rigidCube_franka)",
+      "Bash(grep -v \"Warp\\\\|Module\\\\|cuda\\\\|Compiling\\\\|^\\\\s*$\\\\|warning\\\\|Toolkit\\\\|Device\\\\|init\\\\|Saving\\\\|render\")",
+      "Bash(.venv/bin/python -m py_compile deformableManipulationTools/params.py deformableManipulationTools/grip.py examples/cable_rigidCube_franka.py examples/cable_soft_franka.py)",
+      "Bash(pkill -f \"examples soft_pickplace_franka\")",
+      "Bash(pkill -f \"examples rigidCube_soft\")",
+      "Bash(pkill -f \"examples soft_compression\")",
+      "Bash(pkill -f \"examples pickplace_ycb_vbd\")",
+      "Bash(.venv/bin/python -m py_compile deformableManipulationTools/grip.py)"
     ],
     "additionalDirectories": [
       "/dev",

@@ -5,6 +5,73 @@ and not yet settled, and any working hypotheses. Keep it lean — when something
 durable, promote it to CLAUDE.md (or the relevant `docs/` file) and delete it here. Reset this file
 at the start of each new big task.
 
+## DONE (2026-06-24): grasp MODE split — incompressible (first-contact + bite) vs compressible (force + no bite)
+
+Reworked the force-stop grasp so it is centralized on ONE declarative flag, `GraspWindow.compressible`,
+which fixes both the weak-rigid-grasp (Q1) and the soft-over-grasp (Q2) problems. `GraspWindow` no
+longer carries per-demo `force_target`/`grip_bite` numbers; the controller derives them from the mode:
+
+- **Incompressible** (rigid bodies + cable — NO particles): `force_target = 0`. The latch test is now
+  **strict `sig > ft`**, so `force_target = 0` fires the instant the grip signal first becomes positive
+  — i.e. FIRST contact (both pads) — then bites `GRIP.grasp_interference` (1 mm). This is the
+  geometry-free equivalent of the OLD preset `object_half + margins − grasp_interference`, and it
+  reproduces it (rigid cube latches 25.99 mm ≈ old 26 mm; rubik's 29.0 mm; plate handle 13.0 mm).
+  **Q1 FIXED:** the 1 kg cube now grips firmly at **157 N** (was a near-zero barely-touching grip with
+  the old `grip_bite=0` force-stop) and carries.
+- **Compressible** (soft FEM block): keep `force_target = GRIP.force_target` (8 N) but bite **ZERO**.
+  **Q2 FIXED:** `soft_pickplace` grasp-phase peak **15 N** (steady ~2–4 N), vs the old 2.5 mm bite that
+  drove a 462 N non-deterministic crush. The deep latch (~3.6 mm) is unchanged, but with no extra bite
+  the held force is gentle and the block recovers.
+
+### The cable needed a bigger bite (the lone per-object override)
+The cable is incompressible but a **loose LINE-contact cage** (static grip force decays to ~0; a light
+rolling rod registers first-contact ~1.7 mm WIDER than `object_half + margins`, unlike a solid box that
+stops at its face). So first-contact + the default 1 mm left the cage too open and the cable **slipped
+on the sweep** (`check_physics` fail). Fix: `CableConfig.grip_bite` (≈ **3 mm**), passed as the
+`GraspWindow.grip_bite` override — the ONE per-object bite. Cable now latches ~8.7 mm and holds
+through the sweep (**cable_rigidCube 192 N PASS**; cable_soft 163 N, cable held).
+
+### Verified (headless `--viewer null --device cuda:0`, instrumented grip force + check_physics)
+| demo | object | mode | bite | latched | GRASP-phase peak | whole-run max (after release fix) |
+|---|---|---|---|---|---|---|
+| cable_rigidCube | cable | incompr | 3 mm | 8.69 mm | 192 N | 192 N |
+| cable_soft | cable | incompr | 3 mm | 8.67 mm | 163 N | 163 N |
+| soft_pickplace | soft block | **compr** | 0 | ~3.6 mm | 15–182 N‡ | = grasp peak |
+| rigidCube_soft | rigid cube | incompr | 1 mm | 25.99 mm | 157 N | 157 N |
+| soft_compression | plate handle | incompr | 1 mm | 13.01 mm | 389 N | 389 N |
+| pickplace_ycb_vbd | rubik's cube | incompr | 1 mm | 29.01 mm | 152 N | 152 N |
+| pickplace_ycb_vbd | banana | incompr | 1 mm | 20.86 mm | 32 N | 152 N |
+
+After the release-jolt fix (below) the whole-run max EQUALS the grasp peak — no transient exceeds the
+sustained grip. soft_compression's 389 N is the plate handle loaded during the press-onto-block phase
+(bounded, holds). ‡soft_pickplace's grasp peak varies run-to-run (the documented soft-latch
+non-determinism — deep FP-sensitive latch); the release fix is orthogonal to it. **cable_soft
+`check_physics` is non-deterministic** — it sometimes fails on *"the soft body fell through the table"*,
+which is the token block knocked off the table EDGE by the swept cable (accepted cosmetic behavior),
+NOT the cable grasp (the cable holds either way).
+
+### DONE (2026-06-24): release-jolt fix — fingers no longer crush the object at the instant of release
+**Symptom:** right when the gripper releases any object WITH a release window (i.e. everything except
+the two cable demos, which hold to the end), the fingers jolted INWARD once before reopening — the
+source of the 1.7–3.2 kN "release" spikes above. **Root cause** (`grip._grip_force_stop_kernel`, RELEASE
+branch): the reopen smoothstep interpolates `base → gripper_open` with `base = latched_w` only while
+`latched > 0.5`, but the branch ALSO set `latched = 0` and persisted it. So only the FIRST release
+substep used `base = latched_w`; every later substep read `latched = 0` → `base = close_target` (≈1 mm,
+fully closed), and with the smoothstep `alpha` still ~0 the finger command snapped toward 1 mm for a
+step — a one-substep crush — before opening. **Fix:** DON'T clear `latched` in the release branch (the
+latch is re-armed for the next grasp in the `t < cs` branch), so `base` stays `latched_w` for the whole
+ramp and the command opens monotonically. Verified: whole-run max == grasp peak on all four release
+demos (was 1.7–3.2 kN). The AABB finger proxy boxes were NOT the cause of the release jolt; the user
+nonetheless asked to revert them to the true URDF finger colliders (see next entry — done, for fidelity).
+
+### DONE (2026-06-24): reverted the finger proxies from the single AABB box to the TRUE URDF colliders
+The finger proxies again copy the Franka finger's sparse collision boxes one-for-one (pad + edges +
+knuckle) instead of the gap-filled AABB box. The AABB was a non-physical fattening of the collider;
+the real boxes are the faithful geometry (project priority #1). **Tradeoff (re-accepted):** the gaps
+between the sparse boxes let the swept cable clip ~1 mm into the fingers again — the residual the AABB
+had removed; the palm/EE blocker proxy is UNCHANGED, so the larger palm/wrist penetration stays fixed.
+Re-verified all 6 demos (grasp + check_physics) after the revert; re-rendered all 6.
+
 ## DONE (2026-06-23): palm/EE blocker proxy — stop the swept cable penetrating the gripper
 
 **Symptom:** in the cable demos the swept cable passed through the gripper and the EE. **Root cause
@@ -47,16 +114,16 @@ fewer shapes (cheaper). **Residual concern:** the ~1 mm is penalty-contact compl
 fat cable sinks ~1 mm into the pad) — inherent to the VBD penalty contact; reducing it needs stiffer
 contact (`proxy_ke`/cable `contact_ke`), which risks instability, so left as-is ("better, not perfect").
 
-### ⚠️ CONCERN (pre-existing, NOT fixed — grasp-tuning was deferred): soft force-stop grip is non-deterministic
-`soft_pickplace` grips a soft FEM block, but the harvested soft grip signal rises so slowly (≈1.6 N
-even at a 13 mm finger gap on a 50 mm block) that `force_target=8 N` latches FAR too deep, and the exact
-latch substep is razor-sensitive to FP noise → the held grip varies run-to-run from **~1.8 N (gentle)
-to ~462 N (crush)** for the SAME config (palm off). `check_physics` passes either way (the block is
-compliant and still ends placed), so this was passing silently; earlier "≈1.5 N gentle" was a lucky
-run. The cable/rigid grips are far less noisy and stable. This is the force-stop reliability issue to
-revisit with the deferred grasp work (lower/auto `force_target` for soft objects, debounce on the
-SETTLED not transient signal, or a less noisy soft signal). The palm proxy is kept off the pick-place
-demos so it does not amplify this (palm on pushed soft_pickplace to ~1500–1850 N).
+### ✅ RESOLVED (2026-06-24) — soft over-grasp crush (was the deferred concern below)
+The soft block still latches deep (~3.6 mm; the signal rises slowly, ≈1.6 N at a 13 mm gap, so 8 N is
+only reached deep), but with `compressible=True` biting **ZERO** past the latch the held grip is gentle
+(grasp-phase peak ~15 N, steady ~2–4 N) and the block recovers — vs the old 2.5 mm bite that drove a
+~462 N crush. The over-grasp was the BITE on top of the deep latch, not the deep latch itself; removing
+the bite (not the threshold) fixes the force. Residual: the geometric close depth is still deep (it is
+inherent to the slow-rising soft signal); a future improvement would latch on the SETTLED signal so the
+depth itself is shallower, but the FORCE is now bounded and gentle so this is no longer urgent.
+*(Original concern, for history:* the held grip varied run-to-run ~1.8 N→462 N for the same config
+because the 2.5 mm bite amplified the razor-sensitive deep latch; palm-on pushed it to ~1500–1850 N.)
 
 ## DONE (2026-06-22): centralized MuJoCo/VBD object routing (promoted to CLAUDE.md + solver-architecture.md)
 
@@ -153,13 +220,11 @@ position minus `grip_bite`**; hold; release window reopens.
    scene + policy.
 
 ### Remaining / open
-- `force_target` and `grip_bite` are both per-`GraspWindow` (default `GRIP.force_target`=8,
-  `GRIP.grip_bite`=2.5 mm). Current per-object settings: cables `force_target≈10`, bite 2.5 mm;
-  flat/solid (cube, plate handle, rubik's, banana) `grip_bite=0`. These are first-pass values — tune
-  if a new object slips (raise bite / lower for over-grip).
-- The bite-vs-force mapping is geometry-dependent (patch-point count), so there is no single global
-  bite. If this becomes a burden, a future option is to auto-scale bite from a desired force using the
-  per-pad force slope — not needed yet.
-- The mesh objects (cube/banana on `pickplace_ycb_vbd`) have the ~0.9 s force RAMP (cube ~155 N@12
-  iters vs ~350 N@24); the measured-position latch + `grip_bite=0` sidesteps the transient-vs-settled
-  problem (we freeze the geometry at first solid contact, not the force).
+- **SUPERSEDED by the 2026-06-24 mode split (top of file):** the per-`GraspWindow` `force_target`/
+  `grip_bite` numbers below were replaced by the `compressible` flag (incompressible → force_target 0 +
+  `grasp_interference` bite; compressible → force_target 8 + 0 bite) with `CableConfig.grip_bite` as the
+  lone per-object override. The geometry-dependence note still holds (a flat box at 1 mm reads ~150 N,
+  a cable cage needs ~3 mm).
+- The mesh objects (cube/banana on `pickplace_ycb_vbd`) have the ~0.9 s force RAMP; the measured-position
+  latch at first contact (`force_target=0`) freezes the geometry at first solid contact, not the force,
+  so it sidesteps the transient-vs-settled ramp.
