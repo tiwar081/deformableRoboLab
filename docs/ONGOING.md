@@ -31,16 +31,20 @@ on the sweep** (`check_physics` fail). Fix: `CableConfig.grip_bite` (≈ **3 mm*
 `GraspWindow.grip_bite` override — the ONE per-object bite. Cable now latches ~8.7 mm and holds
 through the sweep (**cable_rigidCube 192 N PASS**; cable_soft 163 N, cable held).
 
-### Verified (headless `--viewer null --device cuda:0`, instrumented grip force + check_physics)
-| demo | object | mode | bite | latched | GRASP-phase peak | whole-run max (after release fix) |
+### Verified (headless `--viewer null --device cuda:0`, instrumented; FINAL = release fix + reverted URDF fingers)
+| demo | object | mode | bite | latched | GRASP-phase peak | whole-run max |
 |---|---|---|---|---|---|---|
-| cable_rigidCube | cable | incompr | 3 mm | 8.69 mm | 192 N | 192 N |
-| cable_soft | cable | incompr | 3 mm | 8.67 mm | 163 N | 163 N |
-| soft_pickplace | soft block | **compr** | 0 | ~3.6 mm | 15–182 N‡ | = grasp peak |
-| rigidCube_soft | rigid cube | incompr | 1 mm | 25.99 mm | 157 N | 157 N |
-| soft_compression | plate handle | incompr | 1 mm | 13.01 mm | 389 N | 389 N |
-| pickplace_ycb_vbd | rubik's cube | incompr | 1 mm | 29.01 mm | 152 N | 152 N |
-| pickplace_ycb_vbd | banana | incompr | 1 mm | 20.86 mm | 32 N | 152 N |
+| cable_rigidCube | cable | incompr | 3 mm | 8.34 mm | 170 N | 170 N |
+| cable_soft | cable | incompr | 3 mm | 8.35 mm | 136 N | 136 N |
+| soft_pickplace | soft block | **compr** | 0 | ~4.8 mm | 30 N‡ | = grasp peak |
+| rigidCube_soft | rigid cube | incompr | 1 mm | 25.99 mm | 158 N | 158 N |
+| soft_compression | plate handle | incompr | 1 mm | 13.01 mm | 419 N | 419 N |
+| pickplace_ycb_vbd | rubik's cube | incompr | 1 mm | 29.01 mm | 154 N | 154 N (incl its release) |
+| pickplace_ycb_vbd | banana | incompr | 1 mm | 20.65 mm | 30 N | 30 N (incl its release) |
+
+(pickplace_ycb_vbd has TWO grasps in one run; the per-OBJECT max above is over that object's own
+window incl release — the rubik's cube 154 N is the demo-wide whole-run max, the banana never exceeds
+~30 N. Both objects' release ramps add nothing over their grasp peak — the release-jolt fix holds.)
 
 After the release-jolt fix (below) the whole-run max EQUALS the grasp peak — no transient exceeds the
 sustained grip. soft_compression's 389 N is the plate handle loaded during the press-onto-block phase
