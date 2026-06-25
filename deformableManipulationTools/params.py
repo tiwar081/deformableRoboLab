@@ -37,6 +37,13 @@ class RobotConfig:
     left_finger_suffix: str = "fr3_leftfinger"
     right_finger_suffix: str = "fr3_rightfinger"
     hand_link_suffix: str = "fr3_hand"                # the hand/palm link (wrist-camera mount, render only)
+    # Optional scenic-render tint for the gripper (hand + fingers), to tell robots apart at a glance.
+    # None -> default gray. Render-only; physics is unaffected.
+    viz_gripper_color: tuple[float, float, float] | None = None
+    # Render the robot from the SIMULATED (physics) model's collision/visual meshes rather than the USD's
+    # detailed visual meshes, so the scenic render shows exactly the geometry being simulated (e.g. the
+    # panda's per-link convex hulls). Render-only; physics is unaffected.
+    render_from_physics: bool = False
     short_name: str = "fr3_franka"                    # output-folder name for this robot (outputs/<short_name>/<demo>)
     n_dof: int = 9                                    # 7 arm + 2 finger
     n_arm_dof: int = 7
@@ -309,6 +316,8 @@ FRANKA_PANDA_ISAACSIM = RobotConfig(                             # Isaac Sim Fra
     left_finger_suffix="panda_leftfinger",
     right_finger_suffix="panda_rightfinger",
     hand_link_suffix="panda_hand",
+    viz_gripper_color=None,    # off for now; set to (0.05, 0.75, 0.82) teal to distinguish from fr3
+    render_from_physics=True,  # demos render the simulated convex-hull gripper (matches the proxy viz)
     short_name="panda_franka",
 )
 ROBOTS = {"fr3_franka_hand": FR3_FRANKA_HAND, "franka_panda_isaacsim": FRANKA_PANDA_ISAACSIM}

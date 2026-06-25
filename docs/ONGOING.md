@@ -20,6 +20,14 @@ only `RobotConfig.loader`/`usd_path` + the `*_link`/`*finger`/`hand` suffixes di
   (shared gains/gravcomp/table after). Render: `robolabViz/robot_fk.py` (`RobotVisualFK` USD support),
   `robolabViz/scenic.py` (robot source from `FRANKA`; wrist-camera `parent_link = FRANKA.hand_link_suffix`).
   `examples/__init__.py` reads render-table/background/device defaults from `settings.yaml`. pyyaml pinned.
+  Render-only gripper tint: `RobotConfig.viz_gripper_color` (machinery in scenic →
+  `RaycastPreviewRenderer(gripper_color=...)`; physics untouched) colours the hand+finger links to tell
+  robots apart. Currently toggled OFF (panda `viz_gripper_color=None`); set it to a tuple to re-enable.
+  Render mesh source: `RobotConfig.render_from_physics` (panda = True) makes the scenic raycast draw the
+  robot from the SIMULATED physics meshes (the per-link convex hulls `add_usd` loads — the same blocky
+  gripper the `franka_vbd_proxies` proxy viz shows) instead of the USD's detailed visual meshes, so the
+  render matches the simulated collision geometry. `_robot_link_meshes_from_model` in `robolabViz/raycast.py`;
+  fr3 stays False (keeps its converted-USD visual). Render-only.
 - **Examples were NOT touched** (they're fully config-driven via `FRANKA`/`home_q`/suffixes).
 
 ### Two panda-specific physics fixes (the panda's links are each one CONVEX_MESH; fr3's were box primitives)

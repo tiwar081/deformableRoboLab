@@ -168,6 +168,37 @@ def _robot_link_meshes(robot_usd: Path, link_names: list[str]) -> dict[str, list
     return out
 
 
+def _robot_link_meshes_from_model(model) -> dict[str, list[tuple[np.ndarray, np.ndarray]]]:
+    """Per-link ``(verts_local, tris)`` from the PHYSICS model's VISIBLE mesh shapes — i.e. the geometry
+    that is ACTUALLY simulated (the convex hulls ``add_usd`` loads, or the URDF colliders), rather than the
+    USD's detailed visual meshes. Same return format as :func:`_robot_link_meshes` (keyed by bare body
+    name, verts baked into the body frame), so the render pipeline is identical downstream. Used when a
+    robot opts into ``render_from_physics`` so the scenic render shows exactly the simulated geometry."""
+    st = model.shape_type.numpy()
+    sf = model.shape_flags.numpy()
+    sb = model.shape_body.numpy()
+    s_tf = model.shape_transform.numpy()
+    s_scale = model.shape_scale.numpy()
+    labels = list(model.body_label)
+    VIS = int(newton.ShapeFlags.VISIBLE)
+    mesh_types = (int(newton.GeoType.MESH), int(newton.GeoType.CONVEX_MESH))
+    out: dict[str, list[tuple[np.ndarray, np.ndarray]]] = {}
+    for s in range(model.shape_count):
+        if not (int(sf[s]) & VIS) or int(st[s]) not in mesh_types:
+            continue
+        src = model.shape_source[s]
+        body = int(sb[s])
+        if src is None or body < 0:
+            continue
+        name = labels[body].split("/")[-1]            # bare link name -> matches the FK link_tfs keys
+        v = np.asarray(src.vertices, dtype=np.float64) * np.asarray(s_scale[s], dtype=np.float64)[None, :]
+        tf = np.asarray(s_tf[s], dtype=np.float64)    # shape -> body local transform (pos + quat xyzw)
+        v = _quat_rotate_np(tf[3:7], v) + tf[:3]
+        tris = np.asarray(src.indices, dtype=np.int32).reshape(-1, 3)
+        out.setdefault(name, []).append((v.astype(np.float32), tris))
+    return out
+
+
 @wp.kernel
 def _transform_verts_kernel(
     rest: wp.array(dtype=wp.vec3),
@@ -288,9 +319,17 @@ class RaycastPreviewRenderer:
         frames_per_image: int = 0,
         instances: list[_Instance] | None = None,
         object_body_min: int | None = None,
+        gripper_color: tuple[float, float, float] | None = None,
+        robot_model: newton.Model | None = None,
+        robot_from_physics: bool = False,
     ):
         self.scene = scene
         self.device = device
+        self._gripper_color = gripper_color   # optional tint for hand+finger links (tell robots apart)
+        # When True, render the robot from the simulated (physics) model's collision/visual meshes
+        # instead of the USD's detailed visual meshes — so the render matches the simulated geometry.
+        self._robot_model = robot_model
+        self._robot_from_physics = robot_from_physics
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.frames_per_image = frames_per_image
@@ -322,11 +361,25 @@ class RaycastPreviewRenderer:
     # ------------------------------------------------------------- instances
 
     def _build_robot_instances(self, link_names: list[str]) -> None:
-        robot_usd = self.scene.robot_usd
-        if robot_usd is None:
-            return
-        link_meshes = _robot_link_meshes(Path(robot_usd), link_names)
+        # Two mesh sources: the simulated physics model (true collision geometry) when the robot opts in,
+        # else the USD's detailed visual meshes. Both return {link_name: [(verts_local, tris)]}.
+        if self._robot_from_physics and self._robot_model is not None:
+            link_meshes = _robot_link_meshes_from_model(self._robot_model)
+        else:
+            robot_usd = self.scene.robot_usd
+            if robot_usd is None:
+                return
+            link_meshes = _robot_link_meshes(Path(robot_usd), link_names)
+        is_gripper = lambda name: ("finger" in name) or ("hand" in name)
         for link, meshes in link_meshes.items():
+            # Default robot look: light-gray links, dark-gray fingers. If a gripper tint is set (used to
+            # distinguish robots at a glance), it overrides the hand + finger links.
+            if self._gripper_color is not None and is_gripper(link):
+                link_color = self._gripper_color
+            elif "finger" in link:
+                link_color = (0.25, 0.25, 0.27)
+            else:
+                link_color = (0.79, 0.79, 0.81)
             for j, (verts, tris) in enumerate(meshes):
                 self.instances.append(
                     _Instance(
@@ -336,7 +389,7 @@ class RaycastPreviewRenderer:
                         key=link,
                         verts=verts,
                         tris=tris,
-                        color=(0.79, 0.79, 0.81) if "finger" not in link else (0.25, 0.25, 0.27),
+                        color=link_color,
                     )
                 )
 

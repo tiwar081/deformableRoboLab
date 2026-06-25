@@ -165,6 +165,9 @@ class ScenicGraspExample(GraspExample):
             camera_names=preview_cameras,
             frames_per_image=args.frames_per_image,
             object_body_min=object_body_min,
+            gripper_color=FRANKA.viz_gripper_color,
+            robot_model=self.robot_model,
+            robot_from_physics=FRANKA.render_from_physics,
         )
         # geometry.pkl is only useful alongside the state cache (rerender needs both).
         if args.npz:
