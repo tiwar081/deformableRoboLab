@@ -1,0 +1,19 @@
+# Central configuration for RoboLab-VBD — the one place outside the source tree to flip
+# project-wide options. Loaded by deformableManipulationTools/settings.py; consumed by params.py
+# (robot selection) and the example runner (render/device defaults). Any missing key falls back to
+# a built-in default, so this file may be partial or deleted without breaking a run.
+
+# Active robot — every demo, visualization, and the scenic renderer use this one robot. Options:
+#   franka_panda_isaacsim  Isaac Sim Franka Panda, native USD (assets/robots/franka_panda_isaacsim/franka.usd)
+#   fr3_franka_hand        Franka FR3 + hand, Newton URDF asset pack (urdf/fr3_franka_hand.urdf)
+# The two robots are kinematically identical (same arm, same TCP at the same home pose); they differ
+# only in the end-effector geometry and the loader (USD vs URDF), so all physics/policy code is shared.
+robot: franka_panda_isaacsim
+
+# Default scenic-render look (per-run CLI --table / --background still override).
+render:
+  table: maple
+  background: home_office
+
+# Default compute device (per-run CLI --device overrides; null = let Warp choose).
+device: cuda:0

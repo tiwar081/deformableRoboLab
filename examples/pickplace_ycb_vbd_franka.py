@@ -119,8 +119,8 @@ class Example(ScenicGraspExample):
         self.drop_height = self.table_top_z + 0.16
         self.bowl_mass = args.bowl_mass
         self.banana_mass = args.banana_mass
-        # Force-stop grasp, TWO windows (both incompressible → latch at FIRST contact + a fixed
-        # GRIP.grasp_interference bite, the geometry-free equivalent of the old preset interference-fit
+        # Force-target grasp, TWO windows (both incompressible → close until the squeeze reaches
+        # GRIP.force_target_rigid, then freeze; geometry emerges, no preset interference-fit
         # widths): rubik's cube close [2.6, 3.8] / release [6.2, 6.8], then banana close [10.2, 11.6] /
         # release [17.8, 18.4]. The banana's grasp pose was raised to table + 1 cm (see plan()) so the
         # pads clear the table and can close onto it.

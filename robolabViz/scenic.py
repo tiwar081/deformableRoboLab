@@ -32,7 +32,7 @@ import numpy as np
 
 import newton.utils
 
-from deformableManipulationTools import GraspExample
+from deformableManipulationTools import GraspExample, FRANKA
 
 from .config import CameraConfig, droid_scene_config, fixture_world_bbox, look_at_quat_wxyz
 from .raycast import RaycastPreviewRenderer
@@ -62,15 +62,21 @@ class ScenicGraspExample(GraspExample):
 
     # ---- scenic build (only when --output-style scenic) ----
     def _setup_scenic(self, args) -> None:
-        # The robot import mirrors the simulated robot: same URDF asset, same base
-        # pose (read from the physics example's robot_base_xform, so origin-mounted
-        # demos like pickplace_ycb and table-corner demos both work unchanged). The
-        # FK/sim parity assertion in the checks guards this against drift.
-        self.robot_urdf_path = (
-            Path(newton.utils.download_asset("franka_emika_panda")) / "urdf" / "fr3_franka_hand.urdf"
-        )
+        # The rendered robot mirrors the simulated robot (params.FRANKA), at the same base pose
+        # (read from the physics example's robot_base_xform, so origin-mounted demos like pickplace_ycb
+        # and table-corner demos both work unchanged). The FK/sim parity assertion in the checks guards
+        # this against drift. A native-USD robot is rendered + FK'd straight from its USD; a URDF robot
+        # is converted to USD once (Isaac Sim importer) and FK'd from the URDF.
         self.robot_base_pos = tuple(float(x) for x in self.robot_base_xform.p)
-        robot_usd = ensure_robot_usd(self.robot_urdf_path, name="fr3_franka_hand")
+        if FRANKA.loader == "usd":
+            robot_usd = Path(FRANKA.usd_path)
+            self._fk_source, self._fk_loader = robot_usd, "usd"
+        else:
+            self.robot_urdf_path = (
+                Path(newton.utils.download_asset(FRANKA.asset_name)) / FRANKA.urdf_subpath
+            )
+            robot_usd = ensure_robot_usd(self.robot_urdf_path, name="fr3_franka_hand")
+            self._fk_source, self._fk_loader = self.robot_urdf_path, "urdf"
 
         # RoboLab's DROID scene, with the visual work-table placed from THIS demo's
         # physics table so the rendered surface coincides with the invisible contact
@@ -90,6 +96,10 @@ class ScenicGraspExample(GraspExample):
         scene.robot_usd = robot_usd
         scene.fps = self.fps
         scene.sim_to_viz_translation = sim_to_viz
+        # The wrist camera mounts on the hand link, whose name is robot-specific (fr3_hand vs
+        # panda_hand). The hand-frame eye/target offsets transfer (both are the same Franka hand).
+        if scene.wrist_camera is not None:
+            scene.wrist_camera.parent_link = FRANKA.hand_link_suffix
         if args.wrist_eye is not None:
             scene.wrist_camera.eye = tuple(args.wrist_eye)
         if args.wrist_target is not None:
@@ -121,10 +131,11 @@ class ScenicGraspExample(GraspExample):
 
         self.scene_cfg = scene
         self.viz_fk = RobotVisualFK(
-            self.robot_urdf_path,
+            self._fk_source,
             base_xform=self.robot_base_xform,
             device=self.robot_model.device,
             expected_joint_coords=self.robot_model.joint_coord_count,
+            loader=self._fk_loader,
         )
         # The output directory examples.init resolved for scenic runs (outputs/<name>/).
         self._scenic_dir = Path(getattr(args, "output_dir", None) or Path(args.output_path).parent)

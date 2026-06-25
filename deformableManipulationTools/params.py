@@ -16,18 +16,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .settings import SETTINGS, REPO_ROOT
+
 
 # ---------------------------------------------------------------------------------------------
 # Robot (Franka FR3 + hand) — identical across every example.
 # ---------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
 class RobotConfig:
-    asset_name: str = "franka_emika_panda"           # newton.utils.download_asset key
-    urdf_subpath: str = "urdf/fr3_franka_hand.urdf"
+    # ---- asset source: a downloaded URDF (loader="urdf") OR a local USD (loader="usd") ----
+    # The two supported robots are kinematically identical (same arm, same TCP at the same home pose)
+    # and differ only in the end-effector geometry + the load path, so EVERYTHING below the source
+    # fields (home pose, TCP offset, gains, limits) is shared verbatim — see params.ROBOTS.
+    loader: str = "urdf"                              # "urdf" -> download_asset + add_urdf; "usd" -> add_usd
+    asset_name: str = "franka_emika_panda"           # newton.utils.download_asset key (urdf loader)
+    urdf_subpath: str = "urdf/fr3_franka_hand.urdf"  # under the downloaded asset (urdf loader)
+    usd_path: str | None = None                      # absolute path to the robot USD (usd loader)
     ee_link_suffix: str = "fr3_link7"
     ee_offset: tuple[float, float, float] = (0.0, 0.0, 0.22)  # TCP offset in link7 frame [m]
     left_finger_suffix: str = "fr3_leftfinger"
     right_finger_suffix: str = "fr3_rightfinger"
+    hand_link_suffix: str = "fr3_hand"                # the hand/palm link (wrist-camera mount, render only)
+    short_name: str = "fr3_franka"                    # output-folder name for this robot (outputs/<short_name>/<demo>)
     n_dof: int = 9                                    # 7 arm + 2 finger
     n_arm_dof: int = 7
     # Resting/home joint configuration (7 arm + 2 finger; fingers set to gripper_open).
@@ -76,26 +86,50 @@ class GripConfig:
     proxy_kd: float = 1.0e2           # proxy contact damping [N·s/m] (absolute; re-derived, was 5e6 ~1e4x critical)
     proxy_mu: float = 1.0             # proxy/pad friction
     proxy_margin: float = 0.001       # contact margin [m]
-    proxy_gap: float = 0.008          # centralized proxy contact gap [m] (was per-demo; same for all)
+    # Centralized proxy contact gap [m]: force builds over this distance (f≈ke·(gap−separation)), so it
+    # sets how far the pad sits off the object at a given squeeze. SMALL on purpose — a large gap (the
+    # old 8 mm) holds a stiff object firmly only at a deep, NON-physical squeeze (the pad floats far off
+    # at any physical force); ~2 mm lets a physical force_target (~30 N) engage the pad near the true
+    # surface. Still ≫ the swept cable's ~0.9 mm/substep, so no tunneling (verify on Newton bumps).
+    proxy_gap: float = 0.002
     # Contact damping applied to the *gripped object's* shapes (cable/box) — physical, re-derived.
     object_contact_kd: float = 1.0e2
-    # ---- Force-stop grasp (replaces the geometric preset width on the VBD/proxy path) ----
-    # The controller closes the fingers and FREEZES the target when the (already-harvested) per-pad
-    # grip force crosses force_target — "specify force, get emergent geometry". See grip.GripController.
-    # The grasp MODE is per-GraspWindow (``compressible``); these two constants are its endpoints:
-    force_target: float = 8.0         # COMPRESSIBLE (soft FEM) grip-force threshold [N] (min of both
-                                       # pads) — the squeeze the latch waits for on a compliant block.
-                                       # Incompressible objects latch at first contact (force_target=0).
-    grasp_interference: float = 0.001  # INCOMPRESSIBLE inward bite [m] past the force-discovered first
-                                       # contact (== the old preset object_half + margins − this). Sets
-                                       # grip firmness ≈ ke·bite, bounded. Compressible objects bite 0.
-    min_close_width: float = 0.001    # fully-closed finger floor [m] if the grasp never reaches force_target
+    # ---- Force-target grasp (replaces the geometric preset width on the VBD/proxy path) ----
+    # The controller closes the fingers and FREEZES the position when the (already-harvested) min-of-pads
+    # squeeze first reaches the target force — "specify force, get emergent geometry". The freeze (not a
+    # continuous servo) is deliberate: during the lift/sweep the harvested force is dominated by the
+    # object's LOAD reaction (weight+inertia), not over-squeeze, so a servo would mis-read the load and
+    # OPEN, dropping the object; a frozen position lets the squeeze rise under load (holding it) while a
+    # physical resting squeeze (the target) is what the cable/plate needed. The MODE is per-GraspWindow
+    # (``compressible``) and selects which target to wait for:
+    force_target: float = 8.0         # COMPRESSIBLE (soft FEM) target [N] (min of both pads) — gentle, so
+                                       # the compliant block is held without crush.
+    force_target_rigid: float = 30.0  # INCOMPRESSIBLE (rigid bodies + cable) target [N] — a firm, PHYSICAL
+                                       # squeeze (a Franka does ~70 N). Replaces both the old first-contact
+                                       # latch (≈0 N → cable slipped) and the per-object grip_bite. One
+                                       # central value: friction μ·F·2pads holds every rigid object's load.
+    # Close-ONLY hold servo: after the latch stops the fast close, slowly tighten the frozen width until
+    # the STEADY min-of-pads squeeze reaches the target. This is the force-derived replacement for the
+    # per-object bite — it over-closes a SETTLING contact (the cable, whose resting force decays at any
+    # fixed width) just enough to maintain the target, and barely moves on a stiff object that already
+    # reads the target. It NEVER opens, so the lift/sweep LOAD (squeeze ≫ target) can't loosen the grip.
+    grip_servo_rate: float = 0.02     # hold-servo slew [m/s] (tighten-only)
+    grip_force_deadband: float = 2.0  # [N] deadband around the target (kills servo limit-cycling)
+    max_overclose: float = 0.003      # CENTRALIZED cap [m] on how far the servo may tighten past the
+                                       # first-contact width. A solid object reaches force_target well
+                                       # before this, so the cap is inert for it. A SETTLING line contact
+                                       # (the cable) has no width that reads the target at rest, so its
+                                       # servo would run away to the floor and crush — the cap stops it at
+                                       # a firm, bounded over-close (the force-informed, centralized
+                                       # replacement for the old per-object CABLE.grip_bite).
+    min_close_width: float = 0.001    # fully-closed finger floor [m] if the grasp never reaches the target
     # Hand/palm "blocker" proxy (CENTRALIZED — every VBD demo's gripper gets it; not demo-tweakable).
     # The two finger proxies already carry the finger collision geometry, but the Franka hand is
     # collapsed into link7 and its collider lives only in MuJoCo, so the VBD world has NO collider for
     # the palm/wrist — a swept cable passes straight through the gripper PALM and the EE. A single box
-    # mirroring the EE (link7) blocks it. It is a BLOCKER only: re-pinned to the EE each substep, NOT
-    # harvested and NOT in the grip signal. Box dims are in the link7/EE frame (z grows wrist→fingertip):
+    # mirroring the EE (link7) blocks it. It is a BLOCKER: re-pinned to the EE each substep, harvested
+    # two-way to the EE (momentum-consistent, so it never shoves an object one-way) but NOT in the grip
+    # signal. Box dims are in the link7/EE frame (z grows wrist→fingertip):
     # it spans the wrist→hand region up to just below the finger origins (~z=0.165) and stays 6 cm clear
     # of the fingertip grasp zone (TCP at z=0.22). Cheap: rigid-shape collision only (no particle).
     palm_box_half: tuple[float, float, float] = (0.05, 0.05, 0.08)    # half-extents [m], EE(link7) frame
@@ -114,26 +148,20 @@ class GraspWindow:
     leave the +inf defaults. All times are in seconds of sim time, on the same clock the arm-target
     kernel uses.
 
-    The ONLY physics knob is ``compressible`` — it selects the centralized grasp MODE; the actual
-    force threshold / inward bite are derived in GripController from :data:`GRIP` (never per-demo):
+    The ONLY physics knob is ``compressible`` — it selects which centralized FORCE TARGET the latch
+    waits for (derived in GripController from :data:`GRIP`, never per-demo); the close width emerges:
 
-      * ``compressible=False`` (rigid bodies + the cable — NO particles, incompressible): latch at
-        FIRST contact (``force_target = 0`` → the moment both pads register force) and bite a fixed
-        ``GRIP.grasp_interference`` past it — the geometry-independent equivalent of the old preset
-        ``object_half + margins − grasp_interference`` close width. A firm, bounded squeeze.
-      * ``compressible=True`` (soft FEM block): close until the harvested squeeze reaches
-        ``GRIP.force_target`` (the compliant block needs a real threshold), then bite ZERO past it
-        (any extra bite crushes the already-deforming block). "Specify force, get emergent geometry"."""
+      * ``compressible=False`` (rigid bodies + the cable — NO particles, incompressible): close until
+        the min-of-pads squeeze reaches ``GRIP.force_target_rigid`` (~30 N), then FREEZE — a firm,
+        physical grip whose friction holds the object's load. Geometry-independent: the cable and a
+        flat box both end at whatever width gives that force (no per-object bite).
+      * ``compressible=True`` (soft FEM block): close until the squeeze reaches ``GRIP.force_target``
+        (gentle, ~8 N), then freeze — held without crush. "Specify force, get emergent geometry"."""
     close_start: float
     close_end: float
     release_start: float = float("inf")
     release_end: float = float("inf")
     compressible: bool = False           # the grasped object deforms (soft FEM) vs. rigid/cable
-    grip_bite: float | None = None       # OVERRIDE the mode's default inward bite [m]; None → mode default
-                                         # (0 for compressible, GRIP.grasp_interference for incompressible).
-                                         # Only the CABLE needs this: its loose LINE-contact cage (static
-                                         # force ~0, unlike a solid box's firm multi-point patch) must
-                                         # over-close MORE than grasp_interference or it slips on the sweep.
 
 
 @dataclass(frozen=True)
@@ -189,11 +217,6 @@ class CableConfig:
     contact_kd: float = 1.0e2         # absolute; re-derived (was 20·ke=4e5, ~1e4x critical)
     contact_margin: float = 0.001
     bow: float = 0.02                 # geometric layout bow that locks the free rolling mode
-    grip_bite: float = 0.003          # inward finger bite [m] past first contact for the force-stop grasp
-                                       # (GraspWindow.grip_bite override). The cable is a LOOSE line-contact
-                                       # cage whose static grip force decays to ~0, so first-contact + the
-                                       # default 1 mm grasp_interference is too open and it slips on the
-                                       # sweep; ~3 mm reproduces the firm cage of the old preset close width.
 
 
 @dataclass(frozen=True)
@@ -273,8 +296,27 @@ class YcbMeshConfig:
     piece_maxhullvert: int = 32       # re-hull cap per piece (convex-preserving small BVH)
 
 
+# ---- Robot registry: two kinematically-identical Frankas, selected centrally by settings.yaml ----
+# Only the end-effector geometry + the load path differ, so the panda overrides ONLY the loader, the
+# USD path, and the three link-name suffixes; the home pose, TCP offset, gains, and limits are inherited
+# from RobotConfig's defaults (verified drop-in: same link7/finger/TCP world pose at the shared home_q).
+FR3_FRANKA_HAND = RobotConfig()                                  # Franka FR3 + hand (Newton URDF pack)
+FRANKA_PANDA_ISAACSIM = RobotConfig(                             # Isaac Sim Franka Panda (native USD)
+    loader="usd",
+    asset_name="franka_panda_isaacsim",
+    usd_path=str(REPO_ROOT / "assets" / "robots" / "franka_panda_isaacsim" / "franka.usd"),
+    ee_link_suffix="panda_link7",
+    left_finger_suffix="panda_leftfinger",
+    right_finger_suffix="panda_rightfinger",
+    hand_link_suffix="panda_hand",
+    short_name="panda_franka",
+)
+ROBOTS = {"fr3_franka_hand": FR3_FRANKA_HAND, "franka_panda_isaacsim": FRANKA_PANDA_ISAACSIM}
+if SETTINGS.robot not in ROBOTS:
+    raise ValueError(f"settings.yaml robot={SETTINGS.robot!r} is not one of {sorted(ROBOTS)}.")
+
 # ---- Canonical instances (single source of truth) -------------------------------------------
-FRANKA = RobotConfig()
+FRANKA = ROBOTS[SETTINGS.robot]    # the ACTIVE robot — everything imports this; settings.yaml picks it
 GRIP = GripConfig()
 MUJOCO_GRIP = MujocoGripConfig()   # finger control for the rigid-only single-MuJoCo grasp
 TABLE = TableConfig()

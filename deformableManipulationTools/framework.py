@@ -191,18 +191,17 @@ class GraspExample:
         """Deformable present: MuJoCo robot + VBD object model + dynamic gripper proxies (the original
         two-solver path with the one-way proxy bridge)."""
         self.object_body_start = None
+        # Build the viz model FIRST (SOLVERS §4). It shares the robot's and objects' Mesh sources but
+        # NEVER collides, so its stale BVHs are harmless — while the robot and object models, finalized
+        # AFTER it, each rebuild and OWN the live BVH their collision pipeline reads. Finalizing viz LAST
+        # instead frees those shared BVHs and corrupts the narrow-phase. This used to bite only object
+        # meshes (the old object-only `mesh_first` ordering); the panda robot's per-link CONVEX_MESH
+        # colliders made it bite the ROBOT meshes too, so viz-first — which protects both — replaces it.
+        self.viz_model, self.viz_object_body_start = build_viz_model(robot_builder, object_builder, device)
+        self.viz_state = self.viz_model.state()
         self.robot_model = robot_builder.finalize(device=device)
         self._init_robot_states(rcm)
-        # Mesh shapes need the object model finalized LAST so it owns the live BVH the collision
-        # pipeline points at (viz-last frees a shared mesh's BVH -> narrow-phase segfault, SOLVERS §4).
-        mesh_first = any(int(t) == int(newton.GeoType.MESH) for t in object_builder.shape_type)
-        if mesh_first:
-            self.viz_model, self.viz_object_body_start = build_viz_model(robot_builder, object_builder, device)
-            self.viz_state = self.viz_model.state()
         self.object_model = object_builder.finalize(device=device)
-        if not mesh_first:
-            self.viz_model, self.viz_object_body_start = build_viz_model(robot_builder, object_builder, device)
-            self.viz_state = self.viz_model.state()
 
         # ---- contact materials ----
         if self.soft_block is not None:

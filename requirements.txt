@@ -24,6 +24,7 @@ warp-lang==1.15.0.dev20260610
 -e ./_external/RoboLab[all]
 
 # Newton USD viewer and asset-loading dependencies used by RoboLab_VBD examples.
+PyYAML==6.0.2                 # parse the repo-root settings.yaml (robot selection + render defaults)
 GitPython==3.1.50
 usd-core==26.3
 newton-usd-schemas==0.3.1

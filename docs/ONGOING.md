@@ -5,54 +5,100 @@ and not yet settled, and any working hypotheses. Keep it lean — when something
 durable, promote it to CLAUDE.md (or the relevant `docs/` file) and delete it here. Reset this file
 at the start of each new big task.
 
-## DONE (2026-06-24): grasp MODE split — incompressible (first-contact + bite) vs compressible (force + no bite)
+## DONE (2026-06-25): swappable robot via `settings.yaml` + Isaac Sim Panda (USD) as the default
 
-Reworked the force-stop grasp so it is centralized on ONE declarative flag, `GraspWindow.compressible`,
-which fixes both the weak-rigid-grasp (Q1) and the soft-over-grasp (Q2) problems. `GraspWindow` no
-longer carries per-demo `force_target`/`grip_bite` numbers; the controller derives them from the mode:
+Added a repo-root **`settings.yaml`** (loaded by `deformableManipulationTools/settings.py`) that
+centrally selects the robot; **default is now `franka_panda_isaacsim`** (Isaac Sim Franka Panda, native
+USD), with `fr3_franka_hand` (the old URDF robot) still selectable. Durable design promoted to CLAUDE.md
+("Central config: settings.yaml"). The two robots are a verified **kinematic drop-in** for each other
+(identical link7/finger/TCP world pose at the shared `home_q`), so all physics/policy/IK is shared;
+only `RobotConfig.loader`/`usd_path` + the `*_link`/`*finger`/`hand` suffixes differ.
 
-- **Incompressible** (rigid bodies + cable — NO particles): `force_target = 0`. The latch test is now
-  **strict `sig > ft`**, so `force_target = 0` fires the instant the grip signal first becomes positive
-  — i.e. FIRST contact (both pads) — then bites `GRIP.grasp_interference` (1 mm). This is the
-  geometry-free equivalent of the OLD preset `object_half + margins − grasp_interference`, and it
-  reproduces it (rigid cube latches 25.99 mm ≈ old 26 mm; rubik's 29.0 mm; plate handle 13.0 mm).
-  **Q1 FIXED:** the 1 kg cube now grips firmly at **157 N** (was a near-zero barely-touching grip with
-  the old `grip_bite=0` force-stop) and carries.
-- **Compressible** (soft FEM block): keep `force_target = GRIP.force_target` (8 N) but bite **ZERO**.
-  **Q2 FIXED:** `soft_pickplace` grasp-phase peak **15 N** (steady ~2–4 N), vs the old 2.5 mm bite that
-  drove a 462 N non-deterministic crush. The deep latch (~3.6 mm) is unchanged, but with no extra bite
-  the held force is gentle and the block recovers.
+### What it touched
+- `params.py`: `RobotConfig` gained `loader`/`usd_path`/`hand_link_suffix`; `ROBOTS` registry +
+  `FRANKA = ROBOTS[SETTINGS.robot]`. `robot.py`: `build_franka_robot` branches `add_usd` vs `add_urdf`
+  (shared gains/gravcomp/table after). Render: `robolabViz/robot_fk.py` (`RobotVisualFK` USD support),
+  `robolabViz/scenic.py` (robot source from `FRANKA`; wrist-camera `parent_link = FRANKA.hand_link_suffix`).
+  `examples/__init__.py` reads render-table/background/device defaults from `settings.yaml`. pyyaml pinned.
+- **Examples were NOT touched** (they're fully config-driven via `FRANKA`/`home_q`/suffixes).
 
-### The cable needed a bigger bite (the lone per-object override)
-The cable is incompressible but a **loose LINE-contact cage** (static grip force decays to ~0; a light
-rolling rod registers first-contact ~1.7 mm WIDER than `object_half + margins`, unlike a solid box that
-stops at its face). So first-contact + the default 1 mm left the cage too open and the cable **slipped
-on the sweep** (`check_physics` fail). Fix: `CableConfig.grip_bite` (≈ **3 mm**), passed as the
-`GraspWindow.grip_bite` override — the ONE per-object bite. Cable now latches ~8.7 mm and holds
-through the sweep (**cable_rigidCube 192 N PASS**; cable_soft 163 N, cable held).
+### Two panda-specific physics fixes (the panda's links are each one CONVEX_MESH; fr3's were box primitives)
+1. **Box finger proxies** (`grip.build_gripper_proxies`): a CONVEX_MESH finger proxy is contacted late
+   then explosively by VBD (rigidCube spiked to **1979 N** at a 2.3 mm latch). Auto-detect a non-box
+   finger collider → substitute a per-finger **AABB box** → physical **60.7 N** at 26.8 mm (= fr3's
+   64.9 N @ 26.8 mm). Per-finger AABB also fixes mirroring (panda fingers are both identity-posed; the
+   right pad is a mirrored MESH, unlike fr3's 180°-flipped body). Palm/EE blocker proxy unchanged.
+2. **Viz-first BVH ordering** (`framework._build_split_mujoco_vbd`): the panda's per-link mesh BVHs are
+   shared into the viz model; finalizing viz LAST freed them → robot narrow-phase OOB (illegal memory
+   access), only surfacing once the OBJECT side (cable capsules / ycb meshes) reused the freed pool
+   (so cable/ycb crashed, box/soft passed). Fix = finalize the viz model FIRST (SOLVERS §4); this
+   replaces the old object-only `mesh_first` branch (viz-first protects robot + object meshes both).
+   Also fixed the proxy viz (`visualizations/franka_vbd_proxies.py`) to render CONVEX_MESH links.
 
-### Verified (headless `--viewer null --device cuda:0`, instrumented; FINAL = release fix + reverted URDF fingers)
-| demo | object | mode | bite | latched | GRASP-phase peak | whole-run max |
-|---|---|---|---|---|---|---|
-| cable_rigidCube | cable | incompr | 3 mm | 8.34 mm | 170 N | 170 N |
-| cable_soft | cable | incompr | 3 mm | 8.35 mm | 136 N | 136 N |
-| soft_pickplace | soft block | **compr** | 0 | ~4.8 mm | 30 N‡ | = grasp peak |
-| rigidCube_soft | rigid cube | incompr | 1 mm | 25.99 mm | 158 N | 158 N |
-| soft_compression | plate handle | incompr | 1 mm | 13.01 mm | 419 N | 419 N |
-| pickplace_ycb_vbd | rubik's cube | incompr | 1 mm | 29.01 mm | 154 N | 154 N (incl its release) |
-| pickplace_ycb_vbd | banana | incompr | 1 mm | 20.65 mm | 30 N | 30 N (incl its release) |
+### Verified — all 6 VBD demos PASS headless with the panda (`check_physics`):
+| demo | mode | latched | peak grip (min-pads) | fps |
+|---|---|---|---|---|
+| cable_rigidCube | incompr | 8.7 mm | ~196 N (fr3 177) | 54 |
+| cable_soft | incompr | 8.7 mm | ~153 N | 11 |
+| rigidCube_soft | incompr | 26.8 mm | 60.7 N (fr3 64.9) | 12 |
+| soft_compression | incompr | 14.0 mm | ~59 N | 12 |
+| soft_pickplace | **compr** | 17–18 mm | 10–61 N (soft, run-varies) | 13 |
+| pickplace_ycb_vbd | incompr ×2 | 29.8/18.9 mm | ~53 N | 6 |
 
-(pickplace_ycb_vbd has TWO grasps in one run; the per-OBJECT max above is over that object's own
-window incl release — the rubik's cube 154 N is the demo-wide whole-run max, the banana never exceeds
-~30 N. Both objects' release ramps add nothing over their grasp peak — the release-jolt fix holds.)
+Scenic re-render of all 6 with the panda: DONE — all 6 `simulation.mp4` written, all `test_final` (FK
+parity + table-footprint + wrist-coverage) PASS; the rendered gripper meshes load from `franka.usd`
+(`panda_leftfinger`/`panda_rightfinger`/`panda_hand`), confirmed. Also re-verified the rigid-only
+`pickplace_ycb_franka` (7th demo, single-MuJoCo path) PASS with the panda, and an fr3 regression of the
+mesh (ycb) + capsule (cable) paths PASS under the new viz-first ordering. fps include instrumentation syncs.
 
-After the release-jolt fix (below) the whole-run max EQUALS the grasp peak — no transient exceeds the
-sustained grip. soft_compression's 389 N is the plate handle loaded during the press-onto-block phase
-(bounded, holds). ‡soft_pickplace's grasp peak varies run-to-run (the documented soft-latch
-non-determinism — deep FP-sensitive latch); the release fix is orthogonal to it. **cable_soft
-`check_physics` is non-deterministic** — it sometimes fails on *"the soft body fell through the table"*,
-which is the token block knocked off the table EDGE by the swept cable (accepted cosmetic behavior),
-NOT the cable grasp (the cable holds either way).
+## DONE (2026-06-25): TRUE force-target grasp — fixes cable-slides-up + plate over-grip/"float"
+
+Replaced the **first-contact + fixed-bite** latch (the `2026-06-24` entry below, now SUPERSEDED) with a
+real force-target controller. Root cause it fixes: the first-contact latch never controlled FORCE — it
+froze a position the instant the pads touched, so grip strength was an accident of contact stiffness.
+Confirmed by before/after (`9a6a5ec` preset vs the broken HEAD) instrumented runs:
+- **cable** sweep sustained-grip FLOOR collapsed `20.8 N → 1.9 N`; it slid up `+14.5 mm → +33 mm`
+  (slides *through* the pads). The lone per-object `CABLE.grip_bite=3 mm` band-aid was insufficient.
+- **plate** held in BOTH versions but at an absurd, NON-physical ~180–440 N squeeze (pads barely
+  touching, held by the invisible 8 mm-gap proxy) → reads as "floats". Not a grip failure — the
+  OVER-grip face of the same uncontrolled-force bug.
+
+### The control law (`grip._grip_force_stop_kernel` + `GripController`, all centralized in `GRIP`)
+Close (smoothstep) → **latch to halt the close** → **close-only hold servo to a force target** → freeze
+under load. Per-window mode from `GraspWindow.compressible` (the ONLY knob; no per-object numbers):
+- **Incompressible** (rigid + cable): latch at FIRST contact (just stops the racing smoothstep — the
+  rigid target is only a brief close-transient, so latching ON it is unreliable), then a **close-only**
+  servo tightens to `GRIP.force_target_rigid` (30 N). It NEVER opens, so the lift/sweep LOAD (sig ≫ ft)
+  can't loosen the grip — the squeeze rises under load. A stiff object reaches 30 N in ~0.5 mm; a
+  SETTLING cable (steady force decays at any width, so the servo would run to the crush floor) is
+  stopped by the centralized `GRIP.max_overclose` (3 mm) cap — the force-informed replacement for the
+  old per-object bite.
+- **Compressible** (soft FEM): latch AT `GRIP.force_target` (8 N, gentle) and FREEZE — no servo (extra
+  tightening crushes/ejects the block). The soft block builds force smoothly, so the threshold is
+  reliable here.
+
+Also: **`GRIP.proxy_gap` 8 mm → 2 mm** — force builds over `gap` (`f≈ke·(gap−sep)`), so the old 8 mm
+held a stiff object firmly only at a non-physical deep squeeze (pad floats far off at any physical
+force). 2 mm lets the 30 N target engage the pad near the true surface (no float), still ≫ the swept
+cable's ~0.9 mm/substep (no tunneling). And the **palm/EE blocker proxy is now harvested two-way**
+(`_harvest_proxy_wrench_kernel` loops ALL proxies; the EE sum + sync already generic) — its reaction
+flows to the EE / is undone in sync instead of being a free one-way shove; still OUT of the grip signal.
+
+Removed: `GRIP.grasp_interference`, `GraspWindow.grip_bite`, `CableConfig.grip_bite` (no per-demo knobs).
+
+### Verified (headless `--viewer null --device cuda:0`): all 7 demos `check_physics` PASS
+| demo | object | mode | latched | grip force (physical now) |
+|---|---|---|---|---|
+| cable_soft / cable_rigidCube | cable | incompr | ~8.4 mm (cap-bound) | floor ~10 N, peak ~140 N, slip +16 mm (was +33) |
+| soft_compression | plate handle | incompr | ~14 mm | **~28–57 N** (was ~180–440 N), pads engaged, places |
+| rigidCube_soft | 1 kg cube | incompr | — | holds + carries (was already fine) |
+| soft_pickplace | soft block | **compr** | — | gentle, lifted + placed (mode split fixed an over-compress) |
+| pickplace_ycb_vbd | rubik's + banana | incompr | — | both grasps PASS |
+| pickplace_ycb_franka | YCB meshes | rigid-only MuJoCo | — | unaffected (force_stop_enabled=0), PASS |
+
+Open: rubik's-cube release-stick (asymmetric stick to the right pad on the VBD-path release; ground
+truth = the clean rigid-only `pickplace_ycb_franka`) — user DEFERRED; investigate later (likely a
+penalty-contact tangential-stiction release artifact, separate from the grip-strength fix).
 
 ### DONE (2026-06-24): release-jolt fix — fingers no longer crush the object at the instant of release
 **Symptom:** right when the gripper releases any object WITH a release window (i.e. everything except

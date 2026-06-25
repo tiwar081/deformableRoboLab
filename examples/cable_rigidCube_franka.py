@@ -74,10 +74,9 @@ class Example(ScenicGraspExample):
         self.cube_half = RIGID_CUBE.half_extent
         self.cube_start_pos = np.array([0.28, -0.30, self.table_top_z + self.cube_half], dtype=np.float32)
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048}
-        # Force-stop grasp on the cable (incompressible → latch at FIRST contact; no preset width).
-        # The cable is a loose LINE-contact cage, so it over-closes by CABLE.grip_bite (more than the
-        # default 1 mm — see params) for a firm cage that survives the sweep. Hold to the end of the run.
-        self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6, grip_bite=CABLE.grip_bite)]
+        # Force-target grasp on the cable (incompressible → close until the squeeze reaches
+        # GRIP.force_target_rigid, then freeze; geometry emerges, no per-object knob). Held to the run's end.
+        self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6)]
 
     def _cable_layout(self, start_pos):
         direction = np.array([1.0, 0.05, 0.0], dtype=np.float32)

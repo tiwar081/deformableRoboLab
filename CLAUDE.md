@@ -5,6 +5,24 @@ deformable-object simulation environment. Detailed knowledge is split into `docs
 below); this file holds the project vision, the standards/rules, and the recurring gotchas an
 agent must know before editing.
 
+## Central config: `settings.yaml` (repo root)
+
+The one place OUTSIDE the package to flip project-wide options, loaded by
+`deformableManipulationTools/settings.py` (missing keys fall back to defaults, so it may be partial).
+Today it holds the **active robot** plus default scenic render look + device. Switch robots by editing
+`robot:` — no code change. The two robots are **kinematically identical** (same arm, same TCP/finger
+world pose at the shared `home_q`); they differ ONLY in the end-effector geometry and the load path,
+so ALL physics/policy/IK code is shared:
+
+- `franka_panda_isaacsim` (DEFAULT) — Isaac Sim Franka Panda, **native USD** (`assets/robots/franka_panda_isaacsim/franka.usd`),
+  `add_usd`, `panda_*` links. Each link is ONE `CONVEX_MESH` (both visual + collider).
+- `fr3_franka_hand` — Franka FR3 + hand, Newton **URDF** asset pack, `add_urdf`, `fr3_*` links, primitive box colliders.
+
+`params.ROBOTS` is the registry; `FRANKA = ROBOTS[SETTINGS.robot]` is the active `RobotConfig` that
+the whole codebase imports. A new robot = a new `RobotConfig` (set `loader`/`usd_path` + the link-name
+suffixes) added to `ROBOTS`. The render path (`robolabViz/scenic.py`) reads `FRANKA` to mirror the
+robot too (native-USD rendered/FK'd directly; URDF converted once via Isaac Sim).
+
 ## Project vision & priorities
 
 Building a simulation environment on Newton that handles **deformable bodies and
@@ -115,6 +133,17 @@ internal damping AND the contact `kd`.**
 
 ## Recurring mistakes to avoid (update as they recur)
 
+- **A robot with mesh colliders (e.g. the panda USD: each link is one `CONVEX_MESH`) needs two
+  things the URDF robot didn't.** (1) **Box finger proxies:** `build_gripper_proxies` copies the
+  finger collider into the VBD object model; a CONVEX_MESH proxy is contacted LATE then explosively
+  by the VBD penalty solver (spiked the grip to ~2 kN at a ~2 mm latch). It auto-detects a non-box
+  finger collider and substitutes a per-finger AABB box (well-behaved, ~60 N, pad face matches fr3 to
+  <0.5 mm). (2) **Viz-first BVH:** the robot's mesh BVHs are shared into the viz model; finalizing viz
+  LAST frees them and corrupts the robot narrow-phase (SOLVERS §4) — only manifests once the OBJECT
+  side (cable capsules / ycb meshes) reuses the freed pool, so it looked like a cable/mesh-only crash.
+  `_build_split_mujoco_vbd` finalizes the **viz model first** (it never collides; its stale BVH is
+  harmless). The panda's per-link finger orientation also differs (both fingers identity-posed; the
+  right pad is a MIRRORED mesh, not a flipped body) — the per-finger AABB handles this automatically.
 - **Viz shows soft bodies frozen / objects penetrating them / contact-before-touching** →
   `_sync_viz_state` must copy `particle_q`/`particle_qd` (not just body transforms) from the
   object sim state. This is the #1 recurring soft-body bug.

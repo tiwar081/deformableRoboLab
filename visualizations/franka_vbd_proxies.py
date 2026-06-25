@@ -12,7 +12,7 @@ re-pinned to a robot body (``TwoWayProxyCoupling.sync_proxies``):
 This script reconstructs exactly that: it builds the real Franka model, runs FK at the home pose,
 asks ``build_gripper_proxies`` for the proxy geometry, pins each proxy to its mirror body, and
 ghost-renders the boxes over the robot with a small self-contained Warp raycaster (headless, no
-display / RT cores needed). Output PNGs land in ``outputs/``.
+display / RT cores needed). Output PNGs land in ``outputs/visualizations/``.
 
 Run:  python visualizations/franka_vbd_proxies.py
 """
@@ -27,13 +27,13 @@ import warp as wp
 # Make the repo importable when run directly (visualizations/<this> -> repo root).
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
-OUTPUT_DIR = REPO_ROOT / "outputs"
+OUTPUT_DIR = REPO_ROOT / "outputs" / "visualizations"
 
 import newton  # noqa: E402
 
 from deformableManipulationTools.robot import build_franka_robot, finger_body_indices  # noqa: E402
 from deformableManipulationTools.grip import build_gripper_proxies  # noqa: E402
-from deformableManipulationTools.params import FRANKA, TABLE  # noqa: E402
+from deformableManipulationTools.params import ROBOTS, RobotConfig, TABLE  # noqa: E402
 from deformableManipulationTools.mathutils import find_body  # noqa: E402
 
 # Proxy overlay colours (RGB 0..1): finger pads warm orange, palm/EE blocker cyan.
@@ -113,10 +113,11 @@ def build_robot_meshes(model, body_q):
 
     all_v, all_t, all_c = [], [], []
     offset = 0
+    mesh_types = (int(newton.GeoType.MESH), int(newton.GeoType.CONVEX_MESH))
     for s in range(model.shape_count):
         if not (int(sf[s]) & VIS):
             continue
-        if int(st[s]) != int(newton.GeoType.MESH):
+        if int(st[s]) not in mesh_types:                # MESH (fr3 URDF) or CONVEX_MESH (panda USD)
             continue
         src = model.shape_source[s]
         if src is None:
@@ -136,14 +137,14 @@ def build_robot_meshes(model, body_q):
     return (np.concatenate(all_v), np.concatenate(all_t).astype(np.int32), np.concatenate(all_c))
 
 
-def current_proxy_boxes(robot_builder, robot_model, body_q):
+def current_proxy_boxes(robot_builder, robot_model, body_q, robot: RobotConfig):
     """World-frame proxy boxes for the CURRENT grip (2 finger AABB boxes + 1 palm/EE blocker).
 
     Builds the real proxies via ``build_gripper_proxies`` (the same call the framework makes), then
     pins each proxy body to its mirror robot body exactly as ``TwoWayProxyCoupling.sync_proxies``
     does at runtime: finger proxies -> finger bodies, palm proxy -> EE (link7)."""
-    finger_bodies = finger_body_indices(robot_model)
-    ee_body = find_body(list(robot_model.body_label), FRANKA.ee_link_suffix)
+    finger_bodies = finger_body_indices(robot_model, robot=robot)
+    ee_body = find_body(list(robot_model.body_label), robot.ee_link_suffix)
 
     ob = newton.ModelBuilder()
     proxy_bodies, proxy_shapes = build_gripper_proxies(
@@ -375,6 +376,7 @@ def _draw_box_outlines(rgb, boxes, eye, cam_quat, tan_w, tan_h, width, height):
 
 
 def _save_png(rgb, path):
+    path.parent.mkdir(parents=True, exist_ok=True)
     try:
         import cv2
         cv2.imwrite(str(path), cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
@@ -384,22 +386,21 @@ def _save_png(rgb, path):
 
 
 # ---------------------------------------------------------------------------------------------
-def main():
-    wp.init()
-    device = wp.get_device("cuda:0") if wp.is_cuda_available() else wp.get_device("cpu")
+def render_robot(robot_type: str, robot_cfg: RobotConfig, device):
+    print(f"[franka_vbd_proxies] rendering {robot_type}")
 
     robot_xform = wp.transform((-0.45, -0.45, TABLE.top_z), wp.quat_identity())
-    robot_builder = build_franka_robot(xform=robot_xform, table=TABLE)
+    robot_builder = build_franka_robot(xform=robot_xform, table=TABLE, robot=robot_cfg)
     model = robot_builder.finalize(device=device)
     state = model.state()
     newton.eval_fk(model, model.joint_q, model.joint_qd, state)
     body_q = state.body_q.numpy()
 
     robot = build_robot_meshes(model, body_q)
-    boxes = current_proxy_boxes(robot_builder, model, body_q)
+    boxes = current_proxy_boxes(robot_builder, model, body_q, robot=robot_cfg)
 
     # Frame the gripper: target = midpoint of the two finger bodies.
-    fb = finger_body_indices(model)
+    fb = finger_body_indices(model, robot=robot_cfg)
     grip_center = 0.5 * (body_q[fb[0]][:3] + body_q[fb[1]][:3])
     base = body_q[0][:3]
     robot_mid = 0.5 * (base + grip_center) + np.array([0.0, 0.0, 0.10])
@@ -407,13 +408,20 @@ def main():
     rc = Raycaster(robot, boxes, device)
     # 1) whole-robot 3/4 view with the proxies in context
     rc.render(eye=robot_mid + np.array([0.85, -0.75, 0.45]), target=robot_mid,
-              out_path=OUTPUT_DIR / "franka_vbd_proxies_full.png", fov_deg=40.0)
+              out_path=OUTPUT_DIR / f"{robot_type}_full.png", fov_deg=40.0)
     # 2) gripper close-up, 3/4 front (finger AABB pads + palm/EE blocker clearly visible)
     rc.render(eye=grip_center + np.array([0.40, -0.34, 0.18]), target=grip_center + np.array([0.0, 0.0, -0.02]),
-              out_path=OUTPUT_DIR / "franka_vbd_proxies_gripper.png", fov_deg=40.0)
+              out_path=OUTPUT_DIR / f"{robot_type}_gripper.png", fov_deg=40.0)
     # 3) gripper close-up, side view (shows the palm/EE blocker depth behind the fingers)
     rc.render(eye=grip_center + np.array([0.34, 0.02, 0.06]), target=grip_center,
-              out_path=OUTPUT_DIR / "franka_vbd_proxies_side.png", fov_deg=34.0)
+              out_path=OUTPUT_DIR / f"{robot_type}_side.png", fov_deg=34.0)
+
+
+def main():
+    wp.init()
+    device = wp.get_device("cuda:0") if wp.is_cuda_available() else wp.get_device("cpu")
+    for robot_type, robot_cfg in ROBOTS.items():
+        render_robot(robot_type, robot_cfg, device)
 
 
 if __name__ == "__main__":

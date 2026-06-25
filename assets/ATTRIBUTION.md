@@ -40,3 +40,10 @@ nothing here breaks. Only a curated subset is vendored.
 `robots/` contains USD conversions of robot URDFs generated locally by
 `python -m robolabViz.robot_usd` (source URDF: Newton's
 `franka_emika_panda` asset pack, BSD-licensed by Franka Robotics).
+`robots/franka_panda_isaacsim/` is the NVIDIA Isaac Sim 5.0 Franka Panda USD
+asset downloaded from
+`Assets/Isaac/5.0/Isaac/Robots/FrankaRobotics/FrankaPanda/` in NVIDIA's
+`omniverse-content-production` S3 bucket. The included
+`franka_alt_fingers_quality.usda` wrapper selects the asset's
+`Gripper=AlternateFinger` and `Mesh=Quality` variants. NVIDIA ships
+`franka-LICENSE.txt` with this asset.

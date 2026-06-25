@@ -28,16 +28,29 @@ def build_franka_robot(
     builder.rigid_gap = 0.005
     newton.solvers.SolverMuJoCo.register_custom_attributes(builder)
 
-    asset_path = newton.utils.download_asset(robot.asset_name)
-    builder.add_urdf(
-        Path(asset_path) / robot.urdf_subpath,
-        xform=xform,
-        floating=False,
-        enable_self_collisions=False,
-        parse_visuals_as_colliders=False,
-        collapse_fixed_joints=True,
-        force_show_colliders=False,
-    )
+    # Two interchangeable load paths producing the SAME articulation (D6/fixed base + 7 arm revolute +
+    # 2 prismatic finger DOFs, arm 0-6 then fingers 7-8). The post-load actuator/gravcomp setup below
+    # is identical for both, so switching robots never touches the controller. collapse_fixed_joints
+    # folds the hand into link7 (URDF) / panda_link7 (USD) so the EE/finger suffixes resolve the same way.
+    if robot.loader == "usd":
+        builder.add_usd(
+            robot.usd_path,
+            xform=xform,
+            enable_self_collisions=False,
+            collapse_fixed_joints=True,
+            force_show_colliders=False,
+        )
+    else:
+        asset_path = newton.utils.download_asset(robot.asset_name)
+        builder.add_urdf(
+            Path(asset_path) / robot.urdf_subpath,
+            xform=xform,
+            floating=False,
+            enable_self_collisions=False,
+            parse_visuals_as_colliders=False,
+            collapse_fixed_joints=True,
+            force_show_colliders=False,
+        )
 
     home_q = list(robot.home_q)
     builder.joint_q[: robot.n_dof] = home_q

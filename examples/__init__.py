@@ -20,6 +20,8 @@ import runpy
 import sys
 from pathlib import Path
 
+from deformableManipulationTools.settings import SETTINGS
+
 os.environ.setdefault("WARP_CACHE_PATH", "/tmp/warp-cache")
 
 
@@ -34,6 +36,7 @@ EXAMPLE_NAMES = (
     "soft_pickplace_franka",
     "pickplace_ycb_franka",
     "pickplace_ycb_vbd_franka",
+    "cloth_franka",
 )
 
 
@@ -52,7 +55,8 @@ def _str2bool(value: str) -> bool:
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--device", type=str, default=None, help="Override the default Warp device.")
+    parser.add_argument("--device", type=str, default=SETTINGS.device,
+                        help="Override the default Warp device (settings.yaml: device).")
     parser.add_argument(
         "--output-style",
         type=str,
@@ -84,11 +88,12 @@ def create_parser() -> argparse.ArgumentParser:
     scenic = parser.add_argument_group("scenic rendering (--output-style scenic)")
     scenic.add_argument("--frames-per-image", type=int, default=30,
                         help="Dump a per-camera still into frames/ every N frames (0 = off).")
-    scenic.add_argument("--table", default="maple",
-                        help="Vendored work-table texture (e.g. maple; see robolabViz.config.available_tables).")
-    scenic.add_argument("--background", default="home_office",
-                        help="Vendored dome background (e.g. home_office, garage_2k; "
-                             "see robolabViz.config.available_backgrounds).")
+    scenic.add_argument("--table", default=SETTINGS.render_table,
+                        help="Vendored work-table texture (settings.yaml: render.table; "
+                             "see robolabViz.config.available_tables).")
+    scenic.add_argument("--background", default=SETTINGS.render_background,
+                        help="Vendored dome background (settings.yaml: render.background; e.g. "
+                             "home_office, garage_2k; see robolabViz.config.available_backgrounds).")
     scenic.add_argument("--usd", type=_str2bool, nargs="?", const=True, default=False,
                         help="Also write the full time-sampled RoboLab USD scene to outputs/<name>/<name>.usd.")
     scenic.add_argument("--npz", type=_str2bool, nargs="?", const=True, default=False,
@@ -120,9 +125,11 @@ def init(parser: argparse.ArgumentParser | None = None, example_name: str = "exa
     args = parser.parse_args()
 
     if getattr(args, "output_style", "scenic") == "scenic":
-        # scenic renders through robolabViz; everything lands in outputs/<name>/.
+        # scenic renders through robolabViz; everything lands in outputs/<robot>/<name>/
+        # (<robot> = the active robot's short_name, so the two robots' renders never collide).
         args.viewer = "null"
-        out_dir = Path(args.output_path) if args.output_path else Path("outputs") / example_name
+        from deformableManipulationTools.params import FRANKA
+        out_dir = Path(args.output_path) if args.output_path else Path("outputs") / FRANKA.short_name / example_name
         if out_dir.suffix.lower() in USD_EXTENSIONS:
             out_dir = out_dir.parent
         out_dir.mkdir(parents=True, exist_ok=True)

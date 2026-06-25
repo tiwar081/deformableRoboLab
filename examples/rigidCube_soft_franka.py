@@ -85,8 +85,8 @@ class Example(ScenicGraspExample):
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
         self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK.contact_margin}
-        # Force-stop grasp on the rigid cube (incompressible → latch at FIRST contact + a fixed
-        # GRIP.grasp_interference bite, the geometry-free equivalent of the old preset close width):
+        # Force-target grasp on the rigid cube (incompressible → close until the squeeze reaches
+        # GRIP.force_target_rigid, then freeze; geometry emerges, no preset width):
         # close [3.2, 4.4], hold through the carry, release [8.0, 8.6].
         self.grasp_windows = [GraspWindow(close_start=3.2, close_end=4.4, release_start=8.0,
                                           release_end=8.6)]

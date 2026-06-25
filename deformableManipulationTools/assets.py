@@ -8,6 +8,7 @@ from :mod:`deformableManipulationTools.params`.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -67,6 +68,60 @@ def add_soft_block(builder: newton.ModelBuilder, cfg: SoftBlockConfig, center_po
         rot=wp.quat_identity(), vel=wp.vec3(0.0, 0.0, 0.0),
         dim_x=dx, dim_y=dy, dim_z=dz, cell_x=cfg.cell, cell_y=cfg.cell, cell_z=cfg.cell,
         density=cfg.density, k_mu=cfg.k_mu, k_lambda=cfg.k_lambda, k_damp=cfg.k_damp)
+
+
+@dataclass(frozen=True)
+class ClothConfig:
+    """T-shirt cloth (``add_cloth_mesh`` from the vendored ``assets/objects/unisex_shirt.usd``).
+
+    EXPERIMENTAL — this is a thin SHELL, not a compressible FEM volume, and these values are adapted
+    from Newton's ``example_cloth_franka`` (which runs in CENTIMETRE scale); they are NOT yet tuned for
+    this framework's metre scale or the proxy grip. Exposes the same ``soft_contact_*`` fields the
+    framework reads off ``soft_block`` so the proxy<->particle harvest works like the FEM-block demos."""
+    usd_file: str = "unisex_shirt.usd"
+    usd_prim: str = "/root/shirt"
+    scale: float = 0.01               # the USD shirt mesh is ~65 cm in native units -> metres
+    flatten_z: float = 0.12           # squash the native 3D (worn) shirt mesh in z so it starts LAID
+                                       # FLAT on the table (~3 cm thick), instead of a 27 cm-thick draped
+                                       # shape that would envelop the gripper proxies and drag the arm.
+    density: float = 0.3              # per-area [kg/m^2] (~0.13 kg over the shirt)
+    particle_radius: float = 0.005
+    tri_ke: float = 1.0e4             # stretch / shear (cloth in-plane)
+    tri_ka: float = 1.0e4
+    tri_kd: float = 1.0e-2
+    edge_ke: float = 5.0              # bending
+    edge_kd: float = 0.5
+    contact_margin: float = 0.01
+    # proxy<->particle + body<->cloth contact (read by the framework like SoftBlockConfig)
+    soft_contact_ke: float = 1.0e5
+    soft_contact_kd: float = 1.0e-4
+    soft_contact_kf: float = 1.0e3
+    soft_contact_mu: float = 0.8
+
+
+def add_cloth(builder: newton.ModelBuilder, cfg: ClothConfig, center_pos, *, yaw: float = 0.0):
+    """Load the vendored T-shirt USD mesh and add it as a VBD cloth shell, centred in x/y at
+    ``center_pos`` with its centroid at ``center_pos[2]`` (drop it slightly above the table and let it
+    settle). EXPERIMENTAL (see :class:`ClothConfig`). Returns ``(particle_start, particle_count)``."""
+    import newton.usd
+    from pxr import Usd
+
+    stage = Usd.Stage.Open(str(OBJECTS_DIR / cfg.usd_file))
+    mesh = newton.usd.get_mesh(stage.GetPrimAtPath(cfg.usd_prim))
+    verts = np.asarray(mesh.vertices, dtype=np.float64)
+    verts = verts - verts.mean(axis=0)            # centre the mesh at the origin (its native frame is offset)
+    verts[:, 2] *= cfg.flatten_z                  # lay the draped shirt flat so it starts clear of the gripper
+    builder.default_particle_radius = cfg.particle_radius
+    builder.particle_max_velocity = 50.0
+    p_start = builder.particle_count
+    builder.add_cloth_mesh(
+        pos=wp.vec3(*[float(x) for x in center_pos]),
+        rot=wp.quat_from_axis_angle(wp.vec3(0.0, 0.0, 1.0), float(yaw)),
+        scale=float(cfg.scale), vel=wp.vec3(0.0, 0.0, 0.0),
+        vertices=[wp.vec3(*v) for v in verts], indices=[int(i) for i in mesh.indices],
+        density=cfg.density, tri_ke=cfg.tri_ke, tri_ka=cfg.tri_ka, tri_kd=cfg.tri_kd,
+        edge_ke=cfg.edge_ke, edge_kd=cfg.edge_kd, particle_radius=cfg.particle_radius)
+    return p_start, builder.particle_count - p_start
 
 
 def add_cable(builder: newton.ModelBuilder, node_positions, cable: CableConfig = CABLE):

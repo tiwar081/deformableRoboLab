@@ -20,17 +20,30 @@ import newton
 
 
 class RobotVisualFK:
-    def __init__(self, urdf_path: Path | str, base_xform: wp.transform, device, expected_joint_coords: int):
+    def __init__(self, source_path: Path | str, base_xform: wp.transform, device, expected_joint_coords: int,
+                 loader: str = "urdf"):
         builder = newton.ModelBuilder()
-        builder.add_urdf(
-            urdf_path,
-            xform=base_xform,
-            floating=False,
-            enable_self_collisions=False,
-            parse_visuals_as_colliders=False,
-            collapse_fixed_joints=False,
-            force_show_colliders=False,
-        )
+        # Uncollapsed (collapse_fixed_joints=False) so EVERY robot-USD link prim — including the
+        # fixed-mounted hand/finger links the simulated (collapsed) model folds away — gets a body
+        # to puppeteer by name. Fixed joints add no DOFs, so joint_coord_count still matches the sim.
+        if loader == "usd":
+            builder.add_usd(
+                str(source_path),
+                xform=base_xform,
+                enable_self_collisions=False,
+                collapse_fixed_joints=False,
+                force_show_colliders=False,
+            )
+        else:
+            builder.add_urdf(
+                source_path,
+                xform=base_xform,
+                floating=False,
+                enable_self_collisions=False,
+                parse_visuals_as_colliders=False,
+                collapse_fixed_joints=False,
+                force_show_colliders=False,
+            )
         self.model = builder.finalize(device=device)
         # The URDF FK coords must be a PREFIX of the simulated robot's coords. They match exactly for a
         # plain robot; the hybrid path appends free rigid bodies (each a 6-DOF free joint) AFTER the
