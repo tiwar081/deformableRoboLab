@@ -79,8 +79,8 @@ class Example(ScenicGraspExample):
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 512, **PARTICLE_SOLVER_KWARGS}
         self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK.contact_margin}
-        # Force-target grasp on the cable (incompressible → close until the squeeze reaches
-        # GRIP.force_target_rigid, then freeze; geometry emerges, no per-object knob). Held to the run's end.
+        # Unified admittance grasp on the cable: regulate to GRIP.force_target (default 30 N; no per-demo
+        # override here), jaw opens or closes to hold it. Held to the run's end (no release window).
         self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6)]
 
     def plan(self, ik_model, ik_state):

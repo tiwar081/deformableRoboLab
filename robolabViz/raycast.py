@@ -168,12 +168,18 @@ def _robot_link_meshes(robot_usd: Path, link_names: list[str]) -> dict[str, list
     return out
 
 
-def _robot_link_meshes_from_model(model) -> dict[str, list[tuple[np.ndarray, np.ndarray]]]:
+def _robot_link_meshes_from_model(model, object_body_min: int | None = None) -> dict[str, list[tuple[np.ndarray, np.ndarray]]]:
     """Per-link ``(verts_local, tris)`` from the PHYSICS model's VISIBLE mesh shapes — i.e. the geometry
     that is ACTUALLY simulated (the convex hulls ``add_usd`` loads, or the URDF colliders), rather than the
     USD's detailed visual meshes. Same return format as :func:`_robot_link_meshes` (keyed by bare body
     name, verts baked into the body frame), so the render pipeline is identical downstream. Used when a
-    robot opts into ``render_from_physics`` so the scenic render shows exactly the simulated geometry."""
+    robot opts into ``render_from_physics`` so the scenic render shows exactly the simulated geometry.
+
+    On the rigid-only path the scene's objects are MERGED into this robot model (``add_builder``), so
+    ``object_body_min`` gives the first merged-object body index: those bodies are NOT robot links (they
+    are rendered separately as ``object_body`` instances, posed by the body state, NOT by FK), so skip
+    them here — otherwise they'd be emitted as ``robot_link`` instances whose FK transform doesn't exist
+    (e.g. a ``KeyError: 'bowl'`` at render time)."""
     st = model.shape_type.numpy()
     sf = model.shape_flags.numpy()
     sb = model.shape_body.numpy()
@@ -190,6 +196,8 @@ def _robot_link_meshes_from_model(model) -> dict[str, list[tuple[np.ndarray, np.
         body = int(sb[s])
         if src is None or body < 0:
             continue
+        if object_body_min is not None and body >= object_body_min:
+            continue                                   # merged scene object, not a robot link (rigid-only)
         name = labels[body].split("/")[-1]            # bare link name -> matches the FK link_tfs keys
         v = np.asarray(src.vertices, dtype=np.float64) * np.asarray(s_scale[s], dtype=np.float64)[None, :]
         tf = np.asarray(s_tf[s], dtype=np.float64)    # shape -> body local transform (pos + quat xyzw)
@@ -364,7 +372,7 @@ class RaycastPreviewRenderer:
         # Two mesh sources: the simulated physics model (true collision geometry) when the robot opts in,
         # else the USD's detailed visual meshes. Both return {link_name: [(verts_local, tris)]}.
         if self._robot_from_physics and self._robot_model is not None:
-            link_meshes = _robot_link_meshes_from_model(self._robot_model)
+            link_meshes = _robot_link_meshes_from_model(self._robot_model, self._object_body_min)
         else:
             robot_usd = self.scene.robot_usd
             if robot_usd is None:

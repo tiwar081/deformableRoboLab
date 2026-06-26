@@ -101,34 +101,37 @@ class GripConfig:
     proxy_gap: float = 0.002
     # Contact damping applied to the *gripped object's* shapes (cable/box) — physical, re-derived.
     object_contact_kd: float = 1.0e2
-    # ---- Force-target grasp (replaces the geometric preset width on the VBD/proxy path) ----
-    # The controller closes the fingers and FREEZES the position when the (already-harvested) min-of-pads
-    # squeeze first reaches the target force — "specify force, get emergent geometry". The freeze (not a
-    # continuous servo) is deliberate: during the lift/sweep the harvested force is dominated by the
-    # object's LOAD reaction (weight+inertia), not over-squeeze, so a servo would mis-read the load and
-    # OPEN, dropping the object; a frozen position lets the squeeze rise under load (holding it) while a
-    # physical resting squeeze (the target) is what the cable/plate needed. The MODE is per-GraspWindow
-    # (``compressible``) and selects which target to wait for:
-    force_target: float = 8.0         # COMPRESSIBLE (soft FEM) target [N] (min of both pads) — gentle, so
-                                       # the compliant block is held without crush.
-    force_target_rigid: float = 30.0  # INCOMPRESSIBLE (rigid bodies + cable) target [N] — a firm, PHYSICAL
-                                       # squeeze (a Franka does ~70 N). Replaces both the old first-contact
-                                       # latch (≈0 N → cable slipped) and the per-object grip_bite. One
-                                       # central value: friction μ·F·2pads holds every rigid object's load.
-    # Close-ONLY hold servo: after the latch stops the fast close, slowly tighten the frozen width until
-    # the STEADY min-of-pads squeeze reaches the target. This is the force-derived replacement for the
-    # per-object bite — it over-closes a SETTLING contact (the cable, whose resting force decays at any
-    # fixed width) just enough to maintain the target, and barely moves on a stiff object that already
-    # reads the target. It NEVER opens, so the lift/sweep LOAD (squeeze ≫ target) can't loosen the grip.
-    grip_servo_rate: float = 0.02     # hold-servo slew [m/s] (tighten-only)
-    grip_force_deadband: float = 2.0  # [N] deadband around the target (kills servo limit-cycling)
-    max_overclose: float = 0.003      # CENTRALIZED cap [m] on how far the servo may tighten past the
-                                       # first-contact width. A solid object reaches force_target well
-                                       # before this, so the cap is inert for it. A SETTLING line contact
-                                       # (the cable) has no width that reads the target at rest, so its
-                                       # servo would run away to the floor and crush — the cap stops it at
-                                       # a firm, bounded over-close (the force-informed, centralized
-                                       # replacement for the old per-object CABLE.grip_bite).
+    # ---- Force-target grasp — ONE UNIFIED controller for EVERY object (rigid, cable, AND soft) ----
+    # A single BIDIRECTIONAL admittance regulator (grip.py _grip_force_stop_kernel); the grasp no longer
+    # depends on whether the demo's object is soft or incompressible — only the TARGET FORCE differs (the
+    # one per-demo knob, GraspWindow.force_target). It reads the closing-axis PROJECTED squeeze
+    # (TwoWayProxyCoupling.grip_squeeze_signal), not the raw magnitude: the lift/sweep LOAD is tangential to
+    # the jaw axis, so it projects out and the regulator holds steady under load instead of mis-reading the
+    # load as over-squeeze and opening. Velocity form (integral → zero steady-state error).
+    #
+    # It is ASYMMETRIC — close fast, open slowly — which is what makes a force regulator stable on a
+    # frictional grasp whose contact force is spiky + load-dominated: F_filt = EMA(grip_squeeze_signal,
+    # force_filter_tau); close at grip_rate_max to first contact (F_filt >= engage_force), then regulate
+    # w_dot = k_adm*(F_filt - target). UNDER target it closes fast (chase the target / restore a DECAYING
+    # grip); OVER target it opens VERY slowly (rate <= grip_rate_open) so the lift/sweep LOAD and transient
+    # SPIKES (which transiently dwarf the target) can't open the jaw and drop the object before they pass.
+    # "Grab firmly, release reluctantly" — bidirectional but load-robust. The target is in PROJECTED
+    # (closing-axis) N; pick it per demo near the achievable steady squeeze (a thin cable tops out ~4 N at
+    # any width so its target sets the cage tightness; a rigid box reaches ~30 N; a soft block ~8 N gentle).
+    force_target: float = 30.0        # DEFAULT target [N] if a GraspWindow gives no per-demo override.
+    k_adm: float = 1.0e-4             # admittance gain [m/s per N] (small: k_adm*ke*dt << 1 for stability)
+    force_filter_tau: float = 0.05    # [s] EMA time constant on the squeeze signal (swallows contact spikes)
+    grip_rate_max: float = 0.04       # [m/s] CLOSE / approach rate limit (fast: chase target, restore decay).
+                                       # CENTRALIZED squeeze speed — identical for every grasp (NOT per-demo).
+    grip_rate_open: float = 0.0002    # [m/s] OPEN rate limit (slow: ride out the spiky, load-dominated force)
+    # Engage threshold (projected squeeze) to switch from blind approach to force regulation. RELATIVE to
+    # the target (clamped) so it scales: a low-target SOFT grip engages at a light touch — BEFORE the fast
+    # approach over-compresses the compliant block — while a high-target rigid/cable grip engages firmly (a
+    # firmer seed is what gives the cable its cage). engage = clamp(engage_frac*target, engage_floor, engage_cap).
+    engage_frac: float = 0.15         # engage threshold as a fraction of the target force
+    engage_floor: float = 0.3         # [N] min engage threshold (contact detection floor)
+    engage_cap: float = 2.0           # [N] max engage threshold (firm seed for high-target grips)
+    grip_force_deadband: float = 2.0  # [N] deadband around the target (kills the limit cycle on the contact)
     min_close_width: float = 0.001    # fully-closed finger floor [m] if the grasp never reaches the target
     # Hand/palm "blocker" proxy (CENTRALIZED — every VBD demo's gripper gets it; not demo-tweakable).
     # The two finger proxies already carry the finger collision geometry, but the Franka hand is
@@ -141,10 +144,6 @@ class GripConfig:
     # of the fingertip grasp zone (TCP at z=0.22). Cheap: rigid-shape collision only (no particle).
     palm_box_half: tuple[float, float, float] = (0.05, 0.05, 0.08)    # half-extents [m], EE(link7) frame
     palm_box_offset: tuple[float, float, float] = (0.0, 0.0, 0.08)    # box center in the EE(link7) frame [m]
-    latch_debounce: int = 2           # consecutive substeps above force_target before latching (kills the
-                                       # proxy_kd·v damping spike at first contact)
-    latch_arm_margin: float = 0.003   # only latch once the jaws have closed this far below gripper_open [m]
-                                       # (guards against latching while still wide open)
 
 
 @dataclass(frozen=True)
@@ -155,20 +154,16 @@ class GraspWindow:
     leave the +inf defaults. All times are in seconds of sim time, on the same clock the arm-target
     kernel uses.
 
-    The ONLY physics knob is ``compressible`` — it selects which centralized FORCE TARGET the latch
-    waits for (derived in GripController from :data:`GRIP`, never per-demo); the close width emerges:
-
-      * ``compressible=False`` (rigid bodies + the cable — NO particles, incompressible): close until
-        the min-of-pads squeeze reaches ``GRIP.force_target_rigid`` (~30 N), then FREEZE — a firm,
-        physical grip whose friction holds the object's load. Geometry-independent: the cable and a
-        flat box both end at whatever width gives that force (no per-object bite).
-      * ``compressible=True`` (soft FEM block): close until the squeeze reaches ``GRIP.force_target``
-        (gentle, ~8 N), then freeze — held without crush. "Specify force, get emergent geometry"."""
+    The ONLY physics knob is ``force_target`` — the per-demo TARGET GRASP FORCE [N] (``None`` → the
+    centralized default ``GRIP.force_target``). The SAME bidirectional admittance controller regulates the
+    closing-axis projected squeeze to that target for EVERY object (rigid, cable, AND soft) — the grasp does
+    not depend on the object type, only on the target. Geometry-independent: the cable, a flat box and a soft
+    block each end at whatever width gives the requested force ("specify force, get emergent geometry")."""
     close_start: float
     close_end: float
     release_start: float = float("inf")
     release_end: float = float("inf")
-    compressible: bool = False           # the grasped object deforms (soft FEM) vs. rigid/cable
+    force_target: float | None = None    # per-demo target grasp force [N]; None → GRIP.force_target default
 
 
 @dataclass(frozen=True)

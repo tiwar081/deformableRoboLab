@@ -56,99 +56,84 @@ fingers to the EE. It cut cable-through-palm from 219 frames (37 mm) to 0. **Ena
 extended-deformable (cable) demos** — compact-object pick-place demos have nothing that reaches the
 palm, and the extra body perturbs the (separately fragile) soft grip latch, so they leave it off.
 
-## Force-stop close — no preset width (`grip.GripController`)
+## Force control — target grasp force (`grip.GripController`)
 
-The grip width is **discovered online from the contact force**, not preset from object geometry
-("specify force, get emergent geometry"). `grip.GripController` (built by the framework, one per
-demo that declares `grasp_windows`) owns the finger DOFs; the demo's policy kernel writes only the
-**arm** DOFs (`set_arm_targets`). This is the only legal place to close a force loop: the fingers
-feel nothing in their own (MuJoCo) solver, so we derive a finger **position** command from a force
+The grip width is **derived from the contact force**, not preset from object geometry. `grip.GripController`
+(built by the framework, one per demo that declares `grasp_windows`) owns the finger DOFs; the demo's policy
+kernel writes only the **arm** DOFs (`set_arm_targets`). This is the only legal place to close a force loop:
+the fingers feel nothing in their own (MuJoCo) solver, so we derive a finger **position** command from a force
 **reading** — never inject force into the finger DOF (the [stability invariant](#stability-invariant-do-not-violate)
-holds unchanged).
+holds unchanged). **ONE unified control law for every object** (rigid, cable, AND soft) — the grasp does not
+depend on the object type. **The one per-demo knob is the target grasp force** (`GraspWindow.force_target`); the
+close **speed** is centralized (`GRIP.grip_rate_max`) — identical for every grasp.
 
-Per substep the controller (a `dim=1` Warp kernel, persistent on-device `latch_state`, CUDA-graph
-safe) does, per declared `params.GraspWindow`:
+### The law: bidirectional ASYMMETRIC admittance (a `dim=1` Warp kernel, CUDA-graph safe)
 
-1. **Close** — smoothstep the finger target from `gripper_open` toward `GRIP.min_close_width` over
-   `[close_start, close_end]`.
-2. **Latch** — when the both-pads grip signal `min(|f_left|,|f_right|)` (device-side
-   `TwoWayProxyCoupling.grip_force_signal`, recomputed at the end of `harvest()`) **strictly exceeds**
-   `force_target` for `latch_debounce` substeps (and the jaws have closed past `latch_arm_margin`),
-   **FREEZE the finger target at the MEASURED finger position minus the inward bite**.
-3. **Hold / release** — hold the frozen width; if the window has a release, smoothstep back open over
-   `[release_start, release_end]`.
+A velocity-form force regulator on the **closing-axis-projected** squeeze that may move the jaw open OR closed:
 
-### The grasp MODE: compressible vs. incompressible (centralized, the only per-window knob)
+1. **Approach** — from `close_start`, close at the centralized speed `GRIP.grip_rate_max` until the filtered
+   squeeze first reaches the engage threshold `clamp(engage_frac·target, engage_floor, engage_cap)`; seed the
+   regulator at the **measured** finger width (the open-loop command races ahead of the effort-limited fingers,
+   so seed from what they actually reached). **The engage threshold scales with the target** so a low-target SOFT
+   grip engages at a light touch — *before* the fast approach over-compresses the compliant block — while a
+   high-target rigid/cable grip engages firmly (a firmer seed is what gives the cable its cage).
+2. **Regulate** — `F_filt = EMA(grip_squeeze_signal, force_filter_tau)`; `w_dot = k_adm·(F_filt − target)`,
+   **deadbanded** then **asymmetrically rate-limited**: when UNDER target close fast (`≤ grip_rate_max`, to chase
+   the target / restore a **decaying** grip); when OVER target open **very slowly** (`≤ grip_rate_open`).
+3. **Release** (optional window) — smoothstep the held width back to `gripper_open`.
 
-`force_target` and the inward bite are NOT tuned per demo — they are derived from one declarative
-flag, `GraspWindow.compressible`, so the same robot grips like-for-like objects identically:
+The **asymmetry is the stability mechanism**, and it is what lets a force regulator hold a passive object whose
+contact force is spiky and **load-dominated**. "Grab firmly, release reluctantly": a lift/sweep LOAD or a rigid
+SPIKE transiently dwarfs the target, but the slow open rate (`grip_rate_open` ≈ 0.2 mm/s) means the jaw barely
+moves before the transient passes, so the grasp survives — while a genuine sustained over-force or a decay still
+moves the jaw the right way. The signal is the **closing-axis projection** (`grip_squeeze_signal`, below), not the
+raw magnitude, so the load (tangential to the jaw axis) is partly rejected before the asymmetry even sees it.
 
-- **Incompressible** (rigid bodies + the cable — NO particles): `force_target = 0`, so the strict-`>`
-  latch fires the instant the grip signal first becomes positive — i.e. **FIRST contact** (both pads
-  pressing; the signal is exactly 0 until the pads touch). It then bites `GRIP.grasp_interference`
-  (1 mm) past the measured contact. This is the geometry-FREE equivalent of the old preset close width
-  `object_half + margins − grasp_interference`, and it reproduces it: the rigid cube latches ~26 mm
-  (= old `cube_half + margins − 1 mm`), the rubik's cube ~29 mm, the plate handle ~13 mm.
-- **Compressible** (soft FEM block): `force_target = GRIP.force_target` (8 N — a compliant block needs
-  a real squeeze threshold, not first-contact) and bites **ZERO** past it. Any inward bite crushes the
-  already-deforming block (the old 2.5 mm bite drove it to a 462 N non-deterministic crush); biting 0
-  holds it gently.
+**The target is the only thing that differs between objects** (and the target-scaled engage threshold falls out of
+it automatically). A soft block needs a gentle target (~5 N) — its engage threshold is then small, so it is held
+without crush; no "freeze" mode is needed, the regulator simply settles there. A rigid box (~30 N) has a steep
+force-width curve, so the target is a true squeeze setpoint. The cable is the degenerate case (below), where the
+target instead sets the cage geometry. Tune the per-object target up if it slips, down if it crushes.
 
 ```python
-self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6, grip_bite=CABLE.grip_bite)]  # cable: hold to end
-self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6)]                # rigid: incompressible default
-self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6, compressible=True)]  # soft: pick&place
+self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6, force_target=30.0)]                  # cable: held to end
+self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6)]                       # rigid: GRIP default target
+self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6, force_target=5.0)]     # soft: gentle target
 ```
 
-### Why these choices are load-bearing
+### Why the cable target is what it is
 
-- **Latch the MEASURED finger position, not the commanded ramp.** The open-loop command races far
-  ahead of the effort-limited (`FRANKA.finger_effort` = 20 N) fingers — the fingers are ~11 mm at
-  contact while the command has raced to ~3 mm. Freezing the *command* leaves the fingers straining
-  inward → **600–720 N** dynamic spikes during the cable sweep. Freezing the *measured*
-  `robot_state.joint_q[finger]` holds the actual contact width → bounded force.
-- **The cable needs a BIGGER bite than the solid bodies** (`GraspWindow.grip_bite` override =
-  `CABLE.grip_bite` ≈ 3 mm). The cable grip is a loose LINE-contact cage: its static harvested force
-  decays to ~0 at the working width (force only appears as the pads compress the rod, or dynamically
-  on lift), and a light rolling rod registers "first contact" ~1.7 mm WIDER than `object_half + margins`
-  (vs a solid box, which stops sharply at its face). So first-contact + the default 1 mm leaves the
-  cage too open and the cable slips on the sweep; ~3 mm reproduces the old preset's firm cage. A solid
-  box doesn't need this — its flat multi-point patch already reads firm at 1 mm (~150 N).
+The cable is the pathological case: its static projected squeeze is **flat at ~3–6 N at every width** (the rod
+rolls/deforms rather than building force as the pads close), so there is no width where closing raises force to a
+higher setpoint. The grasp is therefore **geometric** — the jaw must reach a cage tight enough to trap the 8 mm-radius
+rod (~8–9 mm). `force_target = 30 N` drives the asymmetric regulator to that cage (`w` settles ~8.5–9.3 mm, matching
+the old design's 8.4 mm) at a physical force (median ~100 N, dynamic peak ~170 N). Lower targets leave the cage too
+loose (the rod slips on the lift); much higher targets crush the rod to a non-physical force.
 
-### Knobs (centralized in `params.GripConfig` / per object in params)
+### Knobs (all centralized in `params.GripConfig`; one per-demo target)
 
-- **`compressible`** (`GraspWindow`, default `False`) — selects the mode above. The ONE physics knob a
-  demo declares; everything else is derived.
-- **`force_target`** (`GRIP`, 8 N) — the both-pads squeeze threshold used for **compressible** grasps.
-  Incompressible grasps latch at first contact (`force_target = 0`).
-- **`grasp_interference`** (`GRIP`, 1 mm) — the inward bite for **incompressible** grasps, past the
-  force-discovered first contact. Held grip ≈ `proxy_ke · bite · (contact points)`, so the same bite
-  gives ~150 N on a flat box (multi-point patch) but only a loose cage on a thin rod — hence:
-- **`CableConfig.grip_bite`** (≈ 3 mm) — the cable's bite override (`GraspWindow.grip_bite`), the lone
-  per-object bite, justified by the cable's loose line-contact regime. Compressible grasps bite 0.
+- **`force_target`** (`GraspWindow`, default `None`) — **the one per-demo knob**: the target grasp force [N].
+  `None` → the centralized default `GRIP.force_target` (30 N). **Projected (closing-axis) units.**
+- **`GRIP.force_target`** (30 N) — the single default target when a window gives no override.
+- **`k_adm`** (1e-4 m/s·N⁻¹), **`force_filter_tau`** (0.05 s), **`grip_rate_max`** (0.04 m/s, the centralized
+  close/approach squeeze speed), **`grip_rate_open`** (2e-4 m/s, the slow open), **`grip_force_deadband`** (2 N),
+  and the engage threshold **`engage_frac`** (0.15) **`engage_floor`** (0.3 N) **`engage_cap`** (2 N)
+  — the admittance gains (shared by every grasp; the engage threshold = `clamp(engage_frac·target, floor, cap)`).
 - **`proxy_ke`** (5e4 N/m), **`proxy_kd`** (1e2 N·s/m abs), **`proxy_mass`** (10 kg) — proxy contact
   stiffness/damping/inertia (see CLAUDE.md for the `kd` re-derivation landmine).
-- **`min_close_width`** (1 mm), **`latch_debounce`** (2), **`latch_arm_margin`** (3 mm) — the
-  fully-closed floor (if the grasp never reaches the threshold) and the false-latch guards.
+- **`min_close_width`** (1 mm) — the fully-closed finger floor if the grasp never reaches the target.
 
-**Contact geometry still sets the force scale.** The held grip ≈ `ke · penetration` over every
-contact point, so a flat box face reads higher than a curved/small object at the same bite; bounded
-and net-to-EE ≈ 0 either way. Verify with an instrumented headless run logging
-`GraspExample.grip_force_norms()` (per-pad `[left, right]` N) + `--test`.
+**The grip signals.** `TwoWayProxyCoupling` recomputes two both-pads readings at the end of `harvest()`:
+`grip_squeeze_signal = min` of the per-pad reactions **projected onto the jaw closing axis** (the admittance
+signal — it rejects the lift load, which is tangential to that axis) and `grip_force_signal = min(|f_left|,
+|f_right|)` (raw magnitude, kept as a diagnostic). Verify with an instrumented headless run logging
+`coupling.grip_signal_values()` / `coupling.raw_force_norms()` + `--test`.
 
-**All VBD demos use force-stop:** `cable_rigidCube`, `soft_pickplace`, `cable_soft`, `rigidCube_soft`,
-`soft_compression`, and `pickplace_ycb_vbd` (the last declares **two** `GraspWindow`s — rubik's cube
-then banana). Only `soft_pickplace` is `compressible=True`; the rest are incompressible (the two cable
-demos add the `CABLE.grip_bite` override). The rigid-only MuJoCo demo `pickplace_ycb_franka` keeps a
-fixed close target (`MUJOCO_GRIP.close_target`, true two-way contact stops the pads).
-
-### Legacy `grasp_interference` (revived as the incompressible bite)
-
-`grasp_interference` (1 mm) used to set the geometric preset close target
-`gripper_closed = object_half + object_margin + proxy_margin − grasp_interference`. The force-stop
-controller now uses it as the **inward bite for incompressible grasps** past the force-discovered
-first contact — so the discovered-online grasp lands at the same firm width the preset hand-computed,
-without the demo ever needing the object's size.
+**Every VBD demo uses the same controller** (`cable_rigidCube`, `soft_pickplace`, `cable_soft`, `rigidCube_soft`,
+`soft_compression`, `pickplace_ycb_vbd` — the last declares **two** `GraspWindow`s, rubik's cube then banana),
+differing only in `force_target`. The rigid-only MuJoCo demo `pickplace_ycb_franka` has no coupling
+(`force_stop_enabled=0`) → a plain smoothstep close to `MUJOCO_GRIP.close_target`, with true two-way contact
+stopping the pads.
 
 ## Legacy clamp — fully retired
 

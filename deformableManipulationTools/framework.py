@@ -135,6 +135,7 @@ class GraspExample:
                 finger_dofs=range(FRANKA.n_arm_dof, FRANKA.n_dof), gripper_open=self.gripper_open,
                 grasp_windows=self.grasp_windows,
                 grip_force_signal=(self.coupling.grip_force_signal if self.coupling is not None else None),
+                grip_squeeze_signal=(self.coupling.grip_squeeze_signal if self.coupling is not None else None),
                 close_target=(GRIP.min_close_width if self.coupling is not None else MUJOCO_GRIP.close_target))
         self.graph = None
         self._frames_simulated = 0

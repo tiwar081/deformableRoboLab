@@ -119,14 +119,13 @@ class Example(ScenicGraspExample):
         self.drop_height = self.table_top_z + 0.16
         self.bowl_mass = args.bowl_mass
         self.banana_mass = args.banana_mass
-        # Force-target grasp, TWO windows (both incompressible → close until the squeeze reaches
-        # GRIP.force_target_rigid, then freeze; geometry emerges, no preset interference-fit
-        # widths): rubik's cube close [2.6, 3.8] / release [6.2, 6.8], then banana close [10.2, 11.6] /
-        # release [17.8, 18.4]. The banana's grasp pose was raised to table + 1 cm (see plan()) so the
-        # pads clear the table and can close onto it.
+        # Unified admittance grasp, TWO windows, each with its own per-object target force: rubik's cube at
+        # the GRIP default 30 N, banana at 80 N (the curved mesh is a hard, slip-prone grip — a higher target
+        # holds it firmly). rubik's close [2.6, 3.8] / release [6.2, 6.8], banana close [10.2, 11.6] / release
+        # [17.8, 18.4]. The banana's grasp pose was raised to table + 1 cm (see plan()) so the pads clear it.
         self.grasp_windows = [
             GraspWindow(close_start=2.6, close_end=3.8, release_start=6.2, release_end=6.8),
-            GraspWindow(close_start=10.2, close_end=11.6, release_start=17.8, release_end=18.4),
+            GraspWindow(close_start=10.2, close_end=11.6, release_start=17.8, release_end=18.4, force_target=80.0),
         ]
 
     def plan(self, ik_model, ik_state):

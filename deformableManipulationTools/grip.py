@@ -325,15 +325,29 @@ def _harvest_soft_wrench_kernel(
 @wp.kernel
 def _reduce_grip_signal_kernel(
     force_lag: wp.array(dtype=wp.vec3),
+    object_body_q: wp.array(dtype=wp.transform),
     left_proxy: int,
     right_proxy: int,
     grip_force_signal: wp.array(dtype=wp.float32),
+    grip_squeeze_signal: wp.array(dtype=wp.float32),
 ):
-    # dim=1. The both-pads-engaged grip force = min of the two per-pad reaction magnitudes (min, not
-    # sum, so the latch needs BOTH pads pressing). Read by GripController one substep later.
-    fl = wp.length(force_lag[left_proxy])
-    fr = wp.length(force_lag[right_proxy])
-    grip_force_signal[0] = wp.min(fl, fr)
+    # dim=1. Two both-pads-engaged grip readings (min, not sum, so BOTH pads must press; a single-pad
+    # graze can't trip either). Read by GripController one substep later.
+    #   grip_force_signal   = min of the two per-pad reaction MAGNITUDES [N] — the compressible latch.
+    #   grip_squeeze_signal = min of the two per-pad reactions PROJECTED onto the jaw closing axis [N] —
+    #                         the incompressible admittance signal. force_lag[pad] is the force the object
+    #                         exerts ON the pad (outward, away from the other pad, in compression), so each
+    #                         projects POSITIVE onto its outward axis. The lift/sweep load is tangential to
+    #                         this axis and projects out, so the regulator holds steady under load.
+    fl_vec = force_lag[left_proxy]
+    fr_vec = force_lag[right_proxy]
+    grip_force_signal[0] = wp.min(wp.length(fl_vec), wp.length(fr_vec))
+    p_left = wp.transform_get_translation(object_body_q[left_proxy])
+    p_right = wp.transform_get_translation(object_body_q[right_proxy])
+    axis = wp.normalize(p_left - p_right)          # right pad -> left pad (the jaw closing axis)
+    proj_l = wp.max(wp.dot(fl_vec, axis), 0.0)     # left pad reaction is outward = +axis in compression
+    proj_r = wp.max(wp.dot(fr_vec, -axis), 0.0)    # right pad reaction is outward = -axis in compression
+    grip_squeeze_signal[0] = wp.min(proj_l, proj_r)
 
 
 class TwoWayProxyCoupling:
@@ -375,11 +389,14 @@ class TwoWayProxyCoupling:
         self._force_lag = wp.zeros(nb, dtype=wp.vec3, device=device)
         self._torque_lag = wp.zeros(nb, dtype=wp.vec3, device=device)
         self._obj_body_q_prev = wp.zeros(nb, dtype=wp.transform, device=device)
-        # Device-side grip-force signal the force-stop GripController reads next substep (one-step
-        # stale, like the wrench feedback): the both-pads-engaged squeeze magnitude
-        # min(|f_left|, |f_right|) [N]. min (not sum) requires BOTH pads pressing, so a single-pad
-        # graze can't trip the latch. Recomputed at the end of harvest(), so it is graph-capturable.
+        # Device-side grip-force signals the GripController reads next substep (one-step stale, like the
+        # wrench feedback), both min-of-both-pads so a single-pad graze can't trip them. Recomputed at the
+        # end of harvest(), so they are graph-capturable.
+        #   grip_force_signal   = min(|f_left|, |f_right|) magnitude [N] — the compressible latch.
+        #   grip_squeeze_signal = min of the per-pad closing-axis projections [N] — the incompressible
+        #                         admittance signal (rejects the lift load, which is tangential to the axis).
         self.grip_force_signal = wp.zeros(1, dtype=wp.float32, device=device)
+        self.grip_squeeze_signal = wp.zeros(1, dtype=wp.float32, device=device)
 
     def apply_to_robot(self, robot_state):
         wp.launch(_apply_coupling_to_ee_kernel, dim=1, inputs=[
@@ -417,14 +434,18 @@ class TwoWayProxyCoupling:
                 object_state_0.body_q, self.soft_contact_ke, self.left_proxy, self.right_proxy,
             ], outputs=[self._force_lag, self._torque_lag], device=self._force_lag.device)
         wp.launch(_reduce_grip_signal_kernel, dim=1, inputs=[
-            self._force_lag, self.left_proxy, self.right_proxy,
-        ], outputs=[self.grip_force_signal], device=self._force_lag.device)
+            self._force_lag, object_state_0.body_q, self.left_proxy, self.right_proxy,
+        ], outputs=[self.grip_force_signal, self.grip_squeeze_signal], device=self._force_lag.device)
 
     def raw_force_norms(self):
         """Per-proxy |force| [N] of the harvested object reaction — the physical grip force on each
         pad (raw, un-clamped). Finite and bounded (not the old kinematic 1e4-1e6 N)."""
         f = self._force_lag.numpy()
         return [float(np.linalg.norm(f[p])) for p in (self.left_proxy, self.right_proxy)]
+
+    def grip_signal_values(self):
+        """Host readout (debug/tuning): (magnitude-min, closing-axis-projected-min) grip force [N]."""
+        return float(self.grip_force_signal.numpy()[0]), float(self.grip_squeeze_signal.numpy()[0])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -435,116 +456,100 @@ def _grip_force_stop_kernel(
     t_frame: wp.array(dtype=wp.float32),
     substep: int,
     sim_dt: float,
-    windows: wp.array(dtype=wp.float32),        # flat [close_start, close_end, release_start, release_end, ft, servo_mode]*n
+    windows: wp.array(dtype=wp.float32),        # flat [close_start, close_end, release_start, release_end, ft]*n
     n_windows: int,
     gripper_open: float,
-    close_target: float,                        # ramp/fully-closed target (min_close_width or mujoco close_target)
-    force_stop_enabled: int,                    # 1 = VBD force-stop; 0 = rigid-only smoothstep, no latch
-    latch_arm_margin: float,
-    latch_debounce: int,
-    grip_servo_rate: float,                     # close-only hold-servo slew [m/s] (tighten until steady ft)
+    close_target: float,                        # fully-closed floor (min_close_width or mujoco close_target)
+    force_stop_enabled: int,                    # 1 = VBD admittance regulator; 0 = rigid-only smoothstep
     grip_force_deadband: float,                 # [N] deadband around the target force
-    max_overclose: float,                       # cap [m] on servo tightening past the first-contact width
-    grip_signal: wp.array(dtype=wp.float32),
+    k_adm: float,                               # admittance gain [m/s per N]
+    force_filter_tau: float,                    # [s] EMA time constant on the squeeze signal
+    grip_rate_max: float,                       # [m/s] CLOSE / approach rate limit (centralized squeeze speed)
+    grip_rate_open: float,                      # [m/s] OPEN rate limit (slow: ride out the spiky load)
+    engage_frac: float,                         # engage threshold = clamp(engage_frac*ft, floor, cap)
+    engage_floor: float,
+    engage_cap: float,
+    squeeze_signal: wp.array(dtype=wp.float32), # closing-axis projected min (the admittance signal)
     finger_q: wp.array(dtype=wp.float32),       # measured robot joint positions (read the finger DOFs)
     finger_dof0: int,
     finger_dof1: int,
-    latch_state: wp.array(dtype=wp.float32),    # flat [latched, latched_w, current_w, debounce, seed_w]*n
+    grip_state: wp.array(dtype=wp.float32),     # per-window [w (admittance width), f_filt (EMA squeeze), engaged]
     joint_target_q: wp.array(dtype=wp.float32),
 ):
-    # dim=1, single thread owns the shared per-window latch state (no intra-launch race). The latch
-    # state persists across substeps AND frames inside the replayed CUDA graph; runtime branches on
-    # the device t_frame / grip_signal work on replay (capture bakes launches, not branch outcomes).
+    # dim=1, single thread owns the shared per-window state (no intra-launch race). The state persists
+    # across substeps AND frames inside the replayed CUDA graph; runtime branches on the device
+    # t_frame / squeeze signal work on replay (capture bakes launches, not branch outcomes).
+    #
+    # ONE unified law for every object (rigid, cable, soft): a bidirectional ASYMMETRIC admittance
+    # regulator on the closing-axis projected squeeze. The rigid-only MuJoCo path (no coupling,
+    # force_stop_enabled=0) has no squeeze signal, so it degrades to a plain smoothstep close.
     t = t_frame[0] + float(substep) * sim_dt
-    sig = grip_signal[0]
+    sqz = squeeze_signal[0]
     out = gripper_open                          # default (before/between/after all windows): open
     for w in range(n_windows):
-        wb = 6 * w
+        wb = 5 * w
         cs = windows[wb + 0]
         ce = windows[wb + 1]
         rs = windows[wb + 2]
         re = windows[wb + 3]
-        ft = windows[wb + 4]                     # pre-resolved force TARGET [N] (rigid ~30 N, soft ~8 N)
-        servo_mode = windows[wb + 5]             # 1 = incompressible (first-contact latch + servo); 0 = compressible (latch at ft, freeze)
-        sb = 5 * w
+        ft = windows[wb + 4]                     # pre-resolved force TARGET [N]
+        sb = 3 * w
         if t < cs:
-            # before this grasp: open, (re)arm the latch state for a clean cycle
-            latch_state[sb + 0] = 0.0           # latched flag
-            latch_state[sb + 1] = close_target  # latched width
-            latch_state[sb + 2] = gripper_open  # current commanded width
-            latch_state[sb + 3] = 0.0           # debounce counter
-            latch_state[sb + 4] = gripper_open  # first-contact seed width (for the over-close cap)
+            # before this grasp: open, (re)arm the per-window state for a clean cycle
+            grip_state[sb + 0] = gripper_open    # admittance width w
+            grip_state[sb + 1] = 0.0             # filtered squeeze f_filt
+            grip_state[sb + 2] = 0.0             # engaged flag
         elif t < re:
-            latched = latch_state[sb + 0]
-            latched_w = latch_state[sb + 1]
-            current_w = latch_state[sb + 2]
-            debounce = latch_state[sb + 3]
-            seed_w = latch_state[sb + 4]
-            width = current_w
-            if t >= rs:                         # RELEASE: smoothstep reopen FROM the held width to open
-                # KEEP `latched` set for the whole ramp so `base` stays latched_w every substep (clearing
-                # it made later substeps fall back to close_target → a one-step inward crush). The latch is
-                # re-armed for the next grasp in the `t < cs` branch.
-                base = close_target
-                if latched > 0.5:
-                    base = latched_w
+            width = grip_state[sb + 0]
+            f_filt = grip_state[sb + 1]
+            engaged = grip_state[sb + 2]
+            if force_stop_enabled == 0:
+                # ---- RIGID-ONLY MuJoCo (no coupling): plain smoothstep close; contact stops the pads ----
+                if t >= rs:                      # RELEASE: smoothstep reopen from the closed target to open
+                    alpha = wp_smoothstep((t - rs) / (re - rs))
+                    width = (1.0 - alpha) * close_target + alpha * gripper_open
+                elif t < ce:                     # CLOSING
+                    alpha = wp_smoothstep((t - cs) / (ce - cs))
+                    width = (1.0 - alpha) * gripper_open + alpha * close_target
+                else:                            # HOLD closed
+                    width = close_target
+            elif t >= rs:                        # RELEASE: smoothstep reopen FROM the held width to open
                 alpha = wp_smoothstep((t - rs) / (re - rs))
-                width = (1.0 - alpha) * base + alpha * gripper_open
-            elif latched > 0.5:                 # FORCE-HOLD
-                # Incompressible (servo_mode=1): close-only servo to the STEADY target force. Tighten
-                # (never open) while the steady min-of-pads squeeze is below target — over-closes a
-                # SETTLING contact (the cable, whose resting force decays at any fixed width) just enough
-                # to maintain it; barely moves a stiff object already at target. NEVER opening means the
-                # lift/sweep LOAD (sig ≫ ft) can't loosen the grip. The force-derived replacement for the
-                # old per-object bite. Compressible (servo_mode=0): pure FREEZE — the soft block was
-                # latched AT the gentle target during close; any extra tightening would crush/eject it.
-                if force_stop_enabled == 1 and servo_mode > 0.5:
-                    if sig < ft - grip_force_deadband:
-                        # tighten, but NEVER past seed_w - max_overclose (so a settling cable, whose
-                        # steady force never reaches ft, can't run the servo down to the crush floor)
-                        floor = wp.max(seed_w - max_overclose, close_target)
-                        latched_w = wp.max(latched_w - grip_servo_rate * sim_dt, floor)
-                width = latched_w
-            elif t < ce:                        # CLOSING (not yet latched): velocity-limited smoothstep ramp
-                alpha = wp_smoothstep((t - cs) / (ce - cs))
-                current_w = (1.0 - alpha) * gripper_open + alpha * close_target
-                width = current_w
-                if force_stop_enabled == 1:
-                    hit = float(0.0)            # arming guard + threshold (no boolean `and` in Warp)
-                    if current_w < (gripper_open - latch_arm_margin):
-                        if servo_mode > 0.5:
-                            # Incompressible: latch at FIRST CONTACT (sig>0) — its only job is to HALT the
-                            # fast smoothstep so it can't race to the floor and crush. The force target is
-                            # then reached by the servo, NOT here: the rigid target is only a brief
-                            # transient during the fast close, so latching on it is unreliable.
-                            if sig > 0.0:
-                                hit = 1.0
-                        else:
-                            # Compressible: latch AT the gentle force target — the soft block builds force
-                            # smoothly (reliable threshold) and must be compressed to the target before the
-                            # freeze, NOT just first-contact (which would be too loose to lift it).
-                            if sig >= ft:
-                                hit = 1.0
-                    if hit > 0.5:
-                        debounce = debounce + 1.0
-                    else:
-                        debounce = 0.0
-                    if debounce >= float(latch_debounce):
-                        latched = 1.0
-                        # Seed the hold at the MEASURED finger position (NOT the open-loop command, which
-                        # races ahead of the effort-limited fingers → inward spikes); the servo refines it.
-                        # seed_w records this first-contact width for the over-close cap.
+                width = (1.0 - alpha) * grip_state[sb + 0] + alpha * gripper_open
+            else:
+                # ---- ASYMMETRIC admittance force regulation (open OR close), every object ----
+                # Regulate the closing-axis PROJECTED squeeze to ft. Velocity form (integral -> zero
+                # steady-state error). ASYMMETRIC: close FAST (chase target / restore a decaying grip),
+                # open SLOW (so the spiky, load-dominated force can't open the jaw and drop the object
+                # before the transient passes). Stability on the stiff contact = EMA low-pass + the
+                # asymmetric rate limits + the deadband. The CLOSE rate is the centralized squeeze speed.
+                a = sim_dt / (force_filter_tau + sim_dt)
+                f_filt = f_filt + a * (sqz - f_filt)   # EMA low-pass (swallows single-substep spikes)
+                if engaged < 0.5:
+                    # APPROACH: close at the centralized squeeze speed until the squeeze first builds
+                    # engage_force; then seed the regulator at the MEASURED finger width (the open-loop
+                    # command races ahead of the effort-limited fingers, so seed from what they reached).
+                    width = width - grip_rate_max * sim_dt
+                    if f_filt >= wp.clamp(engage_frac * ft, engage_floor, engage_cap):
+                        engaged = 1.0
                         measured = 0.5 * (finger_q[finger_dof0] + finger_q[finger_dof1])
-                        latched_w = wp.max(measured, close_target)
-                        seed_w = latched_w
-                        width = latched_w
-            else:                               # HOLD but the target was never reached: best-effort closed
-                width = close_target
-            latch_state[sb + 0] = latched
-            latch_state[sb + 1] = latched_w
-            latch_state[sb + 2] = current_w
-            latch_state[sb + 3] = debounce
-            latch_state[sb + 4] = seed_w
+                        width = wp.max(measured, close_target)
+                else:
+                    # REGULATE: err<0 (under target) -> close fast; err>0 (over target) -> open slow.
+                    # Deadbanded (continuous at the edge), then asymmetric rate-limited; integrate to w.
+                    err = f_filt - ft
+                    w_dot = float(0.0)
+                    if err < -grip_force_deadband:
+                        w_dot = k_adm * (err + grip_force_deadband)       # < 0: close
+                        w_dot = wp.max(w_dot, -grip_rate_max)             # fast close clamp
+                    elif err > grip_force_deadband:
+                        w_dot = k_adm * (err - grip_force_deadband)       # > 0: open
+                        w_dot = wp.min(w_dot, grip_rate_open)             # SLOW open clamp
+                    width = width + w_dot * sim_dt
+                width = wp.clamp(width, close_target, gripper_open)
+            grip_state[sb + 0] = width
+            grip_state[sb + 1] = f_filt
+            grip_state[sb + 2] = engaged
             out = width
     joint_target_q[finger_dof0] = out
     joint_target_q[finger_dof1] = out
@@ -553,63 +558,62 @@ def _grip_force_stop_kernel(
 class GripController:
     """Centralized force-feedback finger controller — the legal place to "close until force" given
     that the position-controlled fingers feel nothing in their own (MuJoCo) solver. It DERIVES a
-    finger POSITION command from the harvested grip-force READING (``coupling.grip_force_signal``),
-    never injecting force on the finger DOF (the no-per-finger-feedback invariant is untouched).
+    finger POSITION command from the harvested grip-force READING (``coupling.grip_squeeze_signal``), never
+    injecting force on the finger DOF (the no-per-finger-feedback invariant is untouched). The one allowed
+    per-demo knob is the target grasp force (``GraspWindow.force_target``, else the centralized
+    ``GRIP.force_target``).
 
-    Per grasp window it closes the fingers (velocity-limited smoothstep) toward ``close_target`` and
-    FREEZES the position the moment the min-of-both-pads squeeze first reaches the window's force TARGET
-    (debounced). The target is derived CENTRALLY from the window's ``compressible`` flag (incompressible
-    → ``GRIP.force_target_rigid`` ~30 N; compressible → ``GRIP.force_target`` ~8 N) — "specify force, get
-    emergent geometry". The freeze (not a continuous servo) is intentional: under the lift/sweep load the
-    harvested force is the object's LOAD reaction, not over-squeeze, so a servo would open and drop it;
-    the frozen width lets the squeeze rise under load while holding ~target at rest. On the rigid-only
-    MuJoCo path (no coupling) ``force_stop_enabled=0``: it degrades to a plain smoothstep close to
-    ``close_target`` (= MUJOCO_GRIP.close_target) and lets true two-way contact stop the pads."""
+    ONE unified law for EVERY object (rigid, cable, AND soft) — the grasp does not depend on object type:
+    a BIDIRECTIONAL ASYMMETRIC admittance regulator on the closing-axis PROJECTED squeeze
+    (``grip_squeeze_signal``) drives the jaw open OR closed to hold ``force_target`` through the lift/sweep.
+    The projection rejects the load (tangential to the jaw axis). It closes FAST (chase target / restore a
+    decaying grip) but opens SLOWLY (so a spiky, load-dominated transient can't open the jaw and drop the
+    object) — stable on the stiff contact via EMA low-pass + asymmetric rate limits + deadband
+    (``GRIP.k_adm`` / ``force_filter_tau`` / ``grip_rate_max`` / ``grip_rate_open`` / ``engage_force``).
+
+    On the rigid-only MuJoCo path (no coupling) ``force_stop_enabled=0``: it degrades to a plain smoothstep
+    close to ``close_target`` (= MUJOCO_GRIP.close_target) and lets true two-way contact stop the pads."""
 
     def __init__(self, robot_control, t_frame, sim_dt, finger_dofs, gripper_open, grasp_windows,
-                 grip_force_signal=None, close_target=None, grip: GripConfig = GRIP):
+                 grip_force_signal=None, grip_squeeze_signal=None, close_target=None, grip: GripConfig = GRIP):
         device = robot_control.joint_target_q.device
         self.joint_target_q = robot_control.joint_target_q
         self._t_frame = t_frame
         self.sim_dt = float(sim_dt)
         self.finger_dof0, self.finger_dof1 = int(finger_dofs[0]), int(finger_dofs[1])
         self.gripper_open = float(gripper_open)
-        self.force_stop_enabled = 1 if grip_force_signal is not None else 0
-        self.grip_signal = (grip_force_signal if grip_force_signal is not None
-                            else wp.zeros(1, dtype=wp.float32, device=device))
+        self.force_stop_enabled = 1 if grip_squeeze_signal is not None else 0
+        self.squeeze_signal = (grip_squeeze_signal if grip_squeeze_signal is not None
+                               else wp.zeros(1, dtype=wp.float32, device=device))
         self.close_target = float(close_target if close_target is not None else grip.min_close_width)
-        self.latch_arm_margin = float(grip.latch_arm_margin)
-        self.latch_debounce = int(grip.latch_debounce)
-        self.grip_servo_rate = float(grip.grip_servo_rate)
         self.grip_force_deadband = float(grip.grip_force_deadband)
-        self.max_overclose = float(grip.max_overclose)
+        self.k_adm = float(grip.k_adm)
+        self.force_filter_tau = float(grip.force_filter_tau)
+        self.grip_rate_max = float(grip.grip_rate_max)
+        self.grip_rate_open = float(grip.grip_rate_open)
+        self.engage_frac = float(grip.engage_frac)
+        self.engage_floor = float(grip.engage_floor)
+        self.engage_cap = float(grip.engage_cap)
         self.n_windows = len(grasp_windows)
         flat: list[float] = []
         for win in grasp_windows:
-            # CENTRALIZED force target + mode selected by win.compressible (no per-object knobs):
-            #   compressible  → GRIP.force_target (gentle); latch AT that force, then FREEZE — a soft
-            #                   block builds force smoothly, so the threshold is reliable, and any extra
-            #                   tightening would crush/eject it. servo_mode = 0.
-            #   incompressible→ GRIP.force_target_rigid (firm); latch at FIRST contact, then close-only
-            #                   servo up to that force (a stiff object reaches it fast; a settling cable
-            #                   over-closes to the centralized cap). servo_mode = 1.
-            ft = float(grip.force_target) if win.compressible else float(grip.force_target_rigid)
-            servo_mode = 0.0 if win.compressible else 1.0
+            # The one per-demo knob is win.force_target (else the centralized GRIP.force_target default).
+            # SAME admittance law for every object — no compressible/incompressible split.
+            ft = float(win.force_target if win.force_target is not None else grip.force_target)
             flat += [float(win.close_start), float(win.close_end),
-                     float(win.release_start), float(win.release_end), ft, servo_mode]
+                     float(win.release_start), float(win.release_end), ft]
         self._windows = wp.array(flat, dtype=wp.float32, device=device)
-        self._latch_state = wp.zeros(self.n_windows * 5, dtype=wp.float32, device=device)
+        self._grip_state = wp.zeros(self.n_windows * 3, dtype=wp.float32, device=device)
 
     def step(self, substep: int, finger_q) -> None:
         wp.launch(_grip_force_stop_kernel, dim=1, inputs=[
             self._t_frame, int(substep), self.sim_dt, self._windows, self.n_windows,
-            self.gripper_open, self.close_target,
-            self.force_stop_enabled, self.latch_arm_margin, self.latch_debounce,
-            self.grip_servo_rate, self.grip_force_deadband, self.max_overclose,
-            self.grip_signal, finger_q, self.finger_dof0, self.finger_dof1,
-        ], outputs=[self._latch_state, self.joint_target_q], device=self.joint_target_q.device)
+            self.gripper_open, self.close_target, self.force_stop_enabled,
+            self.grip_force_deadband, self.k_adm, self.force_filter_tau, self.grip_rate_max,
+            self.grip_rate_open, self.engage_frac, self.engage_floor, self.engage_cap, self.squeeze_signal,
+            finger_q, self.finger_dof0, self.finger_dof1,
+        ], outputs=[self._grip_state, self.joint_target_q], device=self.joint_target_q.device)
 
-    def latch_widths(self):
-        """Host readout (debug): per-window [latched_flag, latched_width, current_width, debounce, seed_width]."""
-        s = self._latch_state.numpy().reshape(self.n_windows, 5)
-        return s
+    def grip_widths(self):
+        """Host readout (debug): per-window admittance state [w (width m), f_filt (N), engaged]."""
+        return self._grip_state.numpy().reshape(self.n_windows, 3)

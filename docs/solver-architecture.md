@@ -16,8 +16,9 @@ only declares its scene + policy; it never selects the solver.
   bridge crosses solvers via dynamic finite-mass finger proxies that mirror the fingers in the VBD
   model and feed the net object reaction back to the arm/EE (one-step lag) — the arm feels the object
   through the proxy bridge, not a shared contact. Every object that must touch a deformable lives in
-  the VBD model. **Gripper widths are PRESET** here (`gripper_closed = object_half + GRIP.proxy_margin
-  − GRIP.grasp_interference`): the proxy contact engages at a precise finger width.
+  the VBD model. **The grip is FORCE-CONTROLLED** here by the centralized `GripController` with ONE unified
+  law for every object (rigid, cable, AND soft): a bidirectional asymmetric admittance regulator. A demo
+  declares only a `GraspWindow` + its one knob, `force_target` — see [gripper.md](gripper.md).
 - **Rigid-only** → robot AND objects in **one `SolverMuJoCo`** (`framework._build_rigid_only_mujoco`
   merges the objects into the robot `ModelBuilder` via `add_builder`; Newton `brick_stacking`/`panda`
   pattern): true two-way frictional grasp, MuJoCo's mature convex/mesh contact, **CCD on**

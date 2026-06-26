@@ -90,10 +90,10 @@ class Example(ScenicGraspExample):
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
         self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK.contact_margin}
-        # Force-target grasp on the plate handle (incompressible → close until the squeeze reaches
-        # GRIP.force_target_rigid, then freeze): close [3.2, 4.4], hold through the carry, release [8.0, 8.6].
+        # Unified admittance grasp on the plate handle. force_target=50 N (firmer than the 30 N default) so
+        # the handle is held without sliding during the compression press. close [3.2, 4.4], hold, release.
         self.grasp_windows = [GraspWindow(close_start=3.2, close_end=4.4, release_start=8.0,
-                                          release_end=8.6)]
+                                          release_end=8.6, force_target=50.0)]
 
     def plan(self, ik_model, ik_state):
         def ik_at(pos):

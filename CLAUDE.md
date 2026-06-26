@@ -47,9 +47,10 @@ neither). An example only declares its scene; it never picks the solver.
 - **Any deformable present** → split `SolverMuJoCo` (robot) + `SolverVBD` (ALL objects) + **dynamic
   finite-mass gripper-proxy bridge** (NVIDIA recipe: proxies mirror the fingers, the object's contact
   reaction is harvested and the net external load fed to the arm/EE one step later). VBD is the only
-  Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here gripper widths
-  are PRESET** (`gripper_closed = object_half + GRIP.proxy_margin − GRIP.grasp_interference`) — the
-  proxy contact engages at a precise finger width.
+  Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here the grip is
+  FORCE-CONTROLLED** by the centralized `GripController` with ONE unified law for every object (rigid,
+  cable, AND soft): a bidirectional asymmetric admittance regulator. A demo declares only a `GraspWindow`
+  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md).
 - **Rigid-only** → robot AND objects in ONE `SolverMuJoCo` (objects merged into the robot builder via
   `add_builder`), true two-way grasp, **CCD on** (`make_robot_solver`). The gripper closes to a FIXED
   target (`MUJOCO_GRIP.close_target`; no object-size preset width — contact + actuator effort hold it,
@@ -80,12 +81,21 @@ Details: [docs/solver-architecture.md](docs/solver-architecture.md).
 
 **Requirement (governs the structure of every change): all physics, robot, and asset properties
 live in the `deformableManipulationTools/` package, never inline in an example.** An `examples/`
-script declares ONLY (1) the **scene** (which objects, where; table/background) and (2) the
-**policy** (the robot motion). If a change touches the solver loop, robot, grip, contact materials,
-masses, or how an object's collision/viz geometry is built, it goes in the package so every demo —
-and every *future* demo — inherits it and cannot reintroduce a per-object bug (e.g. the ycb
-raw-concave-mesh ejection). If a new demo needs a knob the package doesn't expose, add the knob to
-the package, don't special-case it in the example.
+script declares ONLY (1) the **scene** (environment initialization — which objects, where;
+table/background) and (2) the **policy** (the robot motion). If a change touches the solver loop,
+robot, grip, contact materials, masses, or how an object's collision/viz geometry is built, it goes
+in the package so every demo — and every *future* demo — inherits it and cannot reintroduce a
+per-object bug (e.g. the ycb raw-concave-mesh ejection). If a new demo needs a knob the package
+doesn't expose, add the knob to the package, don't special-case it in the example.
+
+**THE GRASP IS FULLY CENTRALIZED — the ONLY object/demo-specific grasp knob is the target grasp
+force** (`GraspWindow.force_target` [N], one per grasped object). Everything else about the grasp (the
+control law, close speed, engage threshold, deadband, gains, materials, proxies) is centralized and
+identical for every object — rigid, cable, AND soft (one unified bidirectional admittance regulator;
+see [docs/gripper.md](docs/gripper.md)). A demo script must NOT contain any other grasp detail: no
+preset widths, no compressible/object-type flags, no per-object gains or biases. The demo specifies
+*when* to grasp (the `GraspWindow` times, a policy concern) and *how hard* (`force_target`), nothing
+more. If a grasp needs tuning beyond the target force, fix it centrally in the package, not the demo.
 
 - **`params.py`** — single source of truth for ALL physics parameters (frozen dataclasses):
   `FRANKA`, `GRIP`, `TABLE`/`TABLE_YCB`, `CABLE`, `SOFT_BLOCK`, `RIGID_CUBE`, `PLATE`, and the
@@ -174,8 +184,9 @@ This repo's own docs:
   particle-copy bug, the verification standard.
 - [docs/gripper.md](docs/gripper.md) — the **centralized** dynamic finite-mass proxy grip
   (`deformableManipulationTools/grip.py`, params in `params.py`): net-to-EE feedback, rigid +
-  soft-particle harvest, the no-per-finger-feedback stability invariant, and **how the grip force
-  is tuned** (`grasp_interference` / `proxy_ke` / `finger_effort`, ~10–90 N, no cap).
+  soft-particle harvest, the no-per-finger-feedback stability invariant, and **the force controller**
+  — ONE unified bidirectional asymmetric admittance regulator for every object (rigid, cable, soft);
+  the one per-demo knob is `GraspWindow.force_target`.
 - [docs/deformables.md](docs/deformables.md) — cable (rod) and soft-FEM-block tuned parameters
   + reasons; notes on future cloth/zip-tie deformables.
 - [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.

@@ -93,8 +93,8 @@ class Example(ScenicGraspExample):
                                         self.table_top_z + 0.04], dtype=np.float32)
         self.grasp_tcp_height = self.table_top_z + 0.015   # descend to just above the table to pinch the cloth
         self.lift_height = self.table_top_z + 0.22
-        # Incompressible grasp (a thin shell, NOT a compressible volume): first contact -> servo to
-        # GRIP.force_target_rigid, capped. Held to the end of the run (no release) so we can watch it.
+        # Unified admittance grasp: regulate to GRIP.force_target (default, no per-demo override). Held to
+        # the run's end (no release). EXPERIMENTAL probe — see header; not tuned, may not hold the shell.
         self.grasp_windows = [GraspWindow(close_start=4.2, close_end=4.6)]
         self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
                                      "rigid_body_particle_contact_buffer_size": 16384, **PARTICLE_SOLVER_KWARGS}

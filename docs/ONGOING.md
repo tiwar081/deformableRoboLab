@@ -5,6 +5,78 @@ and not yet settled, and any working hypotheses. Keep it lean — when something
 durable, promote it to CLAUDE.md (or the relevant `docs/` file) and delete it here. Reset this file
 at the start of each new big task.
 
+## DONE (2026-06-26): fix panda scenic render of rigid-only demos (`KeyError: 'bowl'`)
+
+`pickplace_ycb_franka` (the rigid-only MuJoCo demo) crashed at scenic render frame 0 with `KeyError: 'bowl'`
+on the **panda** (`render_from_physics=True`). Root cause in `robolabViz/raycast.py`: on the rigid-only path
+the scene's objects are MERGED into the robot MuJoCo model (`add_builder`), and `_robot_link_meshes_from_model`
+iterated ALL visible mesh shapes, so it emitted the bowl/banana meshes as `robot_link` instances — whose FK
+transform doesn't exist (`robot_link_tfs['bowl']`). Fix: pass `object_body_min` (= `object_body_start`) to
+`_robot_link_meshes_from_model` and skip bodies `>= object_body_min` — the exact complement of the cutoff
+`_build_object_instances` already uses (those bodies render as `object_body` instances, posed by body state).
+The fr3 (`render_from_physics=False`, USD link meshes) never hit this; it surfaced once the panda became default.
+Routing itself is correct & unchanged: `has_deformable = particle_count>0 or has_cable_joint` → rigid-only YCB
+scene → `_build_rigid_only_mujoco` (single MuJoCo, no VBD/proxies).
+
+## DONE (2026-06-26): ONE unified target-force admittance grip for EVERY object (rigid, cable, soft)
+
+**Rule change:** a demo may now tune **one** physics knob — the **target grasp force** (`GraspWindow.force_target`).
+Replaced the **close-only post-contact** servo (the `2026-06-25` "TRUE force-target grasp" entry below, now
+SUPERSEDED) with a **bidirectional impedance/admittance** controller that may move the jaw open OR closed to
+regulate a target force, stable against the spiky/decaying/load-dominated contact force. **Then unified the soft
+and incompressible paths into ONE law** — the grasp no longer depends on object type; only the target differs.
+
+### The control law (`grip._grip_force_stop_kernel` + `GripController`) — one law for all objects
+Velocity-form admittance on the **closing-axis-projected** squeeze (`grip_squeeze_signal`, new). Approach at the
+centralized `GRIP.grip_rate_max` until `engage_force`, then `w_dot = k_adm·(F_filt − target)` (`F_filt = EMA`),
+deadbanded and **asymmetrically rate-limited**: close fast (`grip_rate_max`, chase target / restore a DECAYING
+grip), open **very slowly** (`grip_rate_open` ≈ 0.2 mm/s). The asymmetry IS the stability mechanism ("grab firmly,
+release reluctantly"): a lift/sweep LOAD or rigid SPIKE transiently dwarfs the target but the jaw barely opens
+before it passes, so the grasp survives while genuine sustained over-force / decay still moves the jaw. The same
+law holds a soft block at a gentle target (~8 N, no crush — a smooth force-width curve means no special freeze is
+needed) and a rigid box at a firm target (~30 N). `max_overclose`, the close-only servo, the `compressible` flag,
+and the soft-specific latch-then-freeze are all **removed**.
+
+### Why the projection + asymmetry are both needed (probed empirically)
+The lift load is tangential to the jaw axis, so projecting the per-pad reaction onto the closing axis rejects most
+of it. But the cable is pathological: its **static** projected squeeze is **flat at ~3–6 N at EVERY width** (the
+8 mm-radius rod rolls/deforms instead of building force), so there is NO force setpoint that fixes the cage width —
+the grasp is geometric. So the target instead *drives* the asymmetric regulator to a cage tight enough to trap the
+rod. `force_target = 30 N` → `w` settles ~8.5–9.3 mm (≈ the old 8.4 mm), floor ~30 N, dynamic peak ~150 N (old
+~140 N). Lower → cage too loose, rod slips on the lift; much higher → crushes the rod to non-physical force.
+
+### What it touched
+- `params.py`: `GRIP` lost `max_overclose`, `grip_servo_rate`, `force_target_rigid`, `latch_debounce`,
+  `latch_arm_margin`; gained `k_adm`, `force_filter_tau`, `grip_rate_max` (centralized squeeze speed),
+  `grip_rate_open`, `engage_force`; `force_target` is now the single default (30 N). `GraspWindow` gained
+  `force_target` (the one knob) and **lost `compressible`** (unified — no object-type mode).
+- `grip.py`: `_reduce_grip_signal_kernel` also writes `grip_squeeze_signal` (closing-axis projected min);
+  `TwoWayProxyCoupling.grip_squeeze_signal` + `grip_signal_values()` host getter; `_grip_force_stop_kernel`
+  collapsed to ONE admittance law (5-float windows `[cs,ce,rs,re,ft]`, 3-float state `[w,f_filt,engaged]`) +
+  the unchanged rigid-only smoothstep fallback; `GripController` simplified (`grip_widths()` debug getter).
+- `framework.py`: passes `coupling.grip_squeeze_signal` to `GripController`.
+- demos: `cable_rigidCube` `force_target=30`; `soft_pickplace` `force_target=8` (was `compressible=True`);
+  stale comments updated across the VBD demos.
+
+### Per-object target tuning (2026-06-26) + engage-scales-with-target
+The soft block was over-compressed because the absolute `engage_force` (2 N) needed DEEP compression of a
+compliant block before engaging. Fix: the engage threshold now SCALES with the target —
+`clamp(engage_frac·target, engage_floor, engage_cap)` (0.15 / 0.3 N / 2 N, all centralized & identical across
+demos). A low-target soft grip engages at a light touch (gentle, no crush); a high-target rigid/cable grip caps
+at 2 N (its original firm seed → no cable regression). The deadband stays ABSOLUTE 2 N for every demo.
+Final per-object targets (the only per-demo grasp knob): cable 30, rigid cube 30 (default), plate handle 50,
+soft block 5, rubik's cube 30, banana 80. (An earlier RELATIVE deadband attempt regressed the cable demos and
+was reverted — only the engage scaling was kept.)
+
+### Verified (headless `--viewer null --device cuda:0 --test`): demos `check_physics` PASS
+cable_rigidCube (holds through lift+sweep), soft_pickplace (gentle 8 N, no crush under the unified law),
+rigidCube_soft, cable_soft, soft_compression, pickplace_ycb_vbd (two windows + releases), pickplace_ycb_franka
+(rigid-only, `force_stop_enabled=0`). Ran WITH CUDA-graph capture (replay parity holds). cloth_franka is a
+known-failing experimental probe (regressed by the new controller — deferred).
+**Open / could improve:** the cable's ~150 N dynamic peak is inherent to its geometric (rolling line-contact)
+grip, not a bug; tune `force_target` if a softer/firmer cage is wanted. The default `force_target_rigid` (30 N)
+now also governs the other incompressible demos via the admittance — re-tune per-demo if any needs a different grip.
+
 ## DONE (2026-06-25): swappable robot via `settings.yaml` + Isaac Sim Panda (USD) as the default
 
 Added a repo-root **`settings.yaml`** (loaded by `deformableManipulationTools/settings.py`) that
