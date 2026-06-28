@@ -4,7 +4,8 @@ All in `examples/`, registered in `examples/__init__.py`. Each demo is a **singl
 `<name>.py`; the `--output-style` flag picks how a run is rendered (default `scenic`):
 
 ```bash
-# scenic (default): robolabViz renders outputs/<name>/{frames/, simulation.mp4}
+# scenic (default): robolabViz renders outputs/<robot>/<name>/{frames/, simulation.mp4}
+#   (<robot> = the active robot's short_name, so the two robots' renders never collide),
 #   (over-shoulder-left + wrist cameras, side by side), on any CUDA GPU.
 python -m examples <name> --device cuda:0
 python -m examples <name> --device cuda:0 --frames-per-image 60   # PNG still cadence
@@ -17,7 +18,8 @@ python -m examples cable_rigidCube_franka --output-style basic --device cpu --nu
 ```
 
 Scenic opt-in extras: `--usd` (also write the full time-sampled RoboLab USD scene to
-`outputs/<name>/<name>.usd`), `--npz` (state cache + `geometry.pkl` for `robolabViz.rerender`),
+`outputs/<robot>/<name>/<name>.usd`), `--npz` (state cache `<name>.state.npz` + `geometry.pkl` for
+`robolabViz.rerender`),
 `--objectview` (extra object-inspection still camera, soft demos only), `--table` / `--background`
 (vendored work-table / dome by name), `--wrist-eye` / `--wrist-target`. See
 [docs/robolab-graphics.md](robolab-graphics.md).
@@ -51,10 +53,25 @@ demos are therefore directly cross-comparable.
   proxy↔particle reaction (soft grip).
 
 - **`pickplace_ycb_franka`** — picks a rubik's cube and a banana and drops them into a bowl; a
-  rigid-mesh friction/impact demo, on the same centralized dynamic-proxy path as the rest (proof
-  VBD hosts rigid **meshes**). The bowl and banana collide as **coacd convex-hull pieces** while
-  their full meshes render — a raw concave bowl mesh ejected the solve (the old fly-away); the
-  banana is held by genuine friction (slips physically if the grip is marginal). 16 substeps.
+  rigid-mesh friction/impact demo. **Rigid-only → routes to a single `SolverMuJoCo`** (no
+  deformable present), the faster true-two-way path. The bowl and banana collide as **coacd
+  convex-hull pieces** while their full meshes render — a raw concave bowl mesh ejected the solve
+  (the old fly-away); the banana is held by genuine friction (slips physically if the grip is
+  marginal). 16 substeps.
+- **`pickplace_ycb_vbd_franka`** — the SAME ycb scene **plus a token soft cube** in a table
+  corner, whose particles auto-route the whole workspace to the **split MuJoCo+VBD** dynamic-proxy
+  path. The A/B twin of `pickplace_ycb_franka` demonstrating the centralized solver routing (≈2.2×
+  slower than the rigid-only MuJoCo path). Two `GraspWindow`s — rubik's cube (`force_target=30`)
+  then banana (`force_target=80`, the firmest stable value for the slip-prone curved mesh). 16 substeps.
+
+## Cloth (in flight — see [ONGOING.md](ONGOING.md))
+
+- **`cloth_franka`** — a Franka attempts a per-corner SCOOP pickup of a flat T-shirt (the first
+  cloth-manipulation demo). Replicates Newton's `example_cloth_franka` motion (~45° tilt, all 9 DOFs
+  from keyframes, not the force `GripController`). The sim is **stable** (≈critically-damped cloth
+  contact + self-contact), but the shirt is **NOT lifted/dragged/moved** — an architectural limit of
+  the gripper-proxy bridge (friction-independent; left visible, not faked). See
+  [cloths.md](cloths.md) and [ONGOING.md](ONGOING.md). 600 frames, 16 substeps.
 
 ## Scenic rendering
 

@@ -26,21 +26,29 @@ assume that checkout can be deleted.**
   `machine_shop_01_2k`). `available_tables()/_backgrounds()/_objects()` enumerate the vendored
   sets; `resolve_background` accepts the `_2k`-less stem. Choices render in the raycast
   preview too, not just RTX.
-- Outputs in `outputs/<name>/`: `simulation.mp4` (over-shoulder-left + wrist, side by side) +
+- Outputs in `outputs/<robot>/<name>/` (`<robot>` = the active robot's `FRANKA.short_name`, so the
+  two robots' renders never collide): `simulation.mp4` (over-shoulder-left + wrist, side by side) +
   per-camera PNG frames in `frames/` (`--frames-per-image N`) + `wrist_coverage.json`. Opt-in:
-  `--usd` (time-sampled scene USD at `outputs/<name>/<name>.usd`), `--npz` (state cache +
-  `geometry.pkl` that `robolabViz.rerender` replays without re-simulating).
+  `--usd` (time-sampled scene USD at `outputs/<robot>/<name>/<name>.usd`), `--npz` (state cache
+  `<name>.state.npz` + `geometry.pkl` that `robolabViz.rerender` replays without re-simulating).
 - `--objectview True` adds a fixed `object_view_camera` on the soft body (soft demos only),
   dumped as PNG stills only (`CameraConfig.in_combined_video=False`, so `simulation.mp4` is
   unchanged).
 
 ## Architecture
 
-- **Robot:** the *same* `fr3_franka_hand.urdf` converted to USD once via Isaac Sim's importer
-  (`robot_usd.py`, subprocess, cached in `assets/robots/`). Puppeteered per frame by an
-  *uncollapsed* FK mirror (`robot_fk.py`, `collapse_fixed_joints=False`) — the physics model
-  collapses fixed joints, so the hand link the wrist camera mounts to has no simulated body.
-  `test_final` asserts FK/sim parity on shared links.
+- **Robot (mirrors whichever robot `settings.yaml` selects — reads the active `FRANKA`).** The
+  renderer branches on `FRANKA.loader` / `FRANKA.render_from_physics`, so switching `robot:` in
+  `settings.yaml` switches the render path with no code change (and re-homes the output under a
+  different `short_name`):
+  - **`franka_panda_isaacsim` (the DEFAULT, native USD, `render_from_physics=True`)** — rendered/FK'd
+    **directly** from `FRANKA.usd_path` (`assets/robots/franka_panda_isaacsim/franka.usd`); the robot
+    links are drawn from the simulated meshes (see the rigid-only / `render_from_physics` gotcha below).
+  - **`fr3_franka_hand` (URDF, `render_from_physics=False`)** — the `fr3_franka_hand.urdf` is converted
+    to USD once via Isaac Sim's importer (`robot_usd.py`, subprocess, cached in `assets/robots/`) and
+    puppeteered per frame by an *uncollapsed* FK mirror (`robot_fk.py`, `collapse_fixed_joints=False`) —
+    the physics model collapses fixed joints, so the hand link the wrist camera mounts to has no
+    simulated body. `test_final` asserts FK/sim parity on shared links.
 - **Scene + objects:** time-sampled USD with pure `pxr` (`stage.py`, no kit): fixtures via
   payload; cable/rigid from Newton shapes; soft body as a per-frame deforming mesh. Two render
   paths consume the same USD: `raycast.py` (warp `wp.Mesh` raycaster, flat-shaded but exact —

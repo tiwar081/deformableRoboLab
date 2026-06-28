@@ -31,7 +31,8 @@ The FEM grid from Newton's `rigid_soft_contact` example (the only upstream two-w
 rigid+soft scene), scaled to the table:
 
 - `add_soft_grid(...)`, 4×4×4 cells of 0.0125 m (5×5×5 cm, 125 particles), centered at
-  `soft_start_pos`. `density=150`, `k_damp=10` (absolute, Newton 1.4 — see gotcha).
+  `soft_start_pos`. `density=150`, `k_damp=10` (absolute VBD damping units — see the
+  Newton-version gotcha in CLAUDE.md; re-derive on every Newton bump).
 - **One shared stiffness** `k_mu=5e2, k_lambda=2.5e3` (medium): soft enough to visibly dent/squash
   under the dropped cube and the pressing plate, firm enough to grasp and lift in `soft_pickplace`
   without squishing out of the pads. This single profile is a deliberate cross-comparability

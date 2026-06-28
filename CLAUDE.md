@@ -27,7 +27,10 @@ robot too (native-USD rendered/FK'd directly; URDF converted once via Isaac Sim)
 
 Building a simulation environment on Newton that handles **deformable bodies and
 deformable↔rigid interaction** realistically. Primary deformable types: **cables/wires,
-zip-ties, clothing, towels** (the current rod + FEM block are the first two).
+zip-ties, clothing, towels**. The rod (cable) + FEM block are done; the cloth **shell**
+infrastructure exists (`ClothConfig`, `add_cloth`, [docs/cloths.md](docs/cloths.md)) but
+cloth *manipulation* is in flight — the gripper can't yet move a flat sheet (see
+[docs/ONGOING.md](docs/ONGOING.md)).
 
 Final vision: render **custom scenes** (table + background + any combination of deformable
 and rigid assets) and **simulate a robot policy** in them, with high graphical realism
@@ -111,7 +114,8 @@ more. If a grasp needs tuning beyond the target force, fix it centrally in the p
 - **`grip.py`** — dynamic finite-mass proxies (`build_gripper_proxies`) + `TwoWayProxyCoupling`
   (the one grip: net-to-EE feedback, rigid + soft-particle harvest, no cap).
 - **`assets.py`** — object builders that encapsulate the collision/viz NUANCES: `add_table`,
-  `add_cable`, `add_soft_block`, `add_rigid_box`, `add_rubiks_cube`, `add_ycb_mesh`.
+  `add_cable`, `add_soft_block`, `add_cloth`, `add_rigid_box`, `add_rubiks_cube`, `add_ycb_mesh`
+  (+ the centralized `PARTICLE_SOLVER_KWARGS` / `cloth_solver_kwargs` VBD configs).
 - **`mesh_collision.py` + `coacd_worker.py`** — concave meshes COLLIDE as coacd convex-hull pieces
   while the full mesh RENDERS (a raw concave mesh ejects the VBD solve — SOLVERS.md §4). coacd
   segfaults if co-loaded with Newton, so decomposition runs in a subprocess and is disk-cached.
@@ -119,8 +123,9 @@ more. If a grasp needs tuning beyond the target force, fix it centrally in the p
 `examples/` keeps only the thin demo scripts + the run harness (`__init__.py`); the shared terminal
 helper lives in `deformableManipulationTools/helper.py`. Each demo is **one file** `<name>.py` (no
 separate `_robolab` files); it subclasses `robolabViz.scenic.ScenicGraspExample` and `--output-style`
-picks the renderer — `scenic` (default: `outputs/<name>/{frames/, simulation.mp4}`, both policy
-cameras) or `basic` (`outputs/<name>.usd`). The scenic glue (`robolabViz/scenic.py`) reads the robot
+picks the renderer — `scenic` (default: `outputs/<robot>/<name>/{frames/, simulation.mp4}`, both
+policy cameras; `<robot>` = the active robot's `short_name`) or `basic` (`outputs/<name>.usd`). The
+scenic glue (`robolabViz/scenic.py`) reads the robot
 base pose / table / soft-object position off the physics example, so a new demo gets the RoboLab look
 for free. Import the public API with `from deformableManipulationTools import …`.
 Grip-force tuning: [docs/gripper.md](docs/gripper.md).
@@ -137,9 +142,9 @@ injects energy for yawed finite-radius/small-radius cable contacts).
 `add_rod`-internal damping (`stretch_damping`, `bend_damping`) and tet `k_damp` are tuned for this
 build. But the per-shape **contact** `kd` values (cable `20·ke=4e5`, proxy `1e2·ke=5e6`) were
 ~1e4× the contact critical damping; once the alpha=0 force-runaway was removed they dominated the
-grip with a spurious velocity-proportional force (~4e4 N). The cable example now uses a re-derived
-physical contact `kd≈1e2` (`Example.contact_kd`). **If you bump Newton again, re-check both the
-internal damping AND the contact `kd`.**
+grip with a spurious velocity-proportional force (~4e4 N). The re-derived physical contact `kd≈1e2`
+now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), not in any example.
+**If you bump Newton again, re-check both the internal damping AND the contact `kd`.**
 
 ## Recurring mistakes to avoid (update as they recur)
 

@@ -5,43 +5,48 @@ and not yet settled, and any working hypotheses. Keep it lean — when something
 durable, promote it to CLAUDE.md (or the relevant `docs/` file) and delete it here. Reset this file
 at the start of each new big task.
 
-## Status: nothing in flight
+## In flight: `cloth_franka` — the gripper cannot even MOVE the cloth
 
-The grasp framework is settled and documented: ONE unified bidirectional asymmetric admittance grip
-for every object (rigid, cable, soft), the only per-demo knob being `GraspWindow.force_target` — see
-[gripper.md](gripper.md) (control law + knobs), [solver-architecture.md](solver-architecture.md)
-(routing), and CLAUDE.md (rules). Active robot is the Isaac Sim panda (`settings.yaml`).
+Goal: a Franka picks up / drags a flat T-shirt on the table (the first cloth-manipulation demo,
+`examples/cloth_franka.py`). The sim is **stable** — the blow-up fight is settled and now lives in
+[cloths.md](cloths.md) (≈critically-damped particle↔body contact + cloth self-contact; metre scale
+is fine). The live blocker is the grasp itself.
 
-## Recently settled
+**Symptom (current): the cloth does not move at all — not lifted, not dragged, not even nudged.**
+`cloth_franka` now replicates Newton's `example_cloth_franka` motion exactly: a ~45° tilt + per-corner
+SCOOP (approach → descend-to-surface OPEN → close → lift+translate → drag → release → retract),
+driving all 9 DOFs from IK keyframes (Newton's position-activation gripper), **not** the force
+`GripController`. The pads close on/over the shirt edge and the shirt stays put.
 
-- **`cloth_franka` no longer blows up.** Root cause was NOT the grip gains (the controller never even
-  reached force regulation): a flat sheet presents no two-sided pinch, so the grip blind-closed to the
-  floor, and the **over-stiff, undamped particle↔body contact** (`soft_contact_ke=1e5, kd=1e-4`,
-  carried over from the firm soft-block contact) then **ejected the ultra-light shell particles to
-  NaN**. The FEM block masks this (its tet network + internal damping absorb the impulse); a thin shell
-  has no such sink. Fix (all in the package): `ClothConfig.soft_contact_ke 1e5→1e4`, `kd 1e-4→1e1`
-  (≈critical, matches Newton's `example_cloth_franka`); enabled cloth particle **self-contact** via the
-  new centralized `cloth_solver_kwargs()` (the FEM-block `PARTICLE_SOLVER_KWARGS` keeps it off); set a
-  shell-scale `force_target=5` (sanctioned knob); removed the inert `particle_max_velocity` (VBD ignores
-  it). Verified headless: maxv ~28 m/s→~0, `first_blow=None` over the full run; soft_pickplace
-  unaffected. **cm-scale migration proved unnecessary** — metre scale is stable once the contact is
-  damped. See [cloths.md](cloths.md) for the full cloth setup guide.
-- **Still open — the shirt is NOT lifted; ROOT CAUSE is the gripper-proxy bridge, not physics/policy.**
-  `cloth_franka` now REPLICATES Newton's `example_cloth_franka` motion (45° tilt + per-corner scoop:
-  approach → descend-to-surface → close → lift → drag → release, direct finger control; via the new
-  `solve_gripper_ik(tilt=)`), and cloth friction is matched to Newton (`soft_contact_mu` 0.8→0.25). It
-  still doesn't lift OR drag the cloth. Instrumented A/Bs ruled out: friction (μ=0.25 vs 0 identical —
-  cloth not dragged either way), grasp height, robot (panda+fr3), and ±tilt/scoop. **The decisive
-  finding: the dynamic gripper PROXY (the box mirroring each finger in the VBD world — our one-way
-  contact bridge) JAMS the table at ~177 N instead of scooping UNDER the cloth edge**, and a pressing,
-  sliding pad does not carry the cloth (patch displacement ≈0). This is an ARCHITECTURAL limit of the
-  proxy bridge: Newton's robot fingers contact the cloth DIRECTLY in one VBD solver; ours mirrors the
-  fingers as proxies that jam the rigid table rather than wedge under a thin shell. A faithful cloth
-  pickup likely needs the fingers (or a finger-shaped collider) in the SAME VBD solver as the cloth, or
-  a draped/standing presentation so the proxy never has to wedge between cloth and table. See
-  [cloths.md](cloths.md) gotcha 6. Left visible (the demo shows the scoop + the jam).
+**Decisive A/B: gripper friction OFF behaves IDENTICALLY to friction ON.** `ClothConfig.soft_contact_mu`
+= 0.25 (matched to Newton) vs 0 are indistinguishable — cloth patch displacement ≈ 0 either way. So
+this is **not** a friction/μ-tuning problem: a pad that never really grips the shell can't drag it no
+matter how sticky it is. Earlier instrumented sweeps already ruled out grasp height, ±tilt/scoop, and
+robot (panda vs fr3) — all identical, no motion.
 
-## Known open items
-- **`pickplace_ycb_vbd` banana** holds to release but its grip is intermittent (curved, slip-prone mesh);
-  `force_target=80` is the firmest stable value. The rubik's-cube release-stick on the VBD path
+**Working root cause — the gripper-PROXY bridge, an architectural limit (NOT physics/policy/friction).**
+Our split design mirrors each MuJoCo finger as a dynamic box PROXY in the cloth's VBD world (the
+one-way contact bridge — see [gripper.md](gripper.md)). Instrumented: that proxy **jams the rigid
+table at ~177 N** instead of wedging UNDER the thin shell edge, and a pressing+sliding pad carries no
+cloth. Newton's `example_cloth_franka` succeeds because its robot fingers contact the cloth DIRECTLY
+inside ONE VBD solver — there is no proxy that must squeeze between cloth and table. With friction
+ruled out, this is the remaining explanation.
+
+**Next directions (unverified):**
+- Put a finger-shaped collider IN the cloth's VBD solver (not a mirrored proxy), so the fingers
+  contact the shell directly the way Newton's do. Most faithful, but breaks the split MuJoCo-robot ↔
+  VBD-object architecture the rest of the framework relies on.
+- Or change the cloth PRESENTATION so no under-wedge is needed: drape/stand a corner over a table
+  edge or backstop, or pre-lift a corner, so the proxy grasps a free feature instead of pinching a
+  flat sheet against the table.
+- Keep the failure VISIBLE in the demo (it shows the scoop + the jam); do not fake the grasp.
+
+Full cloth setup + the two grasp-limit gotchas: [cloths.md](cloths.md) §6 (flat-sheet top-down-pinch
+limit) and §7 (the proxy-bridge architectural blocker).
+
+## Known open items (other demos)
+- **`pickplace_ycb_vbd` banana** holds to release but its grip is intermittent (curved, slip-prone
+  mesh); `force_target=80` is the firmest stable value. The rubik's-cube release-stick on the VBD path
   (vs the clean rigid-only `pickplace_ycb_franka`) is a penalty-contact stiction artifact, deferred.
+</content>
+</invoke>

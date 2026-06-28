@@ -4,9 +4,16 @@
 also run the *object side* of every demo through it — rigid cube/sheet/cable/bowl,
 plus the **dynamic finite-mass** gripper "proxy" bodies — so the robot (MuJoCo) and the objects
 share one contact world. That works, but rigid bodies in VBD have a row of sharp
-edges. Recording them here so the next person doesn't relearn them. (Troubles #1–3 are the
-*kinematic*-proxy era; the proxies are now dynamic finite-mass — see "How object↔gripper two-way
-physics is implemented" below.)
+edges. Recording them here so the next person doesn't relearn them.
+
+> **Read this first.** Troubles #1–3 below describe the **superseded kinematic-proxy +
+> force-latch era**, kept for the lessons but NOT what the code does today. Both the *kinematic*
+> proxy (#1–2) and the *force-triggered position latch* (#2) are gone: the grip is now **dynamic
+> finite-mass proxies** closed by a **force-controlled admittance regulator** (no latch), and the
+> VBD object side runs **NVIDIA default-hard contacts** (`alpha=0.95`), not the `alpha=0` those
+> troubles call for. For what the code does NOW see [gripper.md](gripper.md),
+> [solver-architecture.md](solver-architecture.md), and the "current dynamic proxy" section below.
+> The traps in #4–5 (mesh fragility, light-body ejection) are still live.
 
 ### 1. VBD won't hand you forces on a kinematic body
 
@@ -39,11 +46,19 @@ the penalty force into a multi-m/s pinch-ejection. Two things died here:
 ### 3. Pinch ejection from the moving kinematic pads
 
 Even without feedback, penetration accumulating against the *moving* proxy pads
-spikes the contact force and kicks a pinched object out at multi-m/s. The object
-side needs the non-default VBD contact settings: `rigid_avbd_contact_alpha=0.0`
-(full per-step penetration correction) and `rigid_contact_stick_motion_eps=0.0`
-(no sticky contact-point replay). With the defaults (`alpha=0.95`, sticky replay
-on) the residual penetration against the pads ejects grasped objects.
+spikes the contact force and kicks a pinched object out at multi-m/s. The
+kinematic-proxy era fixed this with the non-default VBD setting
+`rigid_avbd_contact_alpha=0.0` (full per-step penetration correction).
+
+**This is now reversed — `alpha=0` is the wrong choice for the *dynamic* proxy.** It
+accumulates the ALM multiplier into a 1e4–1e6 N phantom grip (a kinematic proxy early-outs
+so the runaway is computed-but-not-applied — stable, uncontrolled — but a dynamic proxy
+*applies* it and diverges; see the "current dynamic proxy" section below). The object side
+now runs **NVIDIA default-hard contacts** (`alpha=0.95`, no `rigid_contact_history`) and keeps
+only `rigid_contact_stick_motion_eps=0.0` (no sticky contact-point replay) — see
+`framework.py` `_build_split_mujoco_vbd` (`solver_kwargs = dict(iterations=…,
+rigid_contact_stick_motion_eps=0.0)`) and [solver-architecture.md](solver-architecture.md).
+Pinch stability now comes from physical contact damping (the re-derived `kd`), not `alpha=0`.
 
 ### 4. Mesh rigid bodies are fragile in the narrow phase
 
@@ -79,29 +94,31 @@ each a hard segfault or an eject-to-infinity, not a clean error:
   more stable. (We scale the bowl body to an exact target mass after finalize so a
   `--bowl-mass` knob is independent of the convex-piece volume.) Root cause: contact
   stability is the dimensionless `η = ke·dt²/m_reduced` of the pair, and the blanket
-  `ke=5e4` puts a sub-~0.1 kg body past `η=1`; the `alpha=0` correction then converts
+  `ke=5e4` puts a sub-~0.1 kg body past `η=1`; the over-correction then converts
   penetration into a `∝1/m` velocity and ejects the lighter-coupled member (often the
-  *other* body — e.g. at `--bowl-mass 0.05` the 0.2 kg cube flies, not the bowl). When
-  a realistic mass is not an option, the general fix is a **per-substep rigid-body
-  velocity clamp** on `body_qd` (the rigid analog of `particle_max_velocity`): it
-  bounds any spike before it feeds the next inertial prediction, so the runaway never
-  escalates and a 0.05 kg bowl behaves like the 0.5 kg one. Stiffness retuning can't
-  fully fix it because `ke` is averaged across the pair (`avg_ke ≥ ke_heavy/2`). See
-  CLAUDE.md **Light-body contact stability**.
+  *other* body — e.g. at `--bowl-mass 0.05` the 0.2 kg cube flies, not the bowl).
+  Stiffness retuning can't fully fix it because `ke` is averaged across the pair
+  (`avg_ke ≥ ke_heavy/2`). **The fix here is realistic masses + physical contact
+  damping — NOT a velocity clamp.** Clamping object velocity is forbidden by the
+  CLAUDE.md physics rule "No velocity clamps on objects" (robot/table excepted): a clamp
+  hides the instability instead of curing it. (`particle_max_velocity` is moot anyway —
+  inert under VBD, see `assets.py`.)
 - **Residual ring.** Even stable, the penalty contacts leave brief high-velocity
   transients at impact/grasp moments (they don't displace anything, but they're not
   pretty). They're chaotic/non-deterministic and *increase* with more substeps —
-  i.e. not a dt instability. Honest open item; likely a contact-damping question
-  (compounded by Newton 1.4's absolute-damping reinterpretation — see ONGOING.md).
+  i.e. not a dt instability. Honest open item; likely a contact-damping question.
+  The absolute-damping `kd` semantics must be re-derived on every Newton bump — see
+  CLAUDE.md **Newton version** (current pin: Newton `v0.2.3-665`).
 
 ### Bottom line
 
 VBD is fine as a shared rigid+deformable contact world *if* you treat its rigid
-contacts as stiff penalty contacts: no in-loop cross-solver force feedback (latch
-instead), `alpha=0` to keep pinched objects in, convex-decompose any dynamic
-concave mesh, keep mesh BVHs small and unshared, and use realistic masses. The
-public API is enough (`collect_rigid_contact_forces`, `soft_contact_*`,
-`State.body_f` on the MuJoCo side) — we never modified or imported `newton._src`.
+contacts as stiff penalty contacts: keep the cross-solver feedback **net-to-EE and
+one-step-lagged** (never per-finger), run **NVIDIA default-hard contacts** with physical
+contact damping (NOT `alpha=0` — that diverges a dynamic proxy), convex-decompose any
+dynamic concave mesh, keep mesh BVHs small and unshared, and use realistic masses. The
+public API is enough (`collect_rigid_contact_forces`, `soft_contact_*`, `State.body_f`
+on the MuJoCo side) — we never modified or imported `newton._src`.
 
 ## How object↔gripper two-way physics is implemented (current: dynamic proxy)
 
@@ -114,8 +131,10 @@ authoritative description is [gripper.md](gripper.md); the essentials:
 pose+velocity with the gravity + lagged-contact-wrench velocity deltas pre-subtracted
 (momentum-consistent undo), so it stays slaved to the finger *yet participates as a finite-mass
 contact body* in the VBD solve. The squeeze is a real VBD contact (penalty normal + Coulomb
-friction) — the friction carries the object through the lift. The close target is position-
-controlled (`object_half + margins − grasp_interference`); there is **no force-triggered latch**.
+friction) — the friction carries the object through the lift. The grip width is **force-controlled**
+by the centralized `grip.GripController` (a bidirectional asymmetric admittance regulator; the one
+per-demo knob is `GraspWindow.force_target`) — **not** a preset width and **not** a force-triggered
+latch. See [gripper.md](gripper.md).
 
 **Backward — object → arm/EE (every substep, net).** The object→proxy reaction is harvested (rigid
 via `SolverVBD.collect_rigid_contact_forces`; soft via recomputed `ke·penetration` over the public
@@ -124,10 +143,10 @@ remains) is fed onto the **arm/EE** one substep later — so the arm DOES feel t
 reaction is never fed to the gripper DOFs (that pushes the pads open and loses the grasp).
 
 This **supersedes** the earlier *kinematic*-proxy + force-triggered-latch design (Troubles #1–3
-below were its symptoms). A kinematic proxy can't return body forces and, with `alpha=0`+history,
+above were its symptoms). A kinematic proxy can't return body forces and, with `alpha=0`+history,
 accumulated the ALM multiplier into a 1e4–1e6 N phantom grip; the dynamic proxy with NVIDIA
 default-hard contacts and re-derived physical `kd` is stable and gives a bounded ~10–90 N grip.
-Full analysis in [ONGOING.md](ONGOING.md).
+Full analysis in [gripper.md](gripper.md) and [solver-architecture.md](solver-architecture.md).
 
 # Newton Example Reference
 
@@ -281,8 +300,9 @@ implicit solve. Differences are in topology and what is kinematically driven.
   down the chain and across the 90deg bends. Demonstrates twist transport vs bend
   stiffness.
 - `SolverVBD` with hard contact (`rigid_avbd_contact_alpha=0`); first capsules
-  kinematically driven by writing `body_q` each substep (one-way) — the alpha=0 choice
-  this repo's object side borrows.
+  kinematically driven by writing `body_q` each substep (one-way). (This repo's object side
+  once borrowed this `alpha=0` choice but has since reverted to NVIDIA default-hard contacts —
+  `alpha=0` diverges the dynamic gripper proxy; see the dynamic-proxy notes above.)
 
 `example_cable_pile`:
 - a dense pile of many wavy rods (40 segments) stacked in alternating-orientation
