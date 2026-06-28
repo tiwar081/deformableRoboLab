@@ -60,7 +60,9 @@ def add_table(builder: newton.ModelBuilder, table: TableConfig = TABLE) -> int:
 def add_soft_block(builder: newton.ModelBuilder, cfg: SoftBlockConfig, center_pos) -> None:
     """Passive FEM block, centered in x/y at ``center_pos`` and resting on ``center_pos[2]``."""
     builder.default_particle_radius = cfg.particle_radius
-    builder.particle_max_velocity = 50.0
+    # NOTE: builder.particle_max_velocity is INERT under SolverVBD (only XPBD/MPM/the base
+    # integrator honor it). It is not set here so nothing relies on a non-existent velocity
+    # ceiling — particle stability must come from the contact material (ke/kd), not a cap.
     dx, dy, dz = cfg.dim
     builder.add_soft_grid(
         pos=wp.vec3(float(center_pos[0] - 0.5 * dx * cfg.cell),
@@ -92,11 +94,53 @@ class ClothConfig:
     edge_ke: float = 5.0              # bending
     edge_kd: float = 0.5
     contact_margin: float = 0.01
-    # proxy<->particle + body<->cloth contact (read by the framework like SoftBlockConfig)
-    soft_contact_ke: float = 1.0e5
-    soft_contact_kd: float = 1.0e-4
+    # proxy<->particle + body<->cloth contact (read by the framework like SoftBlockConfig).
+    # CRITICAL for a thin shell: the ultra-light cloth particles (~3e-5 kg) have no volumetric tet
+    # network or internal damping to absorb a contact impulse (unlike the FEM soft block, which masks
+    # an under-damped contact), so the contact itself must be physically damped or the pads eject the
+    # particles to NaN. Critical damping kd_crit = 2*sqrt(ke*m) ~ 1-4 N*s/m here; 1e1 is safely
+    # over-critical and matches Newton's own example_cloth_franka (soft_contact_ke=1e4, kd=1e1). The
+    # old ke=1e5/kd=1e-4 (carried over from the firm soft-block contact) was ~5 orders below critical
+    # and over-stiff for this mass -> ejection. NOTE: the grip-force harvest (grip.py) reconstructs the
+    # pad reaction from soft_contact_ke; cloth_franka wires coupling_soft_ke = CLOTH.soft_contact_ke, so
+    # ke stays consistent across model penalty / VBD solve / harvest from this single source.
+    soft_contact_ke: float = 1.0e4
+    soft_contact_kd: float = 1.0e1
     soft_contact_kf: float = 1.0e3
-    soft_contact_mu: float = 0.8
+    # Cloth (particle↔body) friction. Matched to Newton's example_cloth_franka, which sets
+    # model.soft_contact_mu = 0.25 for the shirt (was 0.8 here). The effective cloth↔pad friction is
+    # the VBD geometric mean √(soft_contact_mu · pad μ); the pad μ (GRIP.proxy_mu=1.0) is unchanged.
+    soft_contact_mu: float = 0.25
+    # ---- VBD particle self-contact (thin-shell fidelity; cf. cloth_solver_kwargs) ----
+    # A thin shell folded/draped on itself MUST self-collide or layers pass through each other (and
+    # through the table) — the FEM block never needs this (its volume can't fold), which is why the
+    # shared PARTICLE_SOLVER_KWARGS leaves self-contact OFF. Newton's example_cloth_franka enables it;
+    # these are its (cm-scale) values converted to this framework's metre scale. The topological filter
+    # threshold + rest-shape exclusion radius stop mesh-adjacent vertices from self-colliding at rest.
+    self_contact: bool = True
+    self_contact_radius: float = 0.002       # [m] particle self-collision radius
+    self_contact_margin: float = 0.003       # [m] broadphase margin for self-contact
+    self_contact_filter_threshold: int = 1   # topological hops excluded from self-contact
+    self_contact_rest_exclusion_radius: float = 0.006  # [m] rest-shape neighbours excluded
+
+
+def cloth_solver_kwargs(cfg: ClothConfig) -> dict:
+    """Centralized SolverVBD kwargs for a CLOTH scene (counterpart to PARTICLE_SOLVER_KWARGS, which is
+    the FEM-block set). Keeps the thin-shell solver config — chiefly particle SELF-contact, which the
+    block set omits — in the package, so a cloth demo declares only its scene, not solver physics."""
+    return dict(
+        rigid_body_contact_buffer_size=2048,
+        rigid_body_particle_contact_buffer_size=16384,
+        particle_enable_tile_solve=False,
+        particle_collision_detection_interval=-1,
+        particle_enable_self_contact=cfg.self_contact,
+        particle_self_contact_radius=cfg.self_contact_radius,
+        particle_self_contact_margin=cfg.self_contact_margin,
+        particle_topological_contact_filter_threshold=cfg.self_contact_filter_threshold,
+        particle_rest_shape_contact_exclusion_radius=cfg.self_contact_rest_exclusion_radius,
+        particle_vertex_contact_buffer_size=32,
+        particle_edge_contact_buffer_size=64,
+    )
 
 
 def add_cloth(builder: newton.ModelBuilder, cfg: ClothConfig, center_pos, *, yaw: float = 0.0):
@@ -112,7 +156,7 @@ def add_cloth(builder: newton.ModelBuilder, cfg: ClothConfig, center_pos, *, yaw
     verts = verts - verts.mean(axis=0)            # centre the mesh at the origin (its native frame is offset)
     verts[:, 2] *= cfg.flatten_z                  # lay the draped shirt flat so it starts clear of the gripper
     builder.default_particle_radius = cfg.particle_radius
-    builder.particle_max_velocity = 50.0
+    # See add_soft_block: particle_max_velocity is inert under SolverVBD; not set (false safety net).
     p_start = builder.particle_count
     builder.add_cloth_mesh(
         pos=wp.vec3(*[float(x) for x in center_pos]),

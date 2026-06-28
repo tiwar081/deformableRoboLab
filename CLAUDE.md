@@ -33,7 +33,7 @@ Final vision: render **custom scenes** (table + background + any combination of 
 and rigid assets) and **simulate a robot policy** in them, with high graphical realism
 (NVIDIA Isaac Sim / RTX is the likely high-fidelity render path).
 
-Priorities, in order: **1) physics fidelity → 2) render quality → 3) speed.**
+Priorities, in order: **1) physics fidelity → 2) speed. → 3) render quality**
 
 ## Solver framework rule
 
@@ -188,7 +188,10 @@ This repo's own docs:
   — ONE unified bidirectional asymmetric admittance regulator for every object (rigid, cable, soft);
   the one per-demo knob is `GraspWindow.force_target`.
 - [docs/deformables.md](docs/deformables.md) — cable (rod) and soft-FEM-block tuned parameters
-  + reasons; notes on future cloth/zip-tie deformables.
+  + reasons; notes on future zip-tie deformables.
+- [docs/cloths.md](docs/cloths.md) — how to add a **cloth-type** deformable (shirt/towel/sheet):
+  `ClothConfig` + `add_cloth` + `cloth_solver_kwargs`, the grasp knob, and the cloth-specific gotchas
+  (the ≈critical `soft_contact_kd` a thin shell needs, particle self-contact, the flat-sheet grasp limit).
 - [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.
 - [docs/robolab-graphics.md](docs/robolab-graphics.md) — the `robolabViz/` RoboLab-look
   renderer (raycast + offline RTX), customization surface, vendored assets, render gotchas.

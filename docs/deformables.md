@@ -36,9 +36,12 @@ rigid+soft scene), scaled to the table:
   under the dropped cube and the pressing plate, firm enough to grasp and lift in `soft_pickplace`
   without squishing out of the pads. This single profile is a deliberate cross-comparability
   tradeoff over the old per-demo tuning (pillow-soft / firm / small-firm).
-- Contact: `soft_contact_ke=1e5, kd=1e-4, kf=1e3, mu=0.8`, `particle_max_velocity=50`,
-  `particle_enable_tile_solve=False`, particle radius 0.0035 (the contact boundary sits one
-  particle radius above the rendered surface — large radii read as contact-before-touching).
+- Contact: `soft_contact_ke=1e5, kd=1e-4, kf=1e3, mu=0.8`, `particle_enable_tile_solve=False`,
+  particle radius 0.0035 (the contact boundary sits one particle radius above the rendered surface —
+  large radii read as contact-before-touching). The block tolerates the near-zero `kd` because its
+  tet network + internal `k_damp=10` dissipate contact energy and it's grasped gently; a thin **cloth**
+  shell does NOT (it needs ≈critical `soft_contact_kd` — see [cloths.md](cloths.md)).
+  Note: `particle_max_velocity` is **not** set — it is inert under `SolverVBD` (XPBD/MPM only).
 - The body-particle pair material is the **average** of `soft_contact_*` and the rigid shape's
   material, and VBD sums per-contact forces on the body. The pressing cube/plate keep their authored
   `ke=5e4`/`1e5` (registered by their asset builder, auto-restored after the blanket fill); the
@@ -48,10 +51,15 @@ rigid+soft scene), scaled to the table:
 - Two-way coupling stability ~ `sqrt(pair_ke / m_body) · substep_dt` and particle mass; the
   16-substep examples sit comfortably within it (upstream uses 32 substeps for a heavier impactor).
 
+## Cloth (thin shell) — see [cloths.md](cloths.md)
+
+Cloth (shirt/towel/sheet) is implemented as a separate deformable type: VBD `add_cloth_mesh`, its own
+`ClothConfig` + `cloth_solver_kwargs` (particle self-contact ON, which the block omits), and a
+≈critically-damped `soft_contact_kd` the light shell requires. The reference demo is `cloth_franka`.
+Full authoring guide + gotchas: **[cloths.md](cloths.md)**.
+
 ## Future deformables (project goal)
 
-Target object types beyond the rod/block: **zip-ties, clothing, towels** (cloth). Cloth in
-Newton is also VBD (`add_cloth_grid`/mesh); expect the same dynamic-proxy two-way bridge +
-light-element `η` stability constraints to dominate, and the same `_sync_viz_state`
-particle-copy rule. A cloth grip would use particle-colliding proxies + the soft harvest, like
-`soft_pickplace`. Start from NVIDIA's cloth-manipulation recipe — [NVIDIA_cloth_manip.md](NVIDIA_cloth_manip.md).
+Remaining target types: **zip-ties** (a stiff cable variant). Same dynamic-proxy two-way bridge +
+light-element `η` stability constraints, and the same `_sync_viz_state` particle-copy rule. Start
+from NVIDIA's cloth-manipulation recipe — [NVIDIA_cloth_manip.md](NVIDIA_cloth_manip.md).

@@ -57,6 +57,9 @@ class ScenicGraspExample(GraspExample):
     def __init__(self, viewer, args):
         super().__init__(viewer, args)
         self._scenic = getattr(args, "output_style", "scenic") == "scenic"
+        # --output graphs emits ONLY the gripper physics PNG (run harness), so skip the (expensive)
+        # scenic raycast render + simulation.mp4 entirely; mp4/both still render the video.
+        self._emit_video = getattr(args, "output", "mp4") in ("mp4", "both")
         if self._scenic:
             self._setup_scenic(args)
 
@@ -184,7 +187,7 @@ class ScenicGraspExample(GraspExample):
     # ---- per-frame loop ----
     def render(self) -> None:
         super().render()
-        if not self._scenic:
+        if not self._scenic or not self._emit_video:
             return
 
         link_tfs = self.viz_fk.link_world_transforms(self.robot_state_0.joint_q)
@@ -225,6 +228,8 @@ class ScenicGraspExample(GraspExample):
                 fps=self.fps,
             )
             print(f"[robolabViz] State cache saved to {cache_path}")
+        if not self._emit_video:
+            return  # --output graphs: no scenic video was rendered, nothing to encode/close
         self.preview_summary = self.preview.close()
         if self.preview_summary:
             cov = self.preview_summary["wrist_mean_coverage"]
@@ -259,7 +264,7 @@ class ScenicGraspExample(GraspExample):
         if checked < 5:
             raise ValueError(f"FK parity check matched only {checked} links; label mapping is broken.")
 
-        if self._viz_frames_written < min(self._viz_num_frames, 1):
+        if self._emit_video and self._viz_frames_written < min(self._viz_num_frames, 1):
             raise ValueError("No viz frames were written.")
 
         # Contact/visual consistency: the visible work table must cover the whole
@@ -296,7 +301,9 @@ class ScenicGraspExample(GraspExample):
                     f"Wrist camera sees {robot_cov:.0%} robot pixels on average — view is blocked by the gripper."
                 )
 
-        # simulation.mp4 is the primary scenic output: it must exist and be non-empty.
-        mp4 = self.preview.output_dir / "simulation.mp4"
-        if not mp4.exists() or mp4.stat().st_size < 1024:
-            raise ValueError(f"Expected scenic video {mp4} was not written.")
+        # simulation.mp4 is the primary scenic output: it must exist and be non-empty (only when the
+        # run was asked to emit video — --output graphs skips the render).
+        if self._emit_video:
+            mp4 = self.preview.output_dir / "simulation.mp4"
+            if not mp4.exists() or mp4.stat().st_size < 1024:
+                raise ValueError(f"Expected scenic video {mp4} was not written.")

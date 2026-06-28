@@ -66,6 +66,14 @@ def create_parser() -> argparse.ArgumentParser:
              "basic: a plain Newton USD at outputs/<name>.usd.",
     )
     parser.add_argument(
+        "--output",
+        type=str,
+        default="mp4",
+        choices=["mp4", "graphs", "both"],
+        help="What to emit: mp4 (scenic video), graphs (per-frame gripper physics PNG), or both. "
+             "graphs are produced on the VBD (proxy) demos only; graphs-only skips the scenic render.",
+    )
+    parser.add_argument(
         "--viewer",
         type=str,
         default="usd",
@@ -159,10 +167,36 @@ def init(parser: argparse.ArgumentParser | None = None, example_name: str = "exa
 
 def run(example, args) -> None:
     viewer = example.viewer
+
+    # Centralized per-frame gripper physics graphs (--output graphs|both). VBD path only: a demo with
+    # no proxy coupling (rigid-only MuJoCo grasp) records nothing even when graphs are requested.
+    recorder = None
+    if (getattr(args, "output", "mp4") in ("graphs", "both")
+            and getattr(example, "coupling", None) is not None
+            and getattr(example, "grasp_windows", None) is not None):
+        from deformableManipulationTools.instrumentation import PhysicsRecorder
+        recorder = PhysicsRecorder(example.fps, example.grasp_windows)
+
     while viewer.is_running():
         if viewer.should_step():
             example.step()
+            if recorder is not None:
+                try:
+                    sample = example.gripper_instrumentation()
+                except Exception as exc:
+                    print(f"[instrumentation] disabled after error: {exc!r}")
+                    recorder = None
+                    sample = None
+                if recorder is not None and sample is not None:
+                    recorder.record(*sample)
         example.render()
+
+    # Save the physics graphs BEFORE test_final so a failing assertion can't discard them.
+    if recorder is not None and recorder.frames:
+        out_dir = Path(getattr(args, "output_dir", None) or Path(args.output_path).parent)
+        png = out_dir / "physics.png"
+        recorder.save(png, title=f"{out_dir.name} — gripper physics")
+        print(f"[instrumentation] physics graphs -> {png}")
 
     if args.test:
         if not hasattr(example, "test_final"):

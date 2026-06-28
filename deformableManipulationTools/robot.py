@@ -126,14 +126,21 @@ def make_robot_solver(model, contact_max: int, robot: RobotConfig = FRANKA):
 
 
 def solve_gripper_ik(model, state, ee_body: int, ee_offset: np.ndarray, target_pos: np.ndarray,
-                     gripper_open: float, yaw: float = 0.0, robot: RobotConfig = FRANKA) -> np.ndarray:
-    """IK the TCP (link7 + ee_offset) to ``target_pos`` keeping the home orientation (optionally
-    yawed about world z); returns the 9-vector joint target with the fingers held open."""
+                     gripper_open: float, yaw: float = 0.0, tilt: float = 0.0,
+                     tilt_axis: tuple[float, float, float] = (1.0, 0.0, 0.0),
+                     robot: RobotConfig = FRANKA) -> np.ndarray:
+    """IK the TCP (link7 + ee_offset) to ``target_pos`` keeping the home orientation, optionally
+    yawed about world z then TILTED about ``tilt_axis`` (world frame) by ``tilt`` rad. A non-zero
+    tilt turns the straight-down approach into an angled one — needed to SCOOP/pinch a thin object
+    (e.g. a cloth corner) whose flat top a vertical jaw can only press, not grasp. Returns the
+    9-vector joint target with the fingers held open."""
     body_q = state.body_q.numpy()[ee_body]
     ee_tf = wp.transform(*body_q)
     rot = wp.transform_get_rotation(ee_tf)
     if yaw != 0.0:
         rot = wp.quat_from_axis_angle(wp.vec3(0.0, 0.0, 1.0), yaw) * rot
+    if tilt != 0.0:
+        rot = wp.quat_from_axis_angle(wp.vec3(*tilt_axis), tilt) * rot
     target_q = wp.array(model.joint_q, shape=(1, model.joint_coord_count))
     pos_obj = ik.IKObjectivePosition(
         link_index=ee_body, link_offset=wp.vec3(*ee_offset),

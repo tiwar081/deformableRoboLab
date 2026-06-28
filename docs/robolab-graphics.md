@@ -77,3 +77,10 @@ assume that checkout can be deleted.**
   pipeline points at). The viz model must finalize BEFORE the object model. This is now enforced
   **automatically** by `deformableManipulationTools.framework.GraspExample` (it detects mesh shapes
   and orders the build so the object model owns the live BVH) — no example need handle it.
+- **`render_from_physics` on a rigid-only scene emitted scene objects as robot links** (`KeyError`
+  at render frame 0, e.g. on `pickplace_ycb_franka`'s bowl). On the rigid-only path the scene's
+  objects are MERGED into the robot model, so `raycast._robot_link_meshes_from_model` (which draws the
+  robot from its simulated meshes) saw them as links — but they have no FK transform. Fix: it takes
+  `object_body_min` (= `object_body_start`) and skips bodies `>= object_body_min`; those render as
+  `object_body` instances (posed by body state), the exact complement of `_build_object_instances`'s
+  cutoff. Only `render_from_physics=True` robots (the panda) hit it; the USD-mesh path (fr3) never did.

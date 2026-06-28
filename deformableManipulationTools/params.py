@@ -91,7 +91,7 @@ class GripConfig:
     proxy_inertia: float = 0.1        # kg·m², isotropic
     proxy_ke: float = 5.0e4           # proxy contact stiffness [N/m]
     proxy_kd: float = 1.0e2           # proxy contact damping [N·s/m] (absolute; re-derived, was 5e6 ~1e4x critical)
-    proxy_mu: float = 1.0             # proxy/pad friction
+    proxy_mu: float = 1.5             # proxy/pad friction
     proxy_margin: float = 0.001       # contact margin [m]
     # Centralized proxy contact gap [m]: force builds over this distance (f≈ke·(gap−separation)), so it
     # sets how far the pad sits off the object at a given squeeze. SMALL on purpose — a large gap (the

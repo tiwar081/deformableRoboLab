@@ -293,6 +293,57 @@ class GraspExample:
         path, where the grasp is true two-way MuJoCo contact (read it from the robot solver instead)."""
         return [] if self.coupling is None else self.coupling.raw_force_norms()
 
+    def gripper_instrumentation(self):
+        """Per-frame ``(penetration_m, grip_force_N, grip_squeeze_N, n_contact_points)`` of the gripper
+        PADS against the object, for the centralized physics graphs (instrumentation.py). ``grip_force``
+        is the raw min-of-pads reaction MAGNITUDE; ``grip_squeeze`` is the closing-axis PROJECTED squeeze
+        — the quantity the admittance regulator drives to ``force_target`` (so the target/engage/deadband
+        reference lines belong on it). VBD path ONLY — returns ``None`` on the rigid-only MuJoCo grasp
+        (no proxies). Read host-side off the public object-contact buffers, never inside the captured step."""
+        if self.coupling is None:
+            return None
+        from .instrumentation import gripper_contact_metrics
+        if not hasattr(self, "_instr_shape_body"):
+            self._instr_shape_body = self.object_model.shape_body.numpy()
+            self._instr_particle_radius = (
+                self.object_model.particle_radius.numpy() if self.has_particles else None)
+        pads = np.asarray(self.gripper_proxy_bodies[:2], dtype=np.int64)     # the two grip pads
+        proxies = np.asarray(self.gripper_proxy_bodies, dtype=np.int64)       # pads + palm blocker
+        body_q = self.object_state_0.body_q.numpy()
+        c = self.object_contacts
+        rc = int(c.rigid_contact_count.numpy()[0])
+        rigid = None
+        if rc > 0:
+            rigid = {
+                "count": rc,
+                "shape0": c.rigid_contact_shape0[:rc].numpy(),
+                "shape1": c.rigid_contact_shape1[:rc].numpy(),
+                "point0": c.rigid_contact_point0[:rc].numpy(),
+                "point1": c.rigid_contact_point1[:rc].numpy(),
+                "normal": c.rigid_contact_normal[:rc].numpy(),
+                "margin0": c.rigid_contact_margin0[:rc].numpy(),
+                "margin1": c.rigid_contact_margin1[:rc].numpy(),
+            }
+        soft, particle_q = None, None
+        if self.has_particles:
+            sc = int(c.soft_contact_count.numpy()[0])
+            if sc > 0:
+                soft = {
+                    "count": sc,
+                    "particle": c.soft_contact_particle[:sc].numpy(),
+                    "shape": c.soft_contact_shape[:sc].numpy(),
+                    "body_pos": c.soft_contact_body_pos[:sc].numpy(),
+                    "normal": c.soft_contact_normal[:sc].numpy(),
+                }
+                particle_q = self.object_state_0.particle_q.numpy()
+        pen, n = gripper_contact_metrics(
+            body_q, self._instr_shape_body, pads, proxies,
+            rigid=rigid, soft=soft, particle_q=particle_q,
+            particle_radius=self._instr_particle_radius)
+        force = float(self.coupling.grip_force_signal.numpy()[0])
+        squeeze = float(self.coupling.grip_squeeze_signal.numpy()[0])
+        return pen, force, squeeze, n
+
     def _apply_material_override(self, ov: dict) -> None:
         ke = self.object_model.shape_material_ke.numpy()
         kd = self.object_model.shape_material_kd.numpy()
