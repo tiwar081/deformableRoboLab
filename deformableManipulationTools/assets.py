@@ -111,7 +111,7 @@ class ClothConfig:
     # model.soft_contact_mu = 0.25 for the shirt (was 0.8 here). The effective cloth↔pad friction is
     # the VBD geometric mean √(soft_contact_mu · pad μ); the pad μ (GRIP.proxy_mu=1.0) is unchanged.
     soft_contact_mu: float = 0.25
-    # ---- VBD particle self-contact (thin-shell fidelity; cf. cloth_solver_kwargs) ----
+    # ---- VBD particle self-contact (thin-shell fidelity; cf. cloth_particle_kwargs) ----
     # A thin shell folded/draped on itself MUST self-collide or layers pass through each other (and
     # through the table) — the FEM block never needs this (its volume can't fold), which is why the
     # shared PARTICLE_SOLVER_KWARGS leaves self-contact OFF. Newton's example_cloth_franka enables it;
@@ -124,13 +124,13 @@ class ClothConfig:
     self_contact_rest_exclusion_radius: float = 0.006  # [m] rest-shape neighbours excluded
 
 
-def cloth_solver_kwargs(cfg: ClothConfig) -> dict:
-    """Centralized SolverVBD kwargs for a CLOTH scene (counterpart to PARTICLE_SOLVER_KWARGS, which is
-    the FEM-block set). Keeps the thin-shell solver config — chiefly particle SELF-contact, which the
-    block set omits — in the package, so a cloth demo declares only its scene, not solver physics."""
+def cloth_particle_kwargs(cfg: ClothConfig) -> dict:
+    """The per-deformable PARTICLE SolverVBD config for a CLOTH (thin shell) — chiefly particle
+    SELF-contact, which the FEM-block set (PARTICLE_SOLVER_KWARGS) omits. This is applied CENTRALLY by
+    the framework whenever a cloth is present (it auto-detects shell vs FEM from the finalized model),
+    so a cloth demo never declares solver physics — adding a cloth to any scene needs no demo override.
+    Counterpart to PARTICLE_SOLVER_KWARGS; both exclude the scene-specific rigid_body_* buffer sizes."""
     return dict(
-        rigid_body_contact_buffer_size=2048,
-        rigid_body_particle_contact_buffer_size=16384,
         particle_enable_tile_solve=False,
         particle_collision_detection_interval=-1,
         particle_enable_self_contact=cfg.self_contact,

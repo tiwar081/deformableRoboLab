@@ -236,7 +236,10 @@ class GraspExample:
         newton.eval_fk(self.object_model, self.object_model.joint_q, self.object_model.joint_qd, self.object_state_1)
         wp.copy(self.object_control.joint_target_q, self.object_model.joint_q)
         solver_kwargs = dict(iterations=args.vbd_iterations, rigid_contact_stick_motion_eps=0.0)
-        solver_kwargs.update(self.object_solver_kwargs)
+        solver_kwargs.update(self._particle_solver_config())   # CENTRAL per-deformable particle config
+        solver_kwargs.update(self.object_solver_kwargs)        # scene-specific buffers (may still override)
+        self._effective_object_solver_kwargs = {k: v for k, v in solver_kwargs.items()
+                                                if k not in ("iterations", "rigid_contact_stick_motion_eps")}
         self.object_solver = newton.solvers.SolverVBD(self.object_model, **solver_kwargs)
         self.coupling = self._make_coupling()
 
@@ -262,6 +265,22 @@ class GraspExample:
         """Force-stop demos: launch the policy kernel writing ONLY the arm DOFs (0..n_arm_dof-1) of
         ``robot_control.joint_target_q``; the finger DOFs are owned by the GripController."""
         raise NotImplementedError
+
+    def _particle_solver_config(self) -> dict:
+        """CENTRAL per-deformable-type particle SolverVBD config, auto-selected from the finalized
+        object model (no demo override): a CLOTH (thin shell — surface tris/edges, NO tets) gets the
+        self-contact config from its ClothConfig; an FEM block (has tets) gets PARTICLE_SOLVER_KWARGS;
+        a cable-only / rigid object (no particles) gets nothing. This is what makes "add a cloth to any
+        demo" need zero solver settings in the demo. Demo ``object_solver_kwargs`` (scene buffer sizes)
+        still merge on top and can override."""
+        from .assets import PARTICLE_SOLVER_KWARGS, cloth_particle_kwargs, ClothConfig
+        om = self.object_model
+        if om is None or om.particle_count == 0:
+            return {}
+        if int(getattr(om, "tet_count", 0)) > 0:                  # FEM volume
+            return dict(PARTICLE_SOLVER_KWARGS)
+        cfg = self.soft_block if isinstance(self.soft_block, ClothConfig) else ClothConfig()
+        return cloth_particle_kwargs(cfg)                         # thin shell (cloth)
 
     # ---- seam (VBD path only) ----
     def _make_coupling(self):

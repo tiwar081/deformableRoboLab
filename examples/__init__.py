@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import runpy
 import sys
 from pathlib import Path
 
@@ -230,8 +229,14 @@ def main() -> None:
         _print_examples(examples)
         sys.exit(1)
 
-    sys.argv = [examples[example_name], *sys.argv[2:]]
-    runpy.run_module(examples[example_name], run_name="__main__")
+    # Each example is now a DATA FILE (a DemoSpec); the single runner `example.py` plays it. This is
+    # the same as: python example.py --demo examples/<example_name>.py [options]
+    sys.argv = [sys.argv[0], *sys.argv[2:]]                 # hand remaining flags to the runner's parser
+    repo_root = Path(__file__).resolve().parents[1]
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    import example as _runner
+    _runner.run(example_name)
 
 
 __all__ = ["create_parser", "get_examples", "init", "main", "run"]

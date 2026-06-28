@@ -1,153 +1,32 @@
-"""Franka picks a heavy rigid cube off the table, carries it over a soft FEM block, and drops it
-so the cube squashes the block. 16 substeps. Pure SCENE + POLICY; all physics/robot/asset detail
-comes from :mod:`deformableManipulationTools`, all rendering from
-:class:`robolabViz.scenic.ScenicGraspExample`.
+"""DATA FILE — rigidCube_soft_franka: pick a rigid cube, carry it over a soft block, drop it to squash."""
+from deformableManipulationTools import SOFT_BLOCK, RIGID_CUBE, TABLE, GraspWindow
+from deformableManipulationTools.demo_runner import DemoSpec, Obj, WP
 
-Run: python -m examples rigidCube_soft_franka --device cuda:0
-  (scenic by default -> outputs/rigidCube_soft_franka/{frames/, simulation.mp4};
-   --output-style basic writes outputs/rigidCube_soft_franka.usd instead.)
-"""
-from __future__ import annotations
+TT = TABLE.top_z
+CH = RIGID_CUBE.half_extent
+CUBE = (0.10, -0.55)
+SOFT = (0.28, -0.30)
+DROP = (SOFT[0] + 0.5 * SOFT_BLOCK.dim[0] * SOFT_BLOCK.cell, SOFT[1])   # soft_start + drop offset
 
-import os
-
-import numpy as np
-
-os.environ.setdefault("WARP_CACHE_PATH", "/tmp/warp-cache")
-
-from deformableManipulationTools.helper import install_terminal_log
-
-_terminal_log = install_terminal_log()
-
-import warp as wp
-
-import examples
-from robolabViz.scenic import ScenicGraspExample
-from deformableManipulationTools import (
-    FRANKA, SOFT_BLOCK, RIGID_CUBE, TABLE, PARTICLE_SOLVER_KWARGS, GraspWindow,
-    add_table, add_soft_block, add_rigid_box, build_gripper_proxies, solve_gripper_ik, wp_smoothstep,
+DEMO = DemoSpec(
+    scene=[
+        Obj("table", TABLE),
+        Obj("soft_block", SOFT_BLOCK, pos=(SOFT[0], SOFT[1], TT)),
+        Obj("proxies"),
+        Obj("rigid_box", RIGID_CUBE, pos=(CUBE[0], CUBE[1], TT + CH), half=CH),
+    ],
+    waypoints=[
+        WP(0.0),
+        WP(2.2, (CUBE[0], CUBE[1], TT + 0.12)),     # pregrasp
+        WP(3.2, (CUBE[0], CUBE[1], TT + CH)),        # pickup
+        WP(5.0, (CUBE[0], CUBE[1], TT + CH)),        # hold (carry begins)
+        WP(7.0, (DROP[0], DROP[1], TT + 0.19)),      # over the block
+        WP(8.6, (DROP[0], DROP[1], TT + 0.19)),      # hold (release)
+        WP(10.6, None),                              # home
+    ],
+    grasp_windows=[GraspWindow(close_start=3.2, close_end=4.4, release_start=8.0, release_end=8.6)],
+    object_solver_kwargs={"rigid_body_contact_buffer_size": 2048,
+                          "rigid_body_particle_contact_buffer_size": 4096},
+    object_pipeline_kwargs={"soft_contact_margin": SOFT_BLOCK.contact_margin},
+    substeps=16, vbd_iterations=12, num_frames=720,
 )
-
-
-@wp.kernel
-def _set_arm_targets_kernel(
-    t_frame: wp.array(dtype=float),
-    substep: int,
-    sim_dt: float,
-    home_q: wp.array(dtype=float),
-    pregrasp_q: wp.array(dtype=float),
-    pickup_q: wp.array(dtype=float),
-    drop_q: wp.array(dtype=float),
-    joint_target_q: wp.array(dtype=float),
-):
-    # ARM DOFs only (0..n_arm_dof-1); the fingers are owned by the centralized force-stop GripController.
-    i = wp.tid()
-    t = t_frame[0] + float(substep) * sim_dt
-
-    descend_start = 2.2
-    close_start = 3.2
-    carry_start = 5.0
-    settle_start = 7.0
-    retreat_start = 8.6
-
-    if t < descend_start:
-        alpha = wp_smoothstep(t / descend_start)
-        q = (1.0 - alpha) * home_q[i] + alpha * pregrasp_q[i]
-    elif t < close_start:
-        alpha = wp_smoothstep((t - descend_start) / (close_start - descend_start))
-        q = (1.0 - alpha) * pregrasp_q[i] + alpha * pickup_q[i]
-    elif t < carry_start:
-        q = pickup_q[i]
-    elif t < settle_start:
-        alpha = wp_smoothstep((t - carry_start) / (settle_start - carry_start))
-        q = (1.0 - alpha) * pickup_q[i] + alpha * drop_q[i]
-    elif t < retreat_start:
-        q = drop_q[i]
-    else:
-        alpha = wp_smoothstep((t - retreat_start) / 2.0)
-        q = (1.0 - alpha) * drop_q[i] + alpha * home_q[i]
-
-    joint_target_q[i] = q
-
-
-class Example(ScenicGraspExample):
-    has_particles = True
-    soft_block = SOFT_BLOCK
-
-    def configure(self, args):
-        self.table_top_z = TABLE.top_z
-        self.cube_half = RIGID_CUBE.half_extent
-        self.cube_start_pos = np.array([0.10, -0.55, self.table_top_z + self.cube_half], dtype=np.float32)
-        self.soft_start_pos = np.array([0.28, -0.30, self.table_top_z], dtype=np.float32)
-        self.soft_drop_offset = np.array([0.5 * SOFT_BLOCK.dim[0] * SOFT_BLOCK.cell, 0.0, 0.0],
-                                         dtype=np.float32)
-        self.drop_tcp_height = self.table_top_z + 0.19
-        self.object_solver_kwargs = {"rigid_body_contact_buffer_size": 2048,
-                                     "rigid_body_particle_contact_buffer_size": 4096, **PARTICLE_SOLVER_KWARGS}
-        self.object_pipeline_kwargs = {"soft_contact_margin": SOFT_BLOCK.contact_margin}
-        # Unified admittance grasp on the rigid cube (regulate to GRIP.force_target default 30 N; geometry
-        # emerges, no preset width): close [3.2, 4.4], hold through the carry, release [8.0, 8.6].
-        self.grasp_windows = [GraspWindow(close_start=3.2, close_end=4.4, release_start=8.0,
-                                          release_end=8.6)]
-
-    def plan(self, ik_model, ik_state):
-        def ik_at(pos):
-            return solve_gripper_ik(ik_model, ik_state, self.ee_body, self.ee_offset,
-                                    np.array(pos, dtype=np.float32), self.gripper_open)
-
-        pre = self.cube_start_pos.copy(); pre[2] = self.table_top_z + 0.12
-        pick = self.cube_start_pos.copy(); pick[2] = self.table_top_z + self.cube_half
-        drop = self.soft_start_pos + self.soft_drop_offset; drop[2] = self.drop_tcp_height
-        self.pregrasp_q = ik_at(pre)
-        self.pickup_q = ik_at(pick)
-        self.drop_q = ik_at(drop)
-        kf = lambda a: wp.array(a, dtype=wp.float32, device=ik_model.device)
-        self._home_q_wp = kf(self.home_q)
-        self._pregrasp_q_wp = kf(self.pregrasp_q)
-        self._pickup_q_wp = kf(self.pickup_q)
-        self._drop_q_wp = kf(self.drop_q)
-
-    def build_scene(self, builder, robot_builder):
-        self._obj_table_shape = add_table(builder, TABLE)
-        add_soft_block(builder, SOFT_BLOCK, self.soft_start_pos)
-        self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
-            builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape)
-        self.cube_body, self.cube_shape = add_rigid_box(builder, self.cube_start_pos, self.cube_half, RIGID_CUBE)
-
-    def set_arm_targets(self, substep):
-        wp.launch(_set_arm_targets_kernel, dim=FRANKA.n_arm_dof, inputs=[
-            self._t_frame, substep, self.sim_dt, self._home_q_wp, self._pregrasp_q_wp,
-            self._pickup_q_wp, self._drop_q_wp,
-        ], outputs=[self.robot_control.joint_target_q], device=self.robot_control.joint_target_q.device)
-
-    def check_physics(self):
-        body_q = self.object_state_0.body_q.numpy()
-        if not np.all(np.isfinite(body_q)):
-            raise ValueError("Non-finite body transform detected.")
-        particle_q = self.object_state_0.particle_q.numpy()
-        if particle_q.size and not np.all(np.isfinite(particle_q)):
-            raise ValueError("Non-finite soft-body particle position detected.")
-        if particle_q.size and np.min(particle_q[:, 2]) < self.table_top_z - 0.03:
-            raise ValueError("The soft body fell through the table.")
-        cube = body_q[self.cube_body, :3]
-        if cube[2] < self.table_top_z:
-            raise ValueError("The cube fell through the table.")
-        if self.sim_time >= 10.0:
-            if cube[2] > self.table_top_z + 0.15:
-                raise ValueError("The cube did not drop after the gripper opened.")
-            if np.linalg.norm(cube[:2] - self.soft_start_pos[:2]) > 0.25:
-                raise ValueError("The cube did not land near the soft block.")
-
-    @staticmethod
-    def create_parser():
-        parser = examples.create_parser()
-        parser.set_defaults(num_frames=720)
-        parser.add_argument("--substeps", type=int, default=16, help="Simulation substeps per rendered frame.")
-        parser.add_argument("--vbd-iterations", type=int, default=12, help="VBD iterations for the objects.")
-        return parser
-
-
-if __name__ == "__main__":
-    parser = Example.create_parser()
-    viewer, args = examples.init(parser, example_name="rigidCube_soft_franka")
-    examples.run(Example(viewer, args), args)

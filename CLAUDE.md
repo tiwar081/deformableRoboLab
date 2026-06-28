@@ -108,27 +108,36 @@ more. If a grasp needs tuning beyond the target force, fix it centrally in the p
   register their authored contact material; the framework restores it after the blanket proxy-fill,
   so an example never re-applies a material override by hand.
 - **`framework.py`** — `GraspExample`: owns the entire build (robot+solver, object-model assembly,
-  finalize ordering, materials, masses, coupling) + the substep loop + CUDA-graph capture + viz.
-  A demo subclass implements `configure`/`plan`/`build_scene`/`set_robot_targets`/`test_final`.
+  finalize ordering, materials, masses, coupling, the **centralized per-deformable particle solver
+  config** `_particle_solver_config`) + the substep loop + CUDA-graph capture + viz.
+- **`demo_runner.py`** — `DemoSpec` data schema (`Obj`/`WP`/`Sweep`) + the generic `DataDrivenExample`
+  + the one policy executor kernel that reproduces every demo motion (waypoint blend, tilt/yaw, force
+  grip OR explicit fingers, cable sweep). This is what makes a demo a pure data file; `example.py` plays it.
 - **`robot.py`** — Franka builder, MuJoCo solver, yaw-aware gripper IK (`solve_gripper_ik`).
 - **`grip.py`** — dynamic finite-mass proxies (`build_gripper_proxies`) + `TwoWayProxyCoupling`
   (the one grip: net-to-EE feedback, rigid + soft-particle harvest, no cap).
 - **`assets.py`** — object builders that encapsulate the collision/viz NUANCES: `add_table`,
   `add_cable`, `add_soft_block`, `add_cloth`, `add_rigid_box`, `add_rubiks_cube`, `add_ycb_mesh`
-  (+ the centralized `PARTICLE_SOLVER_KWARGS` / `cloth_solver_kwargs` VBD configs).
+  (+ the centralized per-deformable particle VBD configs `PARTICLE_SOLVER_KWARGS` (FEM) /
+  `cloth_particle_kwargs` (cloth self-contact), which `framework._particle_solver_config` auto-applies
+  by deformable type — a demo never declares solver physics).
 - **`mesh_collision.py` + `coacd_worker.py`** — concave meshes COLLIDE as coacd convex-hull pieces
   while the full mesh RENDERS (a raw concave mesh ejects the VBD solve — SOLVERS.md §4). coacd
   segfaults if co-loaded with Newton, so decomposition runs in a subprocess and is disk-cached.
 
-`examples/` keeps only the thin demo scripts + the run harness (`__init__.py`); the shared terminal
-helper lives in `deformableManipulationTools/helper.py`. Each demo is **one file** `<name>.py` (no
-separate `_robolab` files); it subclasses `robolabViz.scenic.ScenicGraspExample` and `--output-style`
-picks the renderer — `scenic` (default: `outputs/<robot>/<name>/{frames/, simulation.mp4}`, both
-policy cameras; `<robot>` = the active robot's `short_name`) or `basic` (`outputs/<name>.usd`). The
-scenic glue (`robolabViz/scenic.py`) reads the robot
-base pose / table / soft-object position off the physics example, so a new demo gets the RoboLab look
-for free. Import the public API with `from deformableManipulationTools import …`.
-Grip-force tuning: [docs/gripper.md](docs/gripper.md).
+**Each demo is a DATA FILE, not a script.** `example.py` (repo root) is the ONE runner; every
+`examples/<name>.py` declares a single `DEMO = DemoSpec(...)` (in `deformableManipulationTools/demo_runner.py`)
+holding ONLY the **scene** (a list of `Obj(kind, config, pos, …)`) and the **policy** — arm `WP`
+waypoints (TCP pos + optional `yaw`/`tilt`), the grasp (`grasp_windows` → the force GripController, OR
+an explicit `finger_schedule`), and an optional `Sweep`. To add a demo, write one data file; nothing
+in `example.py`/`demo_runner.py` changes. Run with `python example.py --demo examples/<name>.py` or the
+shim `python -m examples <name>`; `--output-style` picks the renderer (`scenic` default →
+`outputs/<robot>/<name>/{frames/, simulation.mp4}`, `<robot>`=active robot `short_name`; or `basic` →
+`outputs/<name>.usd`). The generic `DataDrivenExample` (subclass of `robolabViz.scenic.ScenicGraspExample`)
+turns the spec into the configure/plan/build_scene/policy the framework expects, so a demo gets the
+RoboLab look + force grip + solver routing for free. A demo file must contain NO physics/solver/grip
+detail — only scene + policy (the one grasp knob is `GraspWindow.force_target`). Import the public API
+with `from deformableManipulationTools import …`. Grip-force tuning: [docs/gripper.md](docs/gripper.md).
 
 ## Newton version (environment gotcha)
 
@@ -195,8 +204,9 @@ This repo's own docs:
 - [docs/deformables.md](docs/deformables.md) — cable (rod) and soft-FEM-block tuned parameters
   + reasons; notes on future zip-tie deformables.
 - [docs/cloths.md](docs/cloths.md) — how to add a **cloth-type** deformable (shirt/towel/sheet):
-  `ClothConfig` + `add_cloth` + `cloth_solver_kwargs`, the grasp knob, and the cloth-specific gotchas
-  (the ≈critical `soft_contact_kd` a thin shell needs, particle self-contact, the flat-sheet grasp limit).
+  `ClothConfig` + `add_cloth` + the centralized `cloth_particle_kwargs`, the grasp knob, and the
+  cloth-specific gotchas (the ≈critical `soft_contact_kd` a thin shell needs, particle self-contact,
+  the flat-sheet grasp limit).
 - [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.
 - [docs/robolab-graphics.md](docs/robolab-graphics.md) — the `robolabViz/` RoboLab-look
   renderer (raycast + offline RTX), customization surface, vendored assets, render gotchas.

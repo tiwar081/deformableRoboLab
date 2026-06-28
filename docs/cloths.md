@@ -11,20 +11,24 @@ config — do **not** put cloth physics inline in a new demo.
 
 ## TL;DR — adding a new cloth object
 
+Demos are DATA FILES (`examples/<name>.py` → a `DemoSpec`; see [examples.md](examples.md)). Adding a
+cloth needs only scene + policy — the cloth solver physics is centralized:
+
 1. **Author/obtain a triangle-mesh USD** of the cloth surface (a thin shell, not a solid). Drop it
    under `assets/objects/` (e.g. `towel.usd`).
 2. **Add a config**: make a new `ClothConfig(...)` instance (or reuse the default) in
    `deformableManipulationTools/assets.py` — set `usd_file`/`usd_prim`, `scale` (native units → m),
    `flatten_z` (squash a draped/worn mesh flat for a table start), and `density` [kg/m²]. Leave the
    stiffness / contact / self-contact fields at the defaults unless you have a reason.
-3. **Build it** in the demo's `build_scene` with `add_cloth(builder, CFG, center_xy_z)`.
-4. **Wire the solver + harvest** in `configure`: `self.soft_block = CFG`,
-   `self.coupling_soft_ke = CFG.soft_contact_ke`, `self.object_solver_kwargs = cloth_solver_kwargs(CFG)`,
-   `self.object_pipeline_kwargs = {"soft_contact_margin": CFG.contact_margin}`.
-5. **Grasp gently**: give the `GraspWindow` a shell-scale `force_target` (~3–8 N). The 30 N default is
-   a rigid-box value and is wrong for fabric.
-6. The framework auto-routes to the split MuJoCo-robot + VBD-cloth path (particles present) with the
-   dynamic gripper proxies — same as the FEM-block demos. No solver wiring in the demo.
+3. **Declare it in the data file's `scene`**: `Obj("cloth", CFG, pos=(x, y, z))` (+ an `Obj("proxies")`).
+4. **Grasp**: set `coupling_soft_ke=CFG.soft_contact_ke` (proxy↔particle harvest) on the `DemoSpec`, and
+   on the grasp give a shell-scale `force_target` (~3–8 N — the 30 N default is a rigid-box value, wrong
+   for fabric). `object_pipeline_kwargs={"soft_contact_margin": CFG.contact_margin}`; buffer sizes go in
+   `object_solver_kwargs`.
+5. **That's it for solver physics** — the framework auto-detects cloth (a shell: surface tris/edges, no
+   tets) from the finalized model and applies `cloth_particle_kwargs(CFG)` (self-contact + the radii)
+   centrally. You never wire `particle_enable_self_contact` etc. in the demo. It also auto-routes to the
+   split MuJoCo-robot + VBD-cloth path with the gripper proxies, same as the FEM-block demos.
 
 ## The config (`ClothConfig` in `assets.py`)
 
@@ -41,12 +45,14 @@ config — do **not** put cloth physics inline in a new demo.
 | `soft_contact_kf`/`mu` | `1e3`/`0.8` | tangential contact stiffness / friction. |
 | `self_contact*` | on, r=0.002, m=0.003, filter=1, rest-excl=0.006 | particle self-collision so folds/layers don't pass through each other (see gotchas). |
 
-## Solver kwargs — use `cloth_solver_kwargs(cfg)`, not `PARTICLE_SOLVER_KWARGS`
+## Solver kwargs — centralized (the demo declares none)
 
-`PARTICLE_SOLVER_KWARGS` is the **FEM-block** set and has self-contact **off** (a volume can't fold
-through itself). Cloth needs `cloth_solver_kwargs(cfg)` (in `assets.py`), which is the same builder
-but with particle **self-contact enabled** + the buffer sizes a shell needs. Keeping a second named
-set means a cloth demo never hand-rolls solver physics.
+Particle solver config is applied **centrally** by `framework._particle_solver_config`, which picks by
+deformable type: an FEM block (has tets) → `PARTICLE_SOLVER_KWARGS` (self-contact **off** — a volume
+can't fold through itself); a cloth (a shell: surface tris/edges, no tets) → `cloth_particle_kwargs(cfg)`
+(self-contact **on** + the radii). The demo's `object_solver_kwargs` holds only the scene-specific
+`rigid_body_*` buffer sizes and merges on top. So a cloth demo never hand-rolls solver physics — that's
+the point of the centralization.
 
 ## Grasp — the one demo knob is `force_target`
 
@@ -67,7 +73,7 @@ demo-tunable; fix anything else centrally.
    soft-block contact) was ~5 orders below critical and blew up. **Re-derive `kd` if you change
    `density`, `soft_contact_ke`, the particle count, or re-pin Newton.**
 2. **Self-contact must be ON for any folding/draping.** Without it, layers (and the table) pass
-   straight through each other. It's enabled in `cloth_solver_kwargs`. The topological filter
+   straight through each other. It's enabled centrally via `cloth_particle_kwargs`. The topological filter
    (`threshold=1`) + rest-shape exclusion radius stop mesh-adjacent vertices from self-colliding at
    rest — tune the exclusion radius up if a flat cloth jitters/puffs at start.
 3. **`soft_contact_ke` is read in two places — keep them one source.** The grip-force *harvest*

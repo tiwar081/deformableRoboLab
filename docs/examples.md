@@ -1,13 +1,16 @@
 # Examples
 
-All in `examples/`, registered in `examples/__init__.py`. Each demo is a **single file**
-`<name>.py`; the `--output-style` flag picks how a run is rendered (default `scenic`):
+Each demo is a **DATA FILE** `examples/<name>.py` declaring one `DEMO = DemoSpec(...)` (scene +
+policy only; schema in `deformableManipulationTools/demo_runner.py`). The single runner `example.py`
+plays it — to add a demo, write one data file and change nothing else. The `--output-style` flag picks
+how a run is rendered (default `scenic`):
 
 ```bash
 # scenic (default): robolabViz renders outputs/<robot>/<name>/{frames/, simulation.mp4}
 #   (<robot> = the active robot's short_name, so the two robots' renders never collide),
 #   (over-shoulder-left + wrist cameras, side by side), on any CUDA GPU.
-python -m examples <name> --device cuda:0
+python example.py --demo examples/<name>.py --device cuda:0
+python -m examples <name> --device cuda:0          # equivalent shim
 python -m examples <name> --device cuda:0 --frames-per-image 60   # PNG still cadence
 
 # basic: a plain Newton USD at outputs/<name>.usd (the old `--viewer usd` behaviour).

@@ -55,7 +55,7 @@ rigid+soft scene), scaled to the table:
 ## Cloth (thin shell) — see [cloths.md](cloths.md)
 
 Cloth (shirt/towel/sheet) is implemented as a separate deformable type: VBD `add_cloth_mesh`, its own
-`ClothConfig` + `cloth_solver_kwargs` (particle self-contact ON, which the block omits), and a
+`ClothConfig` + centralized `cloth_particle_kwargs` (particle self-contact ON, which the block omits), and a
 ≈critically-damped `soft_contact_kd` the light shell requires. The reference demo is `cloth_franka`.
 Full authoring guide + gotchas: **[cloths.md](cloths.md)**.
 
