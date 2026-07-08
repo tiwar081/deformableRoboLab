@@ -192,7 +192,13 @@
       "Bash(awk 'NR % 2 == 1 || /SUMMARY|finite/')",
       "Bash(.venv/bin/python -m py_compile examples/cloth_franka.py deformableManipulationTools/demo_runner.py)",
       "Bash(DEMO=examples/cloth_franka.py OUT=/tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/forcegrip5.csv FRAMES=1200 /mnt/samyak/deformableRoboLab/.venv/bin/python /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/probe_cloth.py)",
-      "Bash(DEMO=examples/cloth_franka.py OUT=/tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/forcegrip8.csv FRAMES=1380 /mnt/samyak/deformableRoboLab/.venv/bin/python /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/probe_cloth.py)"
+      "Bash(DEMO=examples/cloth_franka.py OUT=/tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/forcegrip8.csv FRAMES=1380 /mnt/samyak/deformableRoboLab/.venv/bin/python /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/probe_cloth.py)",
+      "Bash(.venv/bin/python -m py_compile deformableManipulationTools/params.py deformableManipulationTools/framework.py deformableManipulationTools/grip.py)",
+      "Bash(.venv/bin/python -m py_compile deformableManipulationTools/params.py deformableManipulationTools/grip.py)",
+      "Bash(.venv/bin/python -m py_compile examples/cloth_franka.py examples/soft_pickplace_franka.py examples/soft_compression_franka.py deformableManipulationTools/instrumentation.py)",
+      "Bash(DEMO=examples/cloth_franka.py OUT=/tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/forcegrip_ft2.csv FRAMES=1380 /mnt/samyak/deformableRoboLab/.venv/bin/python /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/probe_cloth.py)",
+      "Bash(.venv/bin/python example.py --demo examples/rigidCube_soft_franka.py --output graphs --viewer null --device cuda:0 --test)",
+      "Bash(.venv/bin/python example.py --demo examples/cable_rigidCube_franka.py --output graphs --viewer null --device cuda:0 --test)"
     ],
     "additionalDirectories": [
       "/dev",

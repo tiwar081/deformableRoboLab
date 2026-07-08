@@ -66,16 +66,14 @@ holds unchanged). **ONE unified control law for every object** (rigid, cable, AN
 depend on the object type. **The one per-demo knob is the target grasp force** (`GraspWindow.force_target`); the
 close **speed** is centralized (`GRIP.grip_rate_max`) — identical for every grasp.
 
-**Cloth on the force grip — trial results (`cloth_franka`).** A pinched thin shell's true reaction
-is ~0.2–3 N, around the rigid-scale engage floor (`engage_floor=0.3`, deadband 2 N). Measured
-target ladder on the single-fold demo: **1 N** → engage rode the 0.3 N floor and latched at a loose
-~14 mm jaw whose pinch shed the wad mid-drag; **5 N** → engage 0.75 N latched at 11.8 mm, regulator
-crept ~0.4 mm/s, still faded out during the drag; **8 N** (top of the thin-shell range) → engage
-1.2 N latched at ~9.6 mm and the regulator's continued tightening through a long stationary dwell
-carried the pinch through the whole fold (contacts 57→30, held to release) — WORKS. Caveat: the
-shell can never produce 8 N of squeeze, so the jaw creeps to the `min_close_width` floor (2 mm) by
-release; the slow creep sheds contacts gradually instead of expelling, but a proper shell-aware
-stop (retuned engage/deadband scale or an object-derived min-width floor) remains the open item.
+**Cloth on the force grip — RESOLVED by the target-relative law.** A pinched thin shell's
+achievable squeeze is ~0.3–3 N. Under the old fixed constants a ≤2 N target was literally dead (the
+2 N absolute deadband exceeded the whole error range: the measured 1 N trial latched a loose ~14 mm
+jaw and shed the wad) and the workaround — an unreachable 8 N target — crept the jaw shut forever
+(there is no width floor; the regulator alone must stop the close). With `window_params` the cloth
+demo declares `force_target=2 N` (inside the achievable range): per-window gain 1.5e-3, deadband
+0.13 N — the regulator latches at the 0.3 N engage floor, tightens at ~2.4 mm/s, and CONVERGES to a
+stable force equilibrium near the proven ~8–9 mm jaw, staying live to re-tighten a shedding pinch.
 An abrupt commanded zero-gap pinch still expels a shell — never do that with a schedule.
 
 ### The law: bidirectional ASYMMETRIC admittance (a `dim=1` Warp kernel, CUDA-graph safe)
@@ -88,7 +86,8 @@ A velocity-form force regulator on the **closing-axis-projected** squeeze that m
    so seed from what they actually reached). **The engage threshold scales with the target** so a low-target SOFT
    grip engages at a light touch — *before* the fast approach over-compresses the compliant block — while a
    high-target rigid/cable grip engages firmly (a firmer seed is what gives the cable its cage).
-2. **Regulate** — `F_filt = EMA(grip_squeeze_signal, force_filter_tau)`; `w_dot = k_adm·(F_filt − target)`,
+2. **Regulate** — `F_filt = EMA(grip_squeeze_signal, force_filter_tau)`; `w_dot = k_w·(F_filt − target)`
+   with the per-window `k_w`/deadband from `GripConfig.window_params(target)`,
    **deadbanded** then **asymmetrically rate-limited**: when UNDER target close fast (`≤ grip_rate_max`, to chase
    the target / restore a **decaying** grip); when OVER target open **very slowly** (`≤ grip_rate_open`).
 3. **Release** (optional window) — smoothstep the held width back to `gripper_open`.
@@ -101,7 +100,7 @@ moves the jaw the right way. The signal is the **closing-axis projection** (`gri
 raw magnitude, so the load (tangential to the jaw axis) is partly rejected before the asymmetry even sees it.
 
 **The target is the only thing that differs between objects** (and the target-scaled engage threshold falls out of
-it automatically). A soft block needs a gentle target (~5 N) — its engage threshold is then small, so it is held
+it automatically). A soft block needs a gentle target (~4 N) — its engage threshold is then small, so it is held
 without crush; no "freeze" mode is needed, the regulator simply settles there. A rigid box (~30 N) has a steep
 force-width curve, so the target is a true squeeze setpoint. The cable is the degenerate case (below), where the
 target instead sets the cage geometry. Tune the per-object target up if it slips, down if it crushes.
@@ -109,7 +108,7 @@ target instead sets the cage geometry. Tune the per-object target up if it slips
 ```python
 self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6, force_target=30.0)]                  # cable: held to end
 self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6)]                       # rigid: GRIP default target
-self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6, force_target=5.0)]     # soft: gentle target
+self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6, force_target=4.0)]     # soft: gentle target
 ```
 
 ### Why the cable target is what it is
@@ -125,14 +124,29 @@ loose (the rod slips on the lift); much higher targets crush the rod to a non-ph
 
 - **`force_target`** (`GraspWindow`, default `None`) — **the one per-demo knob**: the target grasp force [N].
   `None` → the centralized default `GRIP.force_target` (30 N). **Projected (closing-axis) units.**
-- **`GRIP.force_target`** (30 N) — the single default target when a window gives no override.
-- **`k_adm`** (1e-4 m/s·N⁻¹), **`force_filter_tau`** (0.05 s), **`grip_rate_max`** (0.04 m/s, the centralized
-  close/approach squeeze speed), **`grip_rate_open`** (2e-4 m/s, the slow open), **`grip_force_deadband`** (2 N),
-  and the engage threshold **`engage_frac`** (0.15) **`engage_floor`** (0.3 N) **`engage_cap`** (2 N)
-  — the admittance gains (shared by every grasp; the engage threshold = `clamp(engage_frac·target, floor, cap)`).
+- **Target-relative, derived per window by `GripConfig.window_params(ft)`** — the ONE centralized
+  derivation, consumed by the controller packing AND the instrumentation reference bands:
+  - `k_adm` → `k_w = min(k_adm·adm_ref_force/ft, k_adm_cap)`: relative-error admittance — the
+    full-scale-error close speed `k_w·ft = 3e-3 m/s` is target-independent, so a 2 N cloth grasp
+    regulates as briskly (in fraction-of-target units) as a 30 N cube grasp. `k_adm_cap` (2e-3)
+    guards discrete-loop stability (`k_w·ke·dt ≪ 1`) at very low targets.
+  - `grip_force_deadband` → `db_w = max(grip_force_deadband·ft/adm_ref_force, 0.1 N)`: a limit-cycle
+    killer is a fraction-of-setpoint quantity (1/15 of target); the absolute floor is the
+    measurement-noise band. (The old 2 N ABSOLUTE deadband exceeded low targets entirely —
+    `w_dot = 0` forever for ft ≤ 2 N.)
+  - **Anchor**: `window_params(adm_ref_force=30) == (1e-4, 2.0)` exactly — the long-tested 30 N
+    grasps (cable cage, rigid cube, rubik's) are bit-identical under the new law.
+- **Fixed — physical robot properties (sim2real: not retunable on real hardware, so not in sim):**
+  **`grip_rate_max`** (0.04 m/s, just under the real Franka Hand's ~0.05 m/s max finger speed),
+  **`engage_floor`** (0.3 N — the contact-DETECTION floor of a real force estimate; scaling it down
+  would fire engage on noise), **`force_filter_tau`** (0.05 s — set by the signal's noise spectrum),
+  and the finger actuator gains/effort (`RobotConfig`).
+- **Fixed — scale-free by function:** **`engage_frac`** (0.15, already relative: engage =
+  `clamp(engage_frac·target, floor, cap)`), **`engage_cap`** (2 N — bounds the approach-phase
+  ram-in, which is target-independent), **`grip_rate_open`** (2e-4 m/s — jaw retreat during a load
+  transient is set by TASK dynamics, not target; scaling it up would be a drop-on-spike regression).
 - **`proxy_ke`** (5e4 N/m), **`proxy_kd`** (1e2 N·s/m abs), **`proxy_mass`** (10 kg) — proxy contact
   stiffness/damping/inertia (see CLAUDE.md for the `kd` re-derivation landmine).
-- **`min_close_width`** (1 mm) — the fully-closed finger floor if the grasp never reaches the target.
 
 **The grip signals.** `TwoWayProxyCoupling` recomputes two both-pads readings at the end of `harvest()`:
 `grip_squeeze_signal = min` of the per-pad reactions **projected onto the jaw closing axis** (the admittance

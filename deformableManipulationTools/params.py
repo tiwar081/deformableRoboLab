@@ -119,20 +119,60 @@ class GripConfig:
     # (closing-axis) N; pick it per demo near the achievable steady squeeze (a thin cable tops out ~4 N at
     # any width so its target sets the cage tightness; a rigid box reaches ~30 N; a soft block ~8 N gentle).
     force_target: float = 30.0        # DEFAULT target [N] if a GraspWindow gives no per-demo override.
-    k_adm: float = 1.0e-4             # admittance gain [m/s per N] (small: k_adm*ke*dt << 1 for stability)
-    force_filter_tau: float = 0.05    # [s] EMA time constant on the squeeze signal (swallows contact spikes)
-    grip_rate_max: float = 0.04       # [m/s] CLOSE / approach rate limit (fast: chase target, restore decay).
-                                       # CENTRALIZED squeeze speed — identical for every grasp (NOT per-demo).
-    grip_rate_open: float = 0.0002    # [m/s] OPEN rate limit (slow: ride out the spiky, load-dominated force)
+    #
+    # ---- TARGET-RELATIVE controller parameters (resolved per grasp window by window_params()) ----
+    # The regulator must work from ~2 N (a cloth shell) to ~80 N (the slip-prone banana) with the ONE
+    # demo knob being force_target — so the parameters that are fractions-of-setpoint BY FUNCTION are
+    # derived from the window's target, anchored so ft == adm_ref_force reproduces the long-tested
+    # 30 N constants bit-for-bit. Everything that is a FIXED PHYSICAL PROPERTY of a real robot
+    # (max finger speed grip_rate_max, the sensing-noise engage_floor, the sensor-set filter tau,
+    # actuator gains/effort in RobotConfig) stays absolute — sim2real: those cannot be retuned on
+    # hardware per task, so the sim must not either.
+    #
+    # k_adm scales ∝ 1/target (relative-error admittance): w_dot = k_w*(err ∓ db_w) with
+    # k_w = k_adm*adm_ref_force/ft — the full-scale-error close speed k_w*ft = 3e-3 m/s is then
+    # target-independent, so a 2 N cloth grasp tightens as briskly (in fraction-of-target units) as a
+    # 30 N cube grasp instead of being ~15x slower (the old fixed gain made low-target regulation
+    # glacial; with the old 2 N ABSOLUTE deadband it was literally dead — w_dot = 0 for any ft <= 2).
+    k_adm: float = 1.0e-4             # admittance gain [m/s per N] AT ft = adm_ref_force
+    adm_ref_force: float = 30.0       # [N] anchor target: window_params(30) == (k_adm, grip_force_deadband)
+    k_adm_cap: float = 2.0e-3         # [m/s per N] gain guard for very low targets — keeps the discrete
+                                       # contact loop stable (k_w*ke*dt << 1 even on the stiffest proxy
+                                       # contact ke=5e4 at dt~1e-3); inactive for ft >= 1.5 N
+    force_filter_tau: float = 0.05    # [s] EMA time constant on the squeeze signal (swallows contact
+                                       # spikes). FIXED: set by the signal's noise spectrum (a sensor
+                                       # property, not a task property).
+    grip_rate_max: float = 0.04       # [m/s] CLOSE / approach rate limit. FIXED (PHYSICAL): just under
+                                       # the real Franka Hand's max finger speed (~0.05 m/s) — identical
+                                       # for every grasp (NOT per-demo, NOT target-scaled).
+    grip_rate_open: float = 0.0002    # [m/s] OPEN rate limit (slow: ride out the spiky, load-dominated
+                                       # force). FIXED: jaw retreat during a load transient is bounded by
+                                       # rate*T where T is set by TASK dynamics (lift/swing), not target.
     # Engage threshold (projected squeeze) to switch from blind approach to force regulation. RELATIVE to
     # the target (clamped) so it scales: a low-target SOFT grip engages at a light touch — BEFORE the fast
     # approach over-compresses the compliant block — while a high-target rigid/cable grip engages firmly (a
     # firmer seed is what gives the cable its cage). engage = clamp(engage_frac*target, engage_floor, engage_cap).
     engage_frac: float = 0.15         # engage threshold as a fraction of the target force
-    engage_floor: float = 0.3         # [N] min engage threshold (contact detection floor)
-    engage_cap: float = 2.0           # [N] max engage threshold (firm seed for high-target grips)
-    grip_force_deadband: float = 2.0  # [N] deadband around the target (kills the limit cycle on the contact)
-    min_close_width: float = 0.001    # fully-closed finger floor [m] if the grasp never reaches the target
+    engage_floor: float = 0.3         # [N] min engage threshold. FIXED (PHYSICAL): the contact-DETECTION
+                                       # floor below which a real force estimate is indistinguishable from
+                                       # noise/tare drift — scaling it down would fire engage on noise.
+    engage_cap: float = 2.0           # [N] max engage threshold. FIXED: bounds the approach-phase ram-in
+                                       # (overshoot ~ contact_ke*v_close*lag — target-independent).
+    # Deadband scales ∝ target (a limit-cycle killer is a fraction-of-setpoint quantity, 1/15 of ft —
+    # the old 2 N ABSOLUTE band exceeded low targets entirely and disabled their regulation), floored at
+    # an absolute noise band (physical: don't chatter on measurement noise).
+    grip_force_deadband: float = 2.0  # [N] deadband around the target AT ft = adm_ref_force
+    grip_force_deadband_floor: float = 0.1  # [N] absolute noise floor for the scaled deadband
+
+    def window_params(self, force_target: float) -> tuple[float, float]:
+        """THE centralized per-grasp-window controller derivation: ``(k_adm_w, deadband_w)`` for a
+        window's ``force_target``. Consumed by GripController (packed per window into the kernel's
+        windows array) and by instrumentation (plot reference bands) — never derived anywhere else.
+        Anchored: ``window_params(adm_ref_force) == (k_adm, grip_force_deadband)`` exactly, so the
+        long-tested 30 N demos (cable cage, rigid cube, rubik's) are bit-identical."""
+        s = float(force_target) / self.adm_ref_force
+        return (min(self.k_adm / s, self.k_adm_cap),
+                max(self.grip_force_deadband * s, self.grip_force_deadband_floor))
     # Hand/palm "blocker" proxy (CENTRALIZED — every VBD demo's gripper gets it; not demo-tweakable).
     # The two finger proxies already carry the finger collision geometry, but the Franka hand is
     # collapsed into link7 and its collider lives only in MuJoCo, so the VBD world has NO collider for

@@ -31,9 +31,10 @@ zip-ties, clothing, towels**. The rod (cable) + FEM block are done; the cloth (`
 Newton's shirt SI-converted, `add_cloth`) is done including the **flat-sheet grasp**: `cloth_franka`
 reproduces Newton's exact folding sequence through the standard proxy bridge at physical friction
 (Newton's recipe: fingertip to table, finite jaw gap never 0 — [docs/cloths.md](docs/cloths.md)).
-`cloth_franka` itself TRIALS the force `GripController` on cloth (a `GraspWindow` with a ≤2 N
-target riding the 0.3 N engage floor — [docs/gripper.md](docs/gripper.md), outcome pending); the
-default pad is the finger's own collider. Live status: [docs/ONGOING.md](docs/ONGOING.md).
+`cloth_franka` grips via the force `GripController` (`force_target=2 N`, inside the shell's
+achievable squeeze — the target-relative admittance law converges to a stable ~8–9 mm pinch,
+[docs/gripper.md](docs/gripper.md)); the default pad is the finger's own collider. Live status:
+[docs/ONGOING.md](docs/ONGOING.md).
 
 Final vision: render **custom scenes** (table + background + any combination of deformable
 and rigid assets) and **simulate a robot policy** in them, with high graphical realism
@@ -56,10 +57,11 @@ neither). An example only declares its scene; it never picks the solver.
   Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here the grip is
   FORCE-CONTROLLED** by the centralized `GripController` with ONE unified law for every object (rigid,
   cable, AND soft): a bidirectional asymmetric admittance regulator. A demo declares only a `GraspWindow`
-  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md). (CLOTH:
-  a shell's ~0.5 N reaction sits at the controller's rigid-scale engage floor — `cloth_franka`
-  trials the force grip with a ≤2 N target riding that floor, outcome pending; the four-fold cloth
-  twins close to Newton's fixed 8 mm jaw via an explicit `finger_schedule`. See gripper.md.)
+  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md). (The
+  controller's gain/deadband are derived PER TARGET by `GripConfig.window_params` — anchored
+  bit-exact at 30 N, so low targets like the 2 N cloth pinch regulate briskly and converge instead
+  of dying in an absolute deadband. Physical params — max finger speed, engage floor, filter tau —
+  stay fixed for sim2real. See gripper.md "Knobs".)
 - **Rigid-only** → robot AND objects in ONE `SolverMuJoCo` (objects merged into the robot builder via
   `add_builder`), true two-way grasp, **CCD on** (`make_robot_solver`). The gripper closes to a FIXED
   target (`MUJOCO_GRIP.close_target`; no object-size preset width — contact + actuator effort hold it,
@@ -99,8 +101,8 @@ doesn't expose, add the knob to the package, don't special-case it in the exampl
 
 **THE GRASP IS FULLY CENTRALIZED — the ONLY object/demo-specific grasp knob is the target grasp
 force** (`GraspWindow.force_target` [N], one per grasped object). Everything else about the grasp (the
-control law, close speed, engage threshold, deadband, gains, materials, proxies) is centralized and
-identical for every object — rigid, cable, AND soft (one unified bidirectional admittance regulator;
+control law, close speed, engage threshold, materials, proxies — and the target-DERIVED gain/deadband,
+`GripConfig.window_params`) is centralized and identical in form for every object — rigid, cable, AND soft (one unified bidirectional admittance regulator;
 see [docs/gripper.md](docs/gripper.md)). A demo script must NOT contain any other grasp detail: no
 preset widths, no compressible/object-type flags, no per-object gains or biases. The demo specifies
 *when* to grasp (the `GraspWindow` times, a policy concern) and *how hard* (`force_target`), nothing

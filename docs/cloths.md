@@ -27,8 +27,9 @@ cloth needs only scene + policy — the cloth solver physics is centralized:
 4. **Grasp** (see the recipe below): descend so the fingertip point reaches the table top; default
    proxy pad (the finger's true collider) on the proxy path. Fingers: EITHER an explicit
    `finger_schedule` closing to a FIXED ~8 mm total jaw gap (Newton's recipe, the proven path), OR a
-   `GraspWindow` with a cloth-scale `force_target` ≤ 2 N (the force-grip trial — engage rides the
-   0.3 N floor and the deadband holds the latched width; see [gripper.md](gripper.md)). Set
+   `GraspWindow` with a cloth-scale `force_target` INSIDE the shell's achievable squeeze (~2 N —
+   the target-relative admittance law then converges to a stable ~8–9 mm pinch and stays live to
+   re-tighten; see [gripper.md](gripper.md)). Set
    `coupling_soft_ke=CFG.soft_contact_ke` to enable the grip-signal harvest (the framework
    replaces it with the correct shape-averaged value centrally) and
    `object_pipeline_kwargs={"soft_contact_margin": CFG.contact_margin}`; buffer sizes go in
@@ -99,11 +100,11 @@ with instrumented probes — all knobs matter; each was A/B-tested:
 4. **Proxy path: the DEFAULT pad is the finger's own collider, deep-copied.** Mesh pads must own
    their BVH inside the object model, and the left/right finger proxies are collision-filtered.
 
-Finger drive: `cloth_franka` TRIALS the force `GripController` via a
-`GraspWindow` with `force_target=1 N`: any target ≤ 2 N keeps the engage threshold at its 0.3 N
-floor, so the blind close stops at the shell's first 0.3 N of squeeze and the 2 N deadband then
-freezes that width — effectively a force-triggered fixed-gap pinch. A thin shell's reaction is
-newton-scale, so the rigid-scale constants remain a caveat ([gripper.md](gripper.md)).
+Finger drive: `cloth_franka` uses the force `GripController` with `force_target=2 N` — INSIDE the
+shell's achievable ~0.3–3 N squeeze, so under the target-relative admittance law
+(`GripConfig.window_params`: gain ∝ 1/target, deadband ∝ target) the regulator latches at the 0.3 N
+engage floor, tightens briskly, and CONVERGES to a true force equilibrium near the proven ~8–9 mm
+jaw — staying live to re-tighten a shedding pinch ([gripper.md](gripper.md)).
 
 ### Both grip paths work — measured comparison (Newton-parity physics, single-fold isolation runs)
 

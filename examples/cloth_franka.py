@@ -3,13 +3,14 @@ settles flat and centred on the shared table; the Franka pinches the middle of i
 lifts, and folds it in half across the fold line along y (the +x edge lands on the -x edge), then
 releases and retracts. Standard dynamic gripper-PROXY bridge (two-way coupling, default pads).
 
-GRIP — force windows (GraspWindow), NOT an explicit finger schedule: the centralized admittance
-GripController drives the fingers from the harvested squeeze (the force grip's cloth TRIAL, see
-docs/gripper.md). ``force_target=8 N`` (top of the thin-shell range, docs/cloths.md): its engage threshold
-clamp(0.15·8, 0.3, 2) = 1.2 N stops the blind close DEEP in the shell's squeeze, and the admittance
-regulator keeps tightening (~0.65 mm/s) through a long stationary dwell so the jaw reaches the
-proven ~8 mm working gap before the drag (a 1 N target's 0.3 N floor latched at a loose ~14 mm jaw
-that shed the wad mid-drag; 5 N latched at 11.8 mm and still faded out — both measured). The controller must stop the close itself
+GRIP — force windows (GraspWindow): the centralized admittance GripController drives the fingers
+from the harvested squeeze. ``force_target=2 N`` sits INSIDE the shell's achievable squeeze range
+(~0.3–3 N), so under the target-relative law (GripConfig.window_params: gain ∝ 1/target, deadband
+∝ target) the regulator latches at the 0.3 N engage floor, tightens briskly (~2.4 mm/s at full-scale
+error), and CONVERGES to a true force equilibrium near the proven ~8–9 mm jaw — the regulator itself
+stops the close and stays live to re-tighten a shedding pinch. (History: under the old fixed-constant
+law a ≤2 N target was literally dead — the 2 N absolute deadband exceeded the whole error range — and
+the workaround was an unreachable 8 N target creeping shut forever; see docs/gripper.md.) The controller must stop the close itself
 (a commanded zero-gap pinch expels a thin shell; docs/cloths.md).
 
 GRASP RECIPE (Newton's, docs/cloths.md): descend the fingertip to the TABLE TOP, straight-down
@@ -68,9 +69,8 @@ DEMO = DemoSpec(
     ],
     grasp_windows=[GraspWindow(close_start=8.5, close_end=10.5,
                                release_start=19.5, release_end=20.5,
-                               force_target=8.0)],     # top of the thin-shell range (docs/cloths.md):
-                                                       # engage at 1.2 N -> deep latch; the regulator then
-                                                       # tightens ~0.65 mm/s through the long dwell
+                               force_target=2.0)],     # inside the shell's achievable squeeze -> the
+                                                       # regulator converges to a stable ~8-9 mm pinch
     start_at_first_waypoint=True,                      # frame 0 = P0 (up), not home_q inside the shirt
     coupling_soft_ke=CLOTH.soft_contact_ke,            # enable the harvest; framework averages in the
                                                        # shape side centrally (ke_eff = 30 N/m)

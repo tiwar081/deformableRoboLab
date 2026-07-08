@@ -81,9 +81,9 @@ parity).
 
 - **`cloth_franka`** — ONE hot-dog fold: pinch the middle of the shirt's +x edge region and fold it
   in half (the +x edge lands on the −x edge). Grip = **force windows** (`GraspWindow`,
-  `force_target=1 N`) through the standard dynamic proxies — the cloth TRIAL of the centralized
-  force grip (a target ≤ 2 N rides the 0.3 N engage floor and the deadband holds the latched width;
-  see [gripper.md](gripper.md)). 1200 frames (20 s).
+  `force_target=2 N`, inside the shell's achievable squeeze) through the standard dynamic proxies —
+  the target-relative admittance law converges to a stable ~8–9 mm pinch
+  ([gripper.md](gripper.md)). 1380 frames (23 s).
 ## Scenic rendering
 
 There are no separate `_robolab` files anymore: scenic rendering is built into every demo via

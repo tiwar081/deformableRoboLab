@@ -130,20 +130,21 @@ class PhysicsRecorder:
         return grasp, release
 
     def _force_refs(self):
-        """Distinct ``(target, engage)`` force pairs [N] across the grasp windows, plus the deadband
-        half-width — the admittance regulator's reference levels for the projected-squeeze signal.
-        Resolved exactly as grip._grip_force_stop_kernel does (per-window target, clamped engage)."""
+        """Distinct ``(target, engage, deadband)`` triples [N] across the grasp windows — the
+        admittance regulator's reference levels for the projected-squeeze signal. Resolved exactly
+        as the kernel does: per-window target, clamped engage, and the TARGET-RELATIVE deadband via
+        the ONE centralized derivation ``GripConfig.window_params`` (never re-derived here)."""
         from .params import GRIP
-        deadband = float(GRIP.grip_force_deadband)
         refs, seen = [], set()
         for w in self.windows:
             target = float(w.force_target) if w.force_target is not None else float(GRIP.force_target)
             engage = min(max(GRIP.engage_frac * target, GRIP.engage_floor), GRIP.engage_cap)
+            _, deadband = GRIP.window_params(target)
             key = (round(target, 6), round(engage, 6))
             if key not in seen:
                 seen.add(key)
-                refs.append((target, float(engage)))
-        return refs, deadband
+                refs.append((target, float(engage), float(deadband)))
+        return refs
 
     def save(self, path, title: str | None = None) -> None:
         import matplotlib
@@ -179,9 +180,9 @@ class PhysicsRecorder:
 
         # --- force: regulated projected squeeze (primary) + raw pad |F| (secondary) + control refs ---
         ax = axes[1]
-        refs, deadband = self._force_refs()
+        refs = self._force_refs()
         first_t, first_d, first_e = True, True, True
-        for target, engage in refs:
+        for target, engage, deadband in refs:
             ax.axhspan(target - deadband, target + deadband, color="orange", alpha=0.13,
                        label="target ± deadband" if first_d else None)
             ax.axhline(target, color="darkorange", linestyle=":", linewidth=1.5,
