@@ -3,3 +3,5 @@ outputs/
 .venv/
 **/__pycache__/
 *.py[cod]
+examples/cloth_franka_hack.py
+examples/cloth_franka_sliceProxies.py

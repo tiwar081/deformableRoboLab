@@ -324,10 +324,6 @@ FRANKA = ROBOTS[SETTINGS.robot]    # the ACTIVE robot — everything imports thi
 GRIP = GripConfig()
 MUJOCO_GRIP = MujocoGripConfig()   # finger control for the rigid-only single-MuJoCo grasp
 TABLE = TableConfig()
-# YCB demo table: its own placement (robot at the origin, table centered at (0.45, 0), top z=0.05)
-# and higher object friction; the robolab view depends on this center/top-z.
-TABLE_YCB = TableConfig(pos=(0.45, 0.0, 0.025), half=(0.35, 0.5, 0.025),
-                        object_mu=1.0, color=(0.55, 0.45, 0.32))
 CABLE = CableConfig()
 
 # ONE soft block + ONE rigid cube + ONE plate, shared identically by every non-YCB demo so the

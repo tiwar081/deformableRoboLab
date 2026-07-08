@@ -76,52 +76,67 @@ def add_soft_block(builder: newton.ModelBuilder, cfg: SoftBlockConfig, center_po
 class ClothConfig:
     """T-shirt cloth (``add_cloth_mesh`` from the vendored ``assets/objects/unisex_shirt.usd``).
 
-    EXPERIMENTAL — this is a thin SHELL, not a compressible FEM volume, and these values are adapted
-    from Newton's ``example_cloth_franka`` (which runs in CENTIMETRE scale); they are NOT yet tuned for
-    this framework's metre scale or the proxy grip. Exposes the same ``soft_contact_*`` fields the
-    framework reads off ``soft_block`` so the proxy<->particle harvest works like the FEM-block demos."""
+    The values are Newton's ``example_cloth_franka`` cloth converted UNIT-CONSISTENTLY to this
+    framework's SI (m, kg) world. Newton's example runs in centimetre-gram units, so copying its
+    numbers verbatim (the original state of this config) made the cloth contact ~1000x stiffer and
+    ~100x more damped RELATIVE TO PARTICLE WEIGHT than Newton's working grasp, and the shirt 10x too
+    light — which is what actually broke the cloth grasp (see docs/cloths.md). The conversion law
+    (cm,g -> m,kg): stiffness-like [M/T^2] (ke, kf, tri_ke/ka) x1e-3; damping-like [M/T] (kd) x1e-3;
+    bending [M*L/T^2] (edge_ke; force units, VBD's k = edge_ke*rest_len with dtheta/dx ~ 1/L) x1e-5;
+    edge_kd [M*L/T] x1e-5; area density [M/L^2] x10 (0.02 g/cm^2 = 0.2 kg/m^2); lengths x0.01.
+    Matching dt (10 substeps) makes every contact dimensionless group equal Newton's: effective
+    pad<->cloth ke_eff = avg(soft 10, shape 50) = 30 N/m, eta = ke_eff*dt^2/m = 3.2, kd_eff = 0.03
+    = 0.5x critical. Exposes the same ``soft_contact_*`` fields the framework reads off ``soft_block``
+    so the proxy<->particle harvest works like the FEM-block demos."""
     usd_file: str = "unisex_shirt.usd"
     usd_prim: str = "/root/shirt"
     scale: float = 0.01               # the USD shirt mesh is ~65 cm in native units -> metres
     flatten_z: float = 0.12           # squash the native 3D (worn) shirt mesh in z so it starts LAID
-                                       # FLAT on the table (~3 cm thick), instead of a 27 cm-thick draped
-                                       # shape that would envelop the gripper proxies and drag the arm.
-    density: float = 0.3              # per-area [kg/m^2] (~0.13 kg over the shirt)
-    particle_radius: float = 0.005
-    tri_ke: float = 1.0e4             # stretch / shear (cloth in-plane)
-    tri_ka: float = 1.0e4
-    tri_kd: float = 1.0e-2
-    edge_ke: float = 5.0              # bending
-    edge_kd: float = 0.5
-    contact_margin: float = 0.01
-    # proxy<->particle + body<->cloth contact (read by the framework like SoftBlockConfig).
-    # CRITICAL for a thin shell: the ultra-light cloth particles (~3e-5 kg) have no volumetric tet
-    # network or internal damping to absorb a contact impulse (unlike the FEM soft block, which masks
-    # an under-damped contact), so the contact itself must be physically damped or the pads eject the
-    # particles to NaN. Critical damping kd_crit = 2*sqrt(ke*m) ~ 1-4 N*s/m here; 1e1 is safely
-    # over-critical and matches Newton's own example_cloth_franka (soft_contact_ke=1e4, kd=1e1). The
-    # old ke=1e5/kd=1e-4 (carried over from the firm soft-block contact) was ~5 orders below critical
-    # and over-stiff for this mass -> ejection. NOTE: the grip-force harvest (grip.py) reconstructs the
-    # pad reaction from soft_contact_ke; cloth_franka wires coupling_soft_ke = CLOTH.soft_contact_ke, so
-    # ke stays consistent across model penalty / VBD solve / harvest from this single source.
-    soft_contact_ke: float = 1.0e4
-    soft_contact_kd: float = 1.0e1
-    soft_contact_kf: float = 1.0e3
-    # Cloth (particle↔body) friction. Matched to Newton's example_cloth_franka, which sets
-    # model.soft_contact_mu = 0.25 for the shirt (was 0.8 here). The effective cloth↔pad friction is
-    # the VBD geometric mean √(soft_contact_mu · pad μ); the pad μ (GRIP.proxy_mu=1.0) is unchanged.
-    soft_contact_mu: float = 0.25
+                                       # FLAT on the table (~3 cm thick); the cloth_franka demos pass 1.0
+                                       # to drop the inflated shirt like Newton's init.
+    density: float = 0.2              # per-area [kg/m^2] = Newton's 0.02 g/cm^2 (~0.17 kg shirt)
+    particle_radius: float = 0.008    # Newton's 0.8 cm — the cloth's contact thickness vs bodies
+    tri_ke: float = 10.0              # stretch / shear (Newton 1e4, [M/T^2] x1e-3)
+    tri_ka: float = 10.0
+    tri_kd: float = 1.5e-5            # Newton 1.5e-2 x1e-3
+    edge_ke: float = 5.0e-5           # bending (Newton 5, force units x1e-5)
+    edge_kd: float = 5.0e-6           # Newton 0.5 x1e-5
+    contact_margin: float = 0.008     # cloth<->body pipeline margin = Newton's 0.8 cm
+    # proxy<->particle + body<->cloth contact (read by the framework like SoftBlockConfig). VBD
+    # body-particle contact uses the ARITHMETIC MEAN of this particle-side material and the touching
+    # shape's material (mu: geometric mean) — so the pads/table shape material below is part of the
+    # same contact and both sides must stay SI-converted together. ke_eff = 30 N/m sounds soft in
+    # metre units but is exactly Newton's working value: penetration under the shirt's own weight is
+    # ~10 um/particle, and an 8 mm jaw on the ~2-layer stack gives ~0.2 N/contact — newton-scale grip
+    # forces, not the old 1e2-N spikes that expelled the shell ("watermelon-seed" ejection).
+    soft_contact_ke: float = 10.0     # Newton 1e4 x1e-3
+    soft_contact_kd: float = 1.0e-2   # Newton 1e1 x1e-3; kd_eff = 0.5x critical, like Newton — the old
+                                       # kd=1e1 (verbatim copy) was ~100x OVER-critical: viscous glue
+                                       # that ratcheted particles out of the pinch during motion.
+    soft_contact_kf: float = 1.0      # Newton 1e3 x1e-3
+    soft_contact_mu: float = 0.25     # dimensionless; effective vs pads = sqrt(0.25*1.5) ~ 0.61
+    # Shape-side contact material for EVERYTHING the cloth touches (pads, palm, table). Newton's
+    # example sets ke=5e4, kd=5e1, mu=1.5 (cm-g) on ALL shapes; SI-converted here. The framework
+    # applies this centrally to the proxy/finger shapes + object-side table on the cloth path
+    # (AFTER restore_proxy_materials, whose GRIP values are FEM/cable-scale and would dominate the
+    # averaged contact 1000:1). A future mixed cloth+rigid scene must give any cloth-touching shape
+    # this scale of material — see docs/cloths.md.
+    shape_contact_ke: float = 50.0
+    shape_contact_kd: float = 5.0e-2
+    shape_contact_mu: float = 1.5
     # ---- VBD particle self-contact (thin-shell fidelity; cf. cloth_particle_kwargs) ----
     # A thin shell folded/draped on itself MUST self-collide or layers pass through each other (and
     # through the table) — the FEM block never needs this (its volume can't fold), which is why the
     # shared PARTICLE_SOLVER_KWARGS leaves self-contact OFF. Newton's example_cloth_franka enables it;
-    # these are its (cm-scale) values converted to this framework's metre scale. The topological filter
-    # threshold + rest-shape exclusion radius stop mesh-adjacent vertices from self-colliding at rest.
+    # these are its values (cm -> m). The topological filter threshold + rest-shape exclusion radius
+    # stop mesh-adjacent vertices from self-colliding at rest. The 2 mm self-contact radius is what
+    # sets the settled two-layer spacing (measured ~2 mm in Newton's recording — there is NO large
+    # inter-layer gap; the graspable thickness comes from particle_radius vs the bodies).
     self_contact: bool = True
-    self_contact_radius: float = 0.002       # [m] particle self-collision radius
-    self_contact_margin: float = 0.003       # [m] broadphase margin for self-contact
+    self_contact_radius: float = 0.002       # [m] particle self-collision radius (Newton 0.2 cm)
+    self_contact_margin: float = 0.002       # [m] broadphase margin for self-contact (Newton 0.2 cm)
     self_contact_filter_threshold: int = 1   # topological hops excluded from self-contact
-    self_contact_rest_exclusion_radius: float = 0.006  # [m] rest-shape neighbours excluded
+    self_contact_rest_exclusion_radius: float = 0.005  # [m] rest-shape neighbours excluded (Newton 0.5 cm)
 
 
 def cloth_particle_kwargs(cfg: ClothConfig) -> dict:

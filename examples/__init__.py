@@ -36,6 +36,8 @@ EXAMPLE_NAMES = (
     "pickplace_ycb_franka",
     "pickplace_ycb_vbd_franka",
     "cloth_franka",
+    "cloth_franka_hack",
+    "cloth_franka_sliceProxies",
 )
 
 
@@ -171,10 +173,12 @@ def run(example, args) -> None:
     # no proxy coupling (rigid-only MuJoCo grasp) records nothing even when graphs are requested.
     recorder = None
     if (getattr(args, "output", "mp4") in ("graphs", "both")
-            and getattr(example, "coupling", None) is not None
-            and getattr(example, "grasp_windows", None) is not None):
+            and getattr(example, "coupling", None) is not None):
+        # grasp_windows is optional: a force-grip demo supplies it (its close/release times draw the
+        # trigger lines); an explicit-finger demo (e.g. cloth_franka / cloth_franka_hack) has none, so
+        # the recorder just omits those lines (PhysicsRecorder handles grasp_windows=None).
         from deformableManipulationTools.instrumentation import PhysicsRecorder
-        recorder = PhysicsRecorder(example.fps, example.grasp_windows)
+        recorder = PhysicsRecorder(example.fps, getattr(example, "grasp_windows", None))
 
     while viewer.is_running():
         if viewer.should_step():

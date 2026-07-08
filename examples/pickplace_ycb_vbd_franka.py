@@ -3,16 +3,16 @@ cube routes the workspace to the VBD path (force-grip via proxies). A/B twin of 
 import numpy as np
 import warp as wp
 
-from deformableManipulationTools import (TABLE_YCB, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB, SOFT_BLOCK,
+from deformableManipulationTools import (TABLE, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB, SOFT_BLOCK,
                                           GraspWindow, OBJECTS_DIR, load_usd_mesh)
 from deformableManipulationTools.demo_runner import DemoSpec, Obj, WP
 
-TT = TABLE_YCB.top_z
+TT = TABLE.top_z    # ONE shared table for every demo (scene remapped to its centre)
 CH = RUBIKS_CUBE.half_extent
-CUBE_XY = (0.431, -0.097)
-BANANA_XY = (0.539, -0.076)
-TRAY_XY = (0.443, 0.127)
-SOFT_XY = (0.55, -0.28)
+CUBE_XY = (0.101, -0.547)
+BANANA_XY = (0.209, -0.526)
+TRAY_XY = (0.113, -0.323)
+SOFT_XY = (0.22, -0.73)
 DROP_Z = TT + 0.16
 YAW = np.pi / 2
 
@@ -27,7 +27,7 @@ CUBE_DROP = (_TRAY32[0] + 0.06, _TRAY32[1])
 
 DEMO = DemoSpec(
     scene=[
-        Obj("table", TABLE_YCB),
+        Obj("table", TABLE),
         Obj("ycb_mesh", BOWL_YCB, pos=(TRAY_XY[0], TRAY_XY[1], 0.0), rest_on_z=True, mass=BOWL_YCB.target_mass),
         Obj("proxies"),
         Obj("rubiks_cube", RUBIKS_CUBE, pos=(CUBE_XY[0], CUBE_XY[1], TT + CH)),
@@ -55,10 +55,6 @@ DEMO = DemoSpec(
         GraspWindow(close_start=10.2, close_end=11.6, release_start=17.8, release_end=18.4, force_target=80.0),
     ],
     blanket_fill=False,
-    robot_base_xform=wp.transform((0.0, 0.0, 0.0), wp.quat_identity()),
-    robot_table=TABLE_YCB,
-    camera=(wp.vec3(1.1, 0.55, 0.6), -25.0, -130.0),
-    scenic_check_table=False,
     object_solver_kwargs={"rigid_body_contact_buffer_size": 16384,
                           "rigid_body_particle_contact_buffer_size": 4096},
     object_pipeline_kwargs={"rigid_contact_max": 100000, "max_triangle_pairs": 1_048_576,

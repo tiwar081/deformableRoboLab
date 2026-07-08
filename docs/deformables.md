@@ -41,7 +41,8 @@ rigid+soft scene), scaled to the table:
   particle radius 0.0035 (the contact boundary sits one particle radius above the rendered surface —
   large radii read as contact-before-touching). The block tolerates the near-zero `kd` because its
   tet network + internal `k_damp=10` dissipate contact energy and it's grasped gently; a thin **cloth**
-  shell does NOT (it needs ≈critical `soft_contact_kd` — see [cloths.md](cloths.md)).
+  shell does NOT (its whole contact set is different — the SI-converted Newton cloth, ke_eff 30 N/m
+  with kd_eff ≈ 0.5× critical; see [cloths.md](cloths.md)).
   Note: `particle_max_velocity` is **not** set — it is inert under `SolverVBD` (XPBD/MPM only).
 - The body-particle pair material is the **average** of `soft_contact_*` and the rigid shape's
   material, and VBD sums per-contact forces on the body. The pressing cube/plate keep their authored
@@ -55,9 +56,10 @@ rigid+soft scene), scaled to the table:
 ## Cloth (thin shell) — see [cloths.md](cloths.md)
 
 Cloth (shirt/towel/sheet) is implemented as a separate deformable type: VBD `add_cloth_mesh`, its own
-`ClothConfig` + centralized `cloth_particle_kwargs` (particle self-contact ON, which the block omits), and a
-≈critically-damped `soft_contact_kd` the light shell requires. The reference demo is `cloth_franka`.
-Full authoring guide + gotchas: **[cloths.md](cloths.md)**.
+`ClothConfig` (Newton's `example_cloth_franka` cloth converted unit-consistently to SI — never copy its
+cm-gram numbers verbatim) + centralized `cloth_particle_kwargs` (particle self-contact ON, which the
+block omits) + a framework-applied shape material profile for everything the cloth touches. The
+reference demo is `cloth_franka` (full grasp-and-fold). Full guide + gotchas: **[cloths.md](cloths.md)**.
 
 ## Future deformables (project goal)
 

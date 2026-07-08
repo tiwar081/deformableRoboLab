@@ -66,15 +66,32 @@ demos are therefore directly cross-comparable.
   path. The A/B twin of `pickplace_ycb_franka` demonstrating the centralized solver routing (≈2.2×
   slower than the rigid-only MuJoCo path). Two `GraspWindow`s — rubik's cube (`force_target=30`)
   then banana (`force_target=80`, the firmest stable value for the slip-prone curved mesh). 16 substeps.
+  Known imperfections (deferred): the banana's grip is intermittent (curved, slip-prone mesh — 80 N is
+  the firmest stable target), and the rubik's cube sticks briefly at release on this VBD path (a
+  penalty-contact stiction artifact; the rigid-only twin releases cleanly).
 
-## Cloth (in flight — see [ONGOING.md](ONGOING.md))
+## Cloth — the shirt fold (solved; recipe + history in [cloths.md](cloths.md))
 
-- **`cloth_franka`** — a Franka attempts a per-corner SCOOP pickup of a flat T-shirt (the first
-  cloth-manipulation demo). Replicates Newton's `example_cloth_franka` motion (~45° tilt, all 9 DOFs
-  from keyframes, not the force `GripController`). The sim is **stable** (≈critically-damped cloth
-  contact + self-contact), but the shirt is **NOT lifted/dragged/moved** — an architectural limit of
-  the gripper-proxy bridge (friction-independent; left visible, not faked). See
-  [cloths.md](cloths.md) and [ONGOING.md](ONGOING.md). 600 frames, 16 substeps.
+Newton's `example_cloth_franka` shirt-folding sequence — same timeline, orientations, and four
+folds, with grasp/release poses mapped IN SPIRIT (scaled 0.8 about the shirt centre) so the scene
+runs on the ONE table every demo shares; see the `cloth_franka` docstring. The shirt drops inflated, settles flat, and
+the Franka folds its four regions in turn (top-left, bottom-left, top-right, bottom-right, then a
+final bottom drag toward the robot) — each fold: descend the fingertip to the TABLE TOP, pinch to a
+FIXED 8 mm jaw (never 0), lift, drag, release. Physical friction only (μ_eff ≈ 0.61); the cloth is
+the SI-converted Newton shirt (`ClothConfig` defaults). The three demos share the identical scene +
+policy and differ ONLY in the grip mechanism:
+
+- **`cloth_franka`** — the standard dynamic gripper-**proxy** bridge (two-way, EE feedback ON) with
+  the default pad (the finger's true collider, deep-copied). Performs the folds.
+- **`cloth_franka_hack`** — **solution A**: kinematic finger colliders IN the cloth's VBD solve
+  (`direct_finger_grip=True`, one-way). This is Newton's own architecture (its robot feels nothing);
+  the positive control. No `finger_grip_mu` — the old friction hack is gone.
+- **`cloth_franka_sliceProxies`** — `cloth_franka` with the legacy box-slice pad
+  (`box_slice_proxy=True`, the only demo that sets it). Captures and lifts
+  identically but the stepped taper **sheds the wad at drag onset**, so folds don't complete: the one
+  remaining proxy-pad limitation, kept visible (fix candidates: [cloths.md](cloths.md) gotcha 8).
+
+All 10 substeps / 5 VBD iterations (Newton's dt — part of the contact parity), 4260 frames (70.5 s).
 
 ## Scenic rendering
 

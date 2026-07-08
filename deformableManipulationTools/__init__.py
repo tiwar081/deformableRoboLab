@@ -17,7 +17,7 @@ from __future__ import annotations
 from .params import (
     RobotConfig, GripConfig, MujocoGripConfig, GraspWindow, TableConfig, CableConfig, SoftBlockConfig,
     RigidBoxConfig, PlateConfig, YcbMeshConfig,
-    FRANKA, GRIP, MUJOCO_GRIP, TABLE, TABLE_YCB, CABLE,
+    FRANKA, GRIP, MUJOCO_GRIP, TABLE, CABLE,
     SOFT_BLOCK, RIGID_CUBE, PLATE, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB,
 )
 # Math helpers.
@@ -45,7 +45,7 @@ __all__ = [
     "RobotConfig", "GripConfig", "MujocoGripConfig", "GraspWindow", "TableConfig", "CableConfig",
     "SoftBlockConfig",
     "RigidBoxConfig", "PlateConfig", "YcbMeshConfig", "FRANKA", "GRIP", "MUJOCO_GRIP", "TABLE",
-    "TABLE_YCB", "CABLE", "SOFT_BLOCK", "RIGID_CUBE", "PLATE", "RUBIKS_CUBE", "BOWL_YCB", "BANANA_YCB",
+    "CABLE", "SOFT_BLOCK", "RIGID_CUBE", "PLATE", "RUBIKS_CUBE", "BOWL_YCB", "BANANA_YCB",
     "quat_rotate_xyzw", "find_body", "smoothstep", "wp_smoothstep", "quat_to_vec4",
     "build_franka_robot", "add_robot_table_box", "make_robot_solver", "solve_gripper_ik",
     "finger_body_indices", "set_mujoco_grip_controller",

@@ -2,8 +2,8 @@
 
 Franka manipulation demos on Newton physics (`_external/newton`), built toward a realistic
 deformable-object simulation environment. Detailed knowledge is split into `docs/` (indexed
-below); this file holds the project vision, the standards/rules, and the recurring gotchas an
-agent must know before editing.
+below, read when relevant); this file holds the project vision, the standards/rules, and the
+recurring gotchas an agent must know before editing.
 
 ## Central config: `settings.yaml` (repo root)
 
@@ -27,10 +27,15 @@ robot too (native-USD rendered/FK'd directly; URDF converted once via Isaac Sim)
 
 Building a simulation environment on Newton that handles **deformable bodies and
 deformable↔rigid interaction** realistically. Primary deformable types: **cables/wires,
-zip-ties, clothing, towels**. The rod (cable) + FEM block are done; the cloth **shell**
-infrastructure exists (`ClothConfig`, `add_cloth`, [docs/cloths.md](docs/cloths.md)) but
-cloth *manipulation* is in flight — the gripper can't yet move a flat sheet (see
-[docs/ONGOING.md](docs/ONGOING.md)).
+zip-ties, clothing, towels**. The rod (cable) + FEM block are done; the cloth (`ClothConfig` =
+Newton's shirt SI-converted, `add_cloth`) is done including the **flat-sheet grasp**: `cloth_franka`
+reproduces Newton's exact folding sequence through the standard proxy bridge at physical friction
+(Newton's recipe: fingertip to table, FIXED 8 mm jaw — [docs/cloths.md](docs/cloths.md)). Cloth
+demos drive the fingers with an explicit `finger_schedule` (Newton's fixed-width close), NOT the
+force `GripController` — its engage/deadband constants are rigid-scale; retuning it for shells is
+an open item in [docs/gripper.md](docs/gripper.md), as is the legacy box-slice proxy-pad
+limitation (the default pad is now the finger's own collider; [docs/cloths.md](docs/cloths.md)
+gotcha 8).
 
 Final vision: render **custom scenes** (table + background + any combination of deformable
 and rigid assets) and **simulate a robot policy** in them, with high graphical realism
@@ -53,7 +58,9 @@ neither). An example only declares its scene; it never picks the solver.
   Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here the grip is
   FORCE-CONTROLLED** by the centralized `GripController` with ONE unified law for every object (rigid,
   cable, AND soft): a bidirectional asymmetric admittance regulator. A demo declares only a `GraspWindow`
-  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md).
+  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md). (Exception:
+  CLOTH demos close to Newton's fixed 8 mm jaw via an explicit `finger_schedule` — a shell's ~0.5 N
+  reaction is below the controller's rigid-scale engage floor; retune pending, see gripper.md.)
 - **Rigid-only** → robot AND objects in ONE `SolverMuJoCo` (objects merged into the robot builder via
   `add_builder`), true two-way grasp, **CCD on** (`make_robot_solver`). The gripper closes to a FIXED
   target (`MUJOCO_GRIP.close_target`; no object-size preset width — contact + actuator effort hold it,
@@ -101,10 +108,12 @@ preset widths, no compressible/object-type flags, no per-object gains or biases.
 more. If a grasp needs tuning beyond the target force, fix it centrally in the package, not the demo.
 
 - **`params.py`** — single source of truth for ALL physics parameters (frozen dataclasses):
-  `FRANKA`, `GRIP`, `TABLE`/`TABLE_YCB`, `CABLE`, `SOFT_BLOCK`, `RIGID_CUBE`, `PLATE`, and the
-  DISTINCT YCB objects `RUBIKS_CUBE`/`BOWL_YCB`/`BANANA_YCB`. **One** soft block + **one** rigid
-  cube (1 kg) are shared identically by every non-YCB demo so the demos are cross-comparable — no
-  per-demo object variants, and an example never creates or modifies an object. Asset builders
+  `FRANKA`, `GRIP`, `TABLE`, `CABLE`, `SOFT_BLOCK`, `RIGID_CUBE`, `PLATE`, and the
+  DISTINCT YCB objects `RUBIKS_CUBE`/`BOWL_YCB`/`BANANA_YCB`. **ONE table (`TABLE`) is shared by
+  EVERY demo** (the former per-demo `TABLE_YCB`/`TABLE_CLOTH` variants were removed; the ycb and
+  cloth scenes are mapped onto it). **One** soft block + **one** rigid cube (1 kg) are shared
+  identically by every non-YCB demo so the demos are cross-comparable — no per-demo object
+  variants, and an example never creates or modifies an object. Asset builders
   register their authored contact material; the framework restores it after the blanket proxy-fill,
   so an example never re-applies a material override by hand.
 - **`framework.py`** — `GraspExample`: owns the entire build (robot+solver, object-model assembly,
@@ -157,17 +166,31 @@ now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), 
 
 ## Recurring mistakes to avoid (update as they recur)
 
+- **Never copy numbers from Newton's cm-gram examples verbatim** (this broke the cloth grasp for
+  weeks and is the same class of error as the carried-over contact `kd` above). Newton's cloth
+  example runs in centimetre-gram units: its `ke=1e4 / kd=1e1 / density=0.02` pasted into our
+  metre-kg world were ~1000×/100×/0.1× off *relative to particle weight* — each number looked
+  plausible alone. Convert the whole set ([M/T²] ×1e-3, [M/T] ×1e-3, bending ×1e-5, area density
+  ×10, lengths ×0.01, and match dt), then verify the dimensionless groups η = ke_eff·dt²/m and
+  kd_eff/kd_crit against the source. Also: VBD body↔particle contact AVERAGES the shape material
+  into the contact, so the pad/table shape ke is part of the cloth contact — see
+  [docs/cloths.md](docs/cloths.md).
+- **A penalty pinch on a thin shell must close to a FINITE gap, never 0.** The MuJoCo fingers feel
+  no VBD object, so they really do reach a commanded 0 width, and a zero-gap pinch EXPELS the cloth
+  (measured: 17 captured particles → 0). Newton closes to 8 mm; `cloth_franka` does the same.
 - **A robot with mesh colliders (e.g. the panda USD: each link is one `CONVEX_MESH`) needs two
-  things the URDF robot didn't.** (1) **Box finger proxies:** `build_gripper_proxies` copies the
-  finger collider into the VBD object model; a CONVEX_MESH proxy is contacted LATE then explosively
-  by the VBD penalty solver (spiked the grip to ~2 kN at a ~2 mm latch). It auto-detects a non-box
-  finger collider and substitutes a per-finger AABB box (well-behaved, ~60 N, pad face matches fr3 to
-  <0.5 mm). (2) **Viz-first BVH:** the robot's mesh BVHs are shared into the viz model; finalizing viz
-  LAST frees them and corrupts the robot narrow-phase (SOLVERS §4) — only manifests once the OBJECT
-  side (cable capsules / ycb meshes) reuses the freed pool, so it looked like a cable/mesh-only crash.
-  `_build_split_mujoco_vbd` finalizes the **viz model first** (it never collides; its stale BVH is
-  harmless). The panda's per-link finger orientation also differs (both fingers identity-posed; the
-  right pad is a MIRRORED mesh, not a flipped body) — the per-finger AABB handles this automatically.
+  things the URDF robot didn't.** (1) **Mesh finger proxies must be DEEP-COPIED and left↔right
+  filtered:** `build_gripper_proxies` copies the finger collider into the VBD object model (the
+  DEFAULT pad = the finger's own collider). Sharing the robot's `Mesh` object frees its BVH under
+  the object narrow phase (GJK-MPR faults, CUDA error 700), and the two mesh fingers must be
+  collision-filtered against each other. The legacy `box_slice_proxy=True` opts a mesh finger into
+  thin box SLICES (`_finger_box_slices`, primitive narrow phase) — kept only as the A/B twin
+  `cloth_franka_sliceProxies`: the slice stack's stepped inner face sheds a pinched cloth wad
+  (see [docs/cloths.md](docs/cloths.md) / `grip.py`).
+  (2) **Viz-first BVH:** the robot's mesh BVHs are shared into the viz model; finalizing viz LAST frees
+  them and corrupts the robot narrow-phase (SOLVERS §4) — only manifests once the OBJECT side (cable
+  capsules / ycb meshes) reuses the freed pool, so it looked like a cable/mesh-only crash.
+  `_build_split_mujoco_vbd` finalizes the **viz model first** (it never collides; its stale BVH is harmless).
 - **Viz shows soft bodies frozen / objects penetrating them / contact-before-touching** →
   `_sync_viz_state` must copy `particle_q`/`particle_qd` (not just body transforms) from the
   object sim state. This is the #1 recurring soft-body bug.
@@ -189,47 +212,29 @@ now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), 
 - Verify changes with **instrumented headless `--viewer null --device cuda:0`** runs +
   `test_final`, not just by looking at a video.
 
-## docs/ index
+## docs/ index — read when relevant
 
 This repo's own docs:
 
-- [docs/solver-architecture.md](docs/solver-architecture.md) — solver framework rule, robot &
-  VBD object solver config + the `alpha=0`/ALM rationale, CUDA-graph capture rules, the viz
-  particle-copy bug, the verification standard.
-- [docs/gripper.md](docs/gripper.md) — the **centralized** dynamic finite-mass proxy grip
-  (`deformableManipulationTools/grip.py`, params in `params.py`): net-to-EE feedback, rigid +
-  soft-particle harvest, the no-per-finger-feedback stability invariant, and **the force controller**
-  — ONE unified bidirectional asymmetric admittance regulator for every object (rigid, cable, soft);
-  the one per-demo knob is `GraspWindow.force_target`.
-- [docs/deformables.md](docs/deformables.md) — cable (rod) and soft-FEM-block tuned parameters
-  + reasons; notes on future zip-tie deformables.
-- [docs/cloths.md](docs/cloths.md) — how to add a **cloth-type** deformable (shirt/towel/sheet):
-  `ClothConfig` + `add_cloth` + the centralized `cloth_particle_kwargs`, the grasp knob, and the
-  cloth-specific gotchas (the ≈critical `soft_contact_kd` a thin shell needs, particle self-contact,
-  the flat-sheet grasp limit).
+- [docs/solver-architecture.md](docs/solver-architecture.md) — the solver framework rule, robot & VBD
+  object solver config + `alpha=0`/ALM rationale, CUDA-graph capture rules, the verification standard.
+- [docs/gripper.md](docs/gripper.md) — the centralized proxy grip + harvest (net-to-EE, no per-finger
+  feedback) and the unified admittance force controller; per-demo knob is `GraspWindow.force_target`.
+- [docs/deformables.md](docs/deformables.md) — cable (rod) + soft-FEM-block tuned parameters and reasons.
+- [docs/cloths.md](docs/cloths.md) — adding a cloth deformable (`ClothConfig` + `add_cloth`) + the
+  cloth gotchas (≈critical `soft_contact_kd`, particle self-contact, the flat-sheet grasp limit).
 - [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.
-- [docs/robolab-graphics.md](docs/robolab-graphics.md) — the `robolabViz/` RoboLab-look
-  renderer (raycast + offline RTX), customization surface, vendored assets, render gotchas.
-- [docs/ONGOING.md](docs/ONGOING.md) — the **live log of in-flight work + recent changes**
-  (volatile, changes often). Always read it for the current state before editing active areas
-  (e.g. the cable coupling / gripper). Its own header lists what's currently unresolved — trust
-  the file, not a summary here.
-- When asked to create/improve this CLAUDE.md → [docs/howToWriteCLAUDE.md](docs/howToWriteCLAUDE.md)
-  (the working procedure: keep it short, universal, point-don't-paste, "if X then Y").
+- [docs/robolab-graphics.md](docs/robolab-graphics.md) — the `robolabViz/` RoboLab-look renderer,
+  customization surface, vendored assets, render gotchas.
+- [docs/ONGOING.md](docs/ONGOING.md) — live log of in-flight work; read before editing an area it
+  names as active. Trust the file, not a summary here.
+- Creating/improving this CLAUDE.md → [docs/howToWriteCLAUDE.md](docs/howToWriteCLAUDE.md).
 
 External references (large; consult on demand, don't read up front):
 
-- [docs/NVIDIA_Newton_release.md](docs/NVIDIA_Newton_release.md) — NVIDIA's Newton GA release
-  article. **The authoritative reference for the cable two-way MuJoCo↔VBD coupling** (dynamic
-  finite-mass proxies, `sync_proxy_state` momentum-consistent undo, staggered one-step-lag
-  step), plus the Isaac Lab Franka-cube physics config (`impratio=1000`, `iterations=20`, …),
-  Kamino closed-chain, and hydroelastic-SDF contact. Primary source for the coupling work and
-  the Isaac Lab / high-fidelity path.
-- [docs/NVIDIA_cloth_manip.md](docs/NVIDIA_cloth_manip.md) — NVIDIA's Isaac Lab + Newton **cloth /
-  deformable manipulation** blog extract (VBD for thin deformables, Franka cloth grasp). Read when
-  starting the cloth/towel/zip-tie deformables on the project roadmap.
-- [docs/SOLVERS.md](docs/SOLVERS.md) — deep solver reference: why `SolverVBD` is fragile for
-  *rigid* objects (the basis of the framework rule), how the object↔gripper two-way physics is
-  wired, and an annotated catalog of Newton's upstream examples (cable, cloth, mpm, kamino,
-  softbody, …) + RoboLab examples. Check here for upstream patterns when adding a new object
-  type, solver, or render feature.
+- [docs/NVIDIA_Newton_release.md](docs/NVIDIA_Newton_release.md) — authoritative reference for the
+  two-way MuJoCo↔VBD proxy coupling + the Isaac Lab Franka-cube physics config / high-fidelity path.
+- [docs/NVIDIA_cloth_manip.md](docs/NVIDIA_cloth_manip.md) — NVIDIA's Isaac Lab + Newton cloth /
+  deformable-manipulation writeup. Read when working the cloth/towel/zip-tie roadmap.
+- [docs/SOLVERS.md](docs/SOLVERS.md) — deep solver reference: why `SolverVBD` is fragile for *rigid*
+  objects, the object↔gripper wiring, and an annotated catalog of Newton's upstream examples.

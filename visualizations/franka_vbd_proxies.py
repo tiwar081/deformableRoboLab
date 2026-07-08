@@ -4,8 +4,10 @@ The proxies are invisible finite-mass bodies that live only in the VBD *object* 
 (``deformableManipulationTools.grip.build_gripper_proxies``); at runtime each substep they are
 re-pinned to a robot body (``TwoWayProxyCoupling.sync_proxies``):
 
-  * two FINGER proxies  -> the left/right Franka finger bodies (one box each = the AABB of the
-    finger's 4 sparse collision boxes), the GRIP pads that are harvested into the grip signal;
+  * two FINGER proxies  -> the left/right Franka finger bodies, carrying the finger's OWN collider
+    copied one-for-one (the DEFAULT pad: the panda USD's CONVEX_MESH per finger, rendered here as
+    the actual ghosted mesh + its tight AABB wireframe; the FR3 URDF's sparse boxes, rendered as
+    the boxes) — the GRIP pads that are harvested into the grip signal;
   * one PALM/EE blocker -> the EE (link7) body (a synthetic box spanning wrist->hand), a blocker
     only (never harvested), stopping a swept cable passing through the gripper palm.
 
@@ -137,12 +139,18 @@ def build_robot_meshes(model, body_q):
     return (np.concatenate(all_v), np.concatenate(all_t).astype(np.int32), np.concatenate(all_c))
 
 
-def current_proxy_boxes(robot_builder, robot_model, body_q, robot: RobotConfig):
-    """World-frame proxy boxes for the CURRENT grip (2 finger AABB boxes + 1 palm/EE blocker).
+def current_proxy_geometry(robot_builder, robot_model, body_q, robot: RobotConfig):
+    """World-frame proxy geometry for the CURRENT grip: ``(tri_geoms, outline_boxes)``.
 
     Builds the real proxies via ``build_gripper_proxies`` (the same call the framework makes), then
     pins each proxy body to its mirror robot body exactly as ``TwoWayProxyCoupling.sync_proxies``
-    does at runtime: finger proxies -> finger bodies, palm proxy -> EE (link7)."""
+    does at runtime: finger proxies -> finger bodies, palm proxy -> EE (link7).
+
+    The DEFAULT finger pad is the finger's own collider copied one-for-one — a CONVEX_MESH on the
+    panda USD (rendered as the actual ghosted mesh, outlined by its tight AABB), sparse BOXes on the
+    FR3 URDF (rendered as the boxes themselves). The palm/EE blocker is always a synthetic box.
+    ``tri_geoms`` is a list of ``(verts_world, tris, color)``; ``outline_boxes`` of
+    ``(center, half, quat, color)`` for the depth-independent wireframes."""
     finger_bodies = finger_body_indices(robot_model, robot=robot)
     ee_body = find_body(list(robot_model.body_label), robot.ee_link_suffix)
 
@@ -153,16 +161,31 @@ def current_proxy_boxes(robot_builder, robot_model, body_q, robot: RobotConfig):
     mirror = {proxy_bodies[0]: finger_bodies[0], proxy_bodies[1]: finger_bodies[1],
               proxy_bodies[2]: ee_body}
     palm_pb = proxy_bodies[2]
+    mesh_types = (int(newton.GeoType.MESH), int(newton.GeoType.CONVEX_MESH))
 
-    boxes = []
+    tri_geoms, boxes = [], []
     for s in proxy_shapes:
         pb = ob.shape_body[s]
         local_tf = np.asarray(ob.shape_transform[s], dtype=np.float64)
-        half = np.asarray(ob.shape_scale[s], dtype=np.float64)[:3]
         world_tf = tf_compose(body_q[mirror[pb]], local_tf)
         color = PALM_COLOR if pb == palm_pb else FINGER_COLOR
-        boxes.append((world_tf[:3], half, world_tf[3:7], color))
-    return boxes
+        src = ob.shape_source[s]
+        scale = np.asarray(ob.shape_scale[s], dtype=np.float64)[:3]
+        if int(ob.shape_type[s]) in mesh_types and src is not None:
+            v_local = np.asarray(src.vertices, dtype=np.float64) * scale[None, :]
+            tris = np.asarray(src.indices, dtype=np.int32).reshape(-1, 3)
+            v_world = quat_rotate(world_tf[3:7], v_local) + world_tf[:3]
+            tri_geoms.append((v_world.astype(np.float32), tris, color))
+            # tight local AABB of the pad mesh -> outlined oriented box
+            lo, hi = v_local.min(axis=0), v_local.max(axis=0)
+            c_local = 0.5 * (lo + hi)
+            center = world_tf[:3] + quat_rotate(world_tf[3:7], c_local)
+            boxes.append((center, 0.5 * (hi - lo), world_tf[3:7], color))
+        else:
+            v, t, c = _box_tris(world_tf[:3], scale, world_tf[3:7], color)
+            tri_geoms.append((v, t, color))
+            boxes.append((world_tf[:3], scale, world_tf[3:7], color))
+    return tri_geoms, boxes
 
 
 # ---------------------------------------------------------------------------------------------
@@ -288,7 +311,7 @@ def look_at_quat(eye, target, up=(0.0, 0.0, 1.0)):
 
 
 class Raycaster:
-    def __init__(self, robot, proxy_boxes, device):
+    def __init__(self, robot, proxy_geoms, proxy_boxes, device):
         self.device = device
         self._boxes = list(proxy_boxes)
         rv, rt, rc = robot
@@ -298,14 +321,13 @@ class Raycaster:
             self._robot_mesh = wp.Mesh(points=self._robot_pts, indices=self._robot_tris)
             self._robot_fcolor = wp.array(rc.astype(np.float32), dtype=wp.vec3)
 
-            if proxy_boxes:
+            if proxy_geoms:
                 pv, pt, pc, off = [], [], [], 0
-                for center, half, quat, color in proxy_boxes:
-                    v, t, c = _box_tris(center, half, quat, color)
-                    pv.append(v)
-                    pt.append(t + off)
-                    pc.append(c)
-                    off += len(v)
+                for verts, tris, color in proxy_geoms:
+                    pv.append(np.asarray(verts, dtype=np.float32))
+                    pt.append(np.asarray(tris, dtype=np.int32) + off)
+                    pc.append(np.tile(np.asarray(color, dtype=np.float32), (len(tris), 1)))
+                    off += len(verts)
                 self._prox_pts = wp.array(np.concatenate(pv).astype(np.float32), dtype=wp.vec3)
                 self._prox_tris = wp.array(np.concatenate(pt).flatten().astype(np.int32), dtype=wp.int32)
                 self._prox_mesh = wp.Mesh(points=self._prox_pts, indices=self._prox_tris)
@@ -397,7 +419,7 @@ def render_robot(robot_type: str, robot_cfg: RobotConfig, device):
     body_q = state.body_q.numpy()
 
     robot = build_robot_meshes(model, body_q)
-    boxes = current_proxy_boxes(robot_builder, model, body_q, robot=robot_cfg)
+    geoms, boxes = current_proxy_geometry(robot_builder, model, body_q, robot=robot_cfg)
 
     # Frame the gripper: target = midpoint of the two finger bodies.
     fb = finger_body_indices(model, robot=robot_cfg)
@@ -405,7 +427,7 @@ def render_robot(robot_type: str, robot_cfg: RobotConfig, device):
     base = body_q[0][:3]
     robot_mid = 0.5 * (base + grip_center) + np.array([0.0, 0.0, 0.10])
 
-    rc = Raycaster(robot, boxes, device)
+    rc = Raycaster(robot, geoms, boxes, device)
     # 1) whole-robot 3/4 view with the proxies in context
     rc.render(eye=robot_mid + np.array([0.85, -0.75, 0.45]), target=robot_mid,
               out_path=OUTPUT_DIR / f"{robot_type}_full.png", fov_deg=40.0)

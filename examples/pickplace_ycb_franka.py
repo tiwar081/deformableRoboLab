@@ -4,15 +4,15 @@ open/close schedule and MuJoCo contact holds each object (no force controller / 
 import numpy as np
 import warp as wp
 
-from deformableManipulationTools import (FRANKA, MUJOCO_GRIP, TABLE_YCB, RUBIKS_CUBE, BOWL_YCB,
+from deformableManipulationTools import (FRANKA, MUJOCO_GRIP, TABLE, RUBIKS_CUBE, BOWL_YCB,
                                           BANANA_YCB, OBJECTS_DIR, load_usd_mesh)
 from deformableManipulationTools.demo_runner import DemoSpec, Obj, WP
 
-TT = TABLE_YCB.top_z
+TT = TABLE.top_z    # ONE shared table for every demo (scene remapped to its centre)
 CH = RUBIKS_CUBE.half_extent
-CUBE_XY = (0.431, -0.097)
-BANANA_XY = (0.539, -0.076)
-TRAY_XY = (0.443, 0.127)
+CUBE_XY = (0.101, -0.547)
+BANANA_XY = (0.209, -0.526)
+TRAY_XY = (0.113, -0.323)
 DROP_Z = TT + 0.16
 YAW = np.pi / 2
 OPEN, CLOSED = FRANKA.gripper_open, MUJOCO_GRIP.close_target
@@ -25,7 +25,7 @@ _TRAY32 = np.array([TRAY_XY[0], TRAY_XY[1]], np.float32)   # match the demo's fl
 CUBE_DROP = (_TRAY32[0] + 0.06, _TRAY32[1])
 
 DEMO = DemoSpec(
-    scene=[   # rigid-only: NO object-side table (objects rest on the robot-side TABLE_YCB) and NO proxies
+    scene=[   # rigid-only: NO object-side table (objects rest on the robot-side TABLE) and NO proxies
         Obj("ycb_mesh", BOWL_YCB, pos=(TRAY_XY[0], TRAY_XY[1], 0.0), rest_on_z=True, mass=BOWL_YCB.target_mass),
         Obj("rubiks_cube", RUBIKS_CUBE, pos=(CUBE_XY[0], CUBE_XY[1], TT + CH)),
         Obj("ycb_mesh", BANANA_YCB, pos=(BANANA_XY[0], BANANA_XY[1], TT + 0.02), mass=BANANA_YCB.target_mass),
@@ -51,10 +51,6 @@ DEMO = DemoSpec(
         (10.2, OPEN), (10.8, CLOSED), (17.8, CLOSED), (18.4, OPEN),
     ],
     blanket_fill=False,
-    robot_base_xform=wp.transform((0.0, 0.0, 0.0), wp.quat_identity()),
-    robot_table=TABLE_YCB,
-    camera=(wp.vec3(1.1, 0.55, 0.6), -25.0, -130.0),
-    scenic_check_table=False,
     robot_contact_max=32768,
     substeps=16, vbd_iterations=12, num_frames=1320,
 )

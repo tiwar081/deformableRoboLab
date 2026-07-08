@@ -40,11 +40,12 @@ lost (grip → 0). Keep the fingers position-controlled and feed the **net** rea
 
 The Franka hand is collapsed into `link7` and its collider exists only in MuJoCo, so a fast deformable
 (the swept cable) passes straight through the gripper **palm and EE**. The gripper proxy collision is
-**CENTRALIZED and identical for every VBD demo** (no per-demo knobs): (1) each finger proxy carries the
-finger's TRUE collision shapes (the sparse URDF boxes, copied one-for-one — the more faithful collider;
-an earlier single-AABB box was reverted as a non-physical fattening). The gaps between the sparse boxes
-let the swept cable clip ~1 mm into the **fingers** (accepted; the palm blocker below stops the larger
-palm/wrist penetration). (2) a THIRD proxy — a single synthetic box
+**CENTRALIZED and identical for every VBD demo**: (1) each finger proxy carries the finger's collision
+shapes — the FR3's sparse URDF boxes copied one-for-one, or (CONVEX_MESH finger, panda USD) a few thin
+box SLICES tiling the finger (`_finger_box_slices`), since a raw mesh proxy is contacted late/explosively
+by the penalty solver. (The `box_slice_proxy` knob opts into the legacy slice pad; the exact mesh, deep-copied to keep its
+own BVH — see [cloths.md](cloths.md).) The gaps between the sparse boxes let the swept cable clip ~1 mm
+into the **fingers** (accepted; the palm blocker below stops the larger palm/wrist penetration). (2) a THIRD proxy — a single synthetic box
 (`GRIP.palm_box_half/offset`, in the `link7`/EE frame, spanning wrist→hand up to just below the finger
 origins, 6 cm clear of the fingertip grasp zone) mirrors the EE body and blocks the palm/EE; and (3)
 the proxies are particle-colliding (`GRIP.proxy_gap`). All built unconditionally in
@@ -66,6 +67,13 @@ the fingers feel nothing in their own (MuJoCo) solver, so we derive a finger **p
 holds unchanged). **ONE unified control law for every object** (rigid, cable, AND soft) — the grasp does not
 depend on the object type. **The one per-demo knob is the target grasp force** (`GraspWindow.force_target`); the
 close **speed** is centralized (`GRIP.grip_rate_max`) — identical for every grasp.
+
+**Known limitation — CLOTH is not yet on the force grip.** A pinched thin shell's true reaction is
+~0.2–0.7 N (measured at the working 8 mm pinch, [cloths.md](cloths.md)), below the rigid-scale engage
+floor (`engage_floor=0.3`, deadband 2 N), so the controller either never latches or over-closes — and a
+shell must NEVER be closed to width 0 (the zero-gap pinch expels it). The cloth demos therefore command
+Newton's fixed 8 mm jaw via an explicit `finger_schedule`. Open item: retune the engage/deadband scale
+(or add a min-width floor per grasp) so a cloth demo can declare a `GraspWindow` like every other object.
 
 ### The law: bidirectional ASYMMETRIC admittance (a `dim=1` Warp kernel, CUDA-graph safe)
 

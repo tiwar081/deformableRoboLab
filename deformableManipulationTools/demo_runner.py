@@ -24,8 +24,8 @@ import warp as wp
 from .params import (FRANKA, TABLE, RIGID_CUBE, CABLE, SOFT_BLOCK, PLATE, RUBIKS_CUBE, GraspWindow)
 from .assets import (add_table, add_rigid_box, add_cable, add_soft_block, add_plate, add_ycb_mesh,
                      add_rubiks_cube, ClothConfig, add_cloth)
-from .robot import solve_gripper_ik
-from .grip import build_gripper_proxies
+from .robot import solve_gripper_ik_path
+from .grip import build_gripper_proxies, build_kinematic_finger_colliders
 from .mathutils import wp_smoothstep
 
 # Particle-deformable kinds whose presence routes a scene to the VBD path + needs gripper proxies.
@@ -89,6 +89,20 @@ class DemoSpec:
     robot_contact_max: int = 8192
     camera: Any = None                           # None -> framework default
     scenic_check_table: bool = True
+    # solution A (cloth): put the finger collider IN the VBD model (kinematic), declared via the
+    # "finger_colliders" scene object instead of "proxies". Default False -> unchanged proxy grip.
+    direct_finger_grip: bool = False
+    # DEFAULT proxy pad = the finger's own collider copied one-for-one (the panda's CONVEX_MESH is
+    # deep-copied). Set box_slice_proxy=True to opt into the LEGACY box-slice approximation of a mesh
+    # finger (kept for A/B: its stepped taper sheds a pinched cloth wad — cloth_franka_sliceProxies is
+    # the only demo that sets it). Only affects the "proxies" path.
+    box_slice_proxy: bool = False
+    # Start the arm AT its first waypoint (t=0) pose instead of home_q, so frame 0 already has the arm
+    # parked out of the way (e.g. clear of a shirt dropping from the air). Default False -> home init.
+    start_at_first_waypoint: bool = False
+    # HACK knob (direct_finger_grip only): override the kinematic FINGER friction (μ) post-finalize, to
+    # hold thin cloth through a fold. None -> default finger μ. Demo-local; no other demo is affected.
+    finger_grip_mu: float | None = None
     # run knobs (argparse defaults)
     substeps: int = 16
     vbd_iterations: int = 12
@@ -196,6 +210,9 @@ def make_data_driven_example(base_cls):
             self.coupling_soft_ke = s.coupling_soft_ke
             self.object_solver_kwargs = dict(s.object_solver_kwargs)
             self.object_pipeline_kwargs = dict(s.object_pipeline_kwargs)
+            self.direct_finger_grip = s.direct_finger_grip
+            self.box_slice_proxy = s.box_slice_proxy
+            self.finger_grip_mu = s.finger_grip_mu
             # has_particles + soft_block are DERIVED from the scene (no demo override needed): the
             # grasped/contacting particle deformable's config sets model.soft_contact_*.
             self._deformable_cfg = self._scene_deformable_cfg()
@@ -225,28 +242,42 @@ def make_data_driven_example(base_cls):
             ctx = self._ctx(ik_model, ik_state)
             self._ctx_cache = ctx
             dev = ik_model.device
-            # ---- arm keyframes (IK each UNIQUE waypoint pose ONCE, in first-appearance order; reuse for
-            # holds). solve_gripper_ik seeds from model.joint_q and chains, so a hand-written demo IKs each
-            # distinct pose once in sequence — deduping here reproduces that exact chain (an extra IK call
-            # for a repeated hold would mutate the seed and shift later keyframes). None pos -> home. ----
-            akf_t, akf_q, ik_cache = [], [], {}
+            # ---- arm keyframes: sequence-level IK (robot.solve_gripper_ik_path). Pass 1 inside is the
+            # status-quo per-unique-pose chained solve (dedup preserved, so ordinary demos are byte-
+            # identical); a global branch-consistency pass runs ONLY when a keyframe misses its target
+            # (long sequences like the cloth fold, where independent solves hop arm branches and the
+            # joint-space smoothstep between keyframes would bow/spin the TCP). None pos -> home. ----
+            wp_specs = []
             for w in self.spec.waypoints:
                 pos = _resolve(w.pos, ctx)
-                if pos is None:
-                    q = np.array(self.home_q, dtype=np.float32)
-                else:
-                    key = (tuple(np.round(np.asarray(pos, dtype=np.float64), 9)),
-                           round(float(w.yaw), 9), round(float(w.tilt), 9), tuple(w.tilt_axis))
-                    if key not in ik_cache:
-                        ik_cache[key] = np.array(solve_gripper_ik(
-                            ik_model, ik_state, self.ee_body, self.ee_offset,
-                            np.array(pos, dtype=np.float32), self.gripper_open,
-                            yaw=w.yaw, tilt=w.tilt, tilt_axis=w.tilt_axis), dtype=np.float32)
-                    q = ik_cache[key]
-                akf_t.append(float(w.t)); akf_q.append(q[:FRANKA.n_arm_dof])
+                wp_specs.append((None if pos is None else np.array(pos, dtype=np.float32),
+                                 float(w.yaw), float(w.tilt), tuple(w.tilt_axis)))
+            # GRIPPED segments (fingers closed on an object) get a heavy branch-jump cost so any
+            # unavoidable arm-branch hop in the global pass lands on an open transit instead.
+            def _width(t):
+                fs2 = self.spec.finger_schedule or [(0.0, self.gripper_open)]
+                seg = max((i for i, f in enumerate(fs2) if t >= f[0]), default=0)
+                if seg >= len(fs2) - 1:
+                    return fs2[-1][1]
+                (t0, w0), (t1, w1) = fs2[seg], fs2[seg + 1]
+                a = min(max((t - t0) / max(t1 - t0, 1e-6), 0.0), 1.0)
+                a = a * a * (3.0 - 2.0 * a)
+                return (1.0 - a) * w0 + a * w1
+            def _gripped(t0, t1):
+                return any(_width(t0 + a * (t1 - t0)) < 0.5 * self.gripper_open
+                           for a in (0.0, 0.25, 0.5, 0.75, 1.0))
+            edge_w = [8.0 if _gripped(a.t, b.t) else 1.0
+                      for a, b in zip(self.spec.waypoints, self.spec.waypoints[1:])]
+            qs = solve_gripper_ik_path(ik_model, ik_state, self.ee_body, self.ee_offset,
+                                       wp_specs, self.gripper_open, edge_weights=edge_w)
+            akf_t = [float(w.t) for w in self.spec.waypoints]
+            akf_q = [np.array(q[:FRANKA.n_arm_dof], dtype=np.float32) for q in qs]
             self._akf_t = wp.array(np.array(akf_t, dtype=np.float32), dtype=wp.float32, device=dev)
             self._akf_q = wp.array(np.stack(akf_q).astype(np.float32), dtype=wp.float32, device=dev)
             self._n_akf = len(akf_t)
+            # Optionally START the arm at its first-waypoint pose (frame 0 = parked), not home_q.
+            if self.spec.start_at_first_waypoint:
+                self.initial_arm_q = np.asarray(akf_q[0], dtype=np.float32)
             # ---- finger keyframes (explicit mode only) ----
             fs = self.spec.finger_schedule or [(0.0, self.gripper_open)]
             self._fkf_t = wp.array(np.array([f[0] for f in fs], dtype=np.float32), dtype=wp.float32, device=dev)
@@ -298,7 +329,13 @@ def make_data_driven_example(base_cls):
                     # Build the gripper proxies HERE (exact builder position preserves the original body
                     # order -> byte-identical object model). VBD demos place a single Obj("proxies").
                     self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
-                        builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape)
+                        builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape,
+                        box_slice_proxy=self.box_slice_proxy)
+                elif o.kind == "finger_colliders":
+                    # Solution A: KINEMATIC finger colliders IN the VBD model (vs the dynamic proxies).
+                    # The demo also sets direct_finger_grip=True so the framework uses the one-way coupling.
+                    self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_kinematic_finger_colliders(
+                        builder, robot_builder, self.robot_finger_bodies)
                 else:
                     raise ValueError(f"unknown scene object kind {o.kind!r}")
 
