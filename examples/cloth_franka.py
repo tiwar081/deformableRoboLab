@@ -1,104 +1,43 @@
-"""DATA FILE — cloth_franka: Newton's `example_cloth_franka` shirt-folding sequence (same timeline,
-same four folds, same shirt regions grasped/released) through the standard dynamic gripper-PROXY
-bridge (two-way coupling, EE feedback ON — no hacks). The scene runs on the ONE table every demo
-shares, so Newton's pose offsets are applied about the shirt centre at SCALE=0.8 (in-spirit mapping;
-the exact world points would put the far grasps out of the arm's reach envelope from the shared
-base placement). The kinematic-finger twin is cloth_franka_hack; the box-slice-pad
-limitation twin is cloth_franka_sliceProxies.
+"""DATA FILE — cloth_franka: ONE hot-dog fold of the shirt, force-grip. The shirt drops inflated,
+settles flat and centred on the shared table; the Franka pinches the middle of its +x edge region,
+lifts, and folds it in half across the fold line along y (the +x edge lands on the -x edge), then
+releases and retracts. Standard dynamic gripper-PROXY bridge (two-way coupling, default pads).
 
-MAPPING (verified numerically; see docs/cloths.md):
-  * Poses: p = shirt_centre + 0.8 * (p_newton - newton_shirt_centre) in xy (same shirt regions),
-    z -> TT + (z_newton - 20 cm) (table-relative, fingertip to the table top on grasps).
-  * Our home EE orientation IS Newton's grasp quat (0.9239,-0.3827,0,0) — measured identical, closing
-    axis pure world-y — so Newton's two orientations map to tilt=0 and tilt=-45° about world y
-    (its "left" grasps: q_left = rot(y,-45°) ∘ q_right, decomposed exactly).
-  * The shirt drops so its SETTLED footprint centres on the shared table, RAISED (TT+0.20) so it
-    starts fully clear of the table and the parked arm (Newton's own init spawns 10 cm through
-    the table), then falls and settles into the same flat state.
-  * Fingers: Newton's activations — open 0.8 -> 3.2 cm/finger, close 0.1 -> 0.4 cm/finger (8 mm
-    total jaw gap, NEVER 0 — a zero-gap penalty pinch expels the shell).
+GRIP — force windows (GraspWindow), NOT an explicit finger schedule: the centralized admittance
+GripController drives the fingers from the harvested squeeze (the force grip's cloth TRIAL, see
+docs/gripper.md). ``force_target=8 N`` (top of the thin-shell range, docs/cloths.md): its engage threshold
+clamp(0.15·8, 0.3, 2) = 1.2 N stops the blind close DEEP in the shell's squeeze, and the admittance
+regulator keeps tightening (~0.65 mm/s) through a long stationary dwell so the jaw reaches the
+proven ~8 mm working gap before the drag (a 1 N target's 0.3 N floor latched at a loose ~14 mm jaw
+that shed the wad mid-drag; 5 N latched at 11.8 mm and still faded out — both measured). The controller must stop the close itself
+(a commanded zero-gap pinch expels a thin shell; docs/cloths.md).
 
-SEQUENCE (Newton's `robot_key_poses`, 70.5 s): descend → fold the shirt's four regions in turn
-(top-left, bottom-left, top-right, bottom-right — each: descend to the table top, close to 8 mm,
-lift, drag, release) → final bottom grasp dragged toward the robot → retreat. Grasping is pure
-frictional contact (μ_eff ≈ 0.61); the cloth is the central SI-converted Newton cloth (ClothConfig
-defaults) — the demo declares NO physics."""
+GRASP RECIPE (Newton's, docs/cloths.md): descend the fingertip to the TABLE TOP, straight-down
+pinch, lift, drag at ~TT+0.11. (Tilt 0 everywhere: Newton's right-side folds grasp untilted, and
+the tilted orientation is q6-limit-bound for the panda past x≈0 — a mid-drag tilt blend twisted the
+marginal pinch and helped shed it.) Grasping is pure frictional contact; the cloth is the central
+SI-converted Newton cloth (ClothConfig defaults) — the demo declares NO physics."""
 import math
 
-from deformableManipulationTools import FRANKA, TABLE
+from deformableManipulationTools import TABLE, GraspWindow
 from deformableManipulationTools.assets import ClothConfig
 from deformableManipulationTools.demo_runner import DemoSpec, Obj, WP
 
-CLOTH = ClothConfig(flatten_z=1.0)             # the canonical SI-Newton cloth, dropped inflated
-CLOTH_YAW = math.pi                            # Newton rotates the shirt 180° about z
-CLOTH_POS = (0.125, -0.527, TABLE.top_z + 0.20)  # drop so the SETTLED footprint centres on the shared
-                                                 # table (the mesh mean sits +7.7 cm in y of the footprint
-                                                 # centre), RAISED so the inflated shell starts fully clear
-                                                 # of the table AND the parked arm (hem 5.5 cm above the top)
+CLOTH = ClothConfig(flatten_z=1.0)               # the canonical SI-Newton cloth, dropped inflated
+CLOTH_YAW = math.pi                              # Newton's shirt orientation (180° about z)
+CLOTH_POS = (0.125, -0.527, TABLE.top_z + 0.20)  # settled footprint centres on the table; RAISED so the
+                                                 # inflated shell starts clear of table AND parked arm
 TT = TABLE.top_z
-OPEN = 0.032                                   # Newton's open activation: 0.8 -> 3.2 cm per finger
-SHUT = 0.004                                   # Newton's close: 0.4 cm per finger -> 8 mm jaw gap
 P0 = (0.10, -0.45, TT + 0.48)                  # frame 0: START up & clear of the inflated shirt
-TILT_L = -0.7854                               # Newton's "left" grasp orientation: 45° about world -y
-SCALE = 0.8                                    # in-spirit pose mapping: Newton's offsets about its shirt
-                                               # centre, scaled 0.8 so every pose stays reachable with the
-                                               # shirt centred on the SHARED default table (same shirt
-                                               # regions grasped/released, not the exact world points)
+P1 = (0.10, -0.45, TT + 0.25)                  # hover while the shirt drops + settles
 
-# Newton's robot_key_poses, verbatim: (duration [s], x, y, z [cm], tilted?, closed?).
-ROWS = [
-    (4.0, 31, -60, 40.0, True, False),         # descend to working height
-    (2.0, 31, -60, 20.0, True, False),         # --- top left: approach at the table top
-    (2.0, 31, -60, 20.0, True, True),          #     close to 8 mm
-    (2.0, 26, -60, 26.0, True, True),          #     lift
-    (2.0, 12, -60, 31.0, True, True),          #     drag
-    (3.0, -6, -60, 31.0, True, True),          #     drag
-    (1.0, -6, -60, 31.0, True, False),         #     release
-    (2.0, 15, -33, 31.0, True, False),         # --- bottom left
-    (3.0, 15, -33, 21.0, True, False),
-    (3.0, 15, -33, 21.0, True, True),
-    (2.0, 15, -33, 28.0, True, True),
-    (3.0, -2, -33, 28.0, True, True),
-    (1.0, -2, -33, 28.0, True, False),
-    (2.0, -28, -60, 28.0, False, False),       # --- top right (straight-down orientation)
-    (2.0, -28, -60, 20.0, False, False),
-    (2.0, -28, -60, 20.0, False, True),
-    (2.0, -18, -60, 31.0, False, True),
-    (3.0, 5, -60, 31.0, False, True),
-    (1.0, 5, -60, 31.0, False, False),
-    (3.0, -18, -30, 20.5, False, False),       # --- bottom right (low sweep approach)
-    (3.0, -18, -30, 20.5, False, True),
-    (2.0, -3, -30, 31.0, False, True),
-    (3.0, -3, -30, 31.0, False, True),
-    (2.0, -3, -30, 31.0, False, False),
-    (2.0, 0, -20, 30.0, False, False),         # --- bottom: drag toward the robot
-    (2.0, 0, -20, 19.5, False, False),
-    (2.0, 0, -20, 19.5, False, True),
-    (2.0, 0, -20, 35.0, False, True),
-    (1.0, 0, -30, 35.0, False, True),
-    (1.5, 0, -30, 35.0, False, True),
-    (1.5, 0, -40, 35.0, False, True),
-    (1.5, 0, -40, 35.0, False, False),         #     release
-    (2.0, -28, -60, 28.0, False, False),       # retreat
-]
-
-
-def _newton_policy():
-    """Newton's key poses -> (waypoints, finger_schedule): cm -> m, +5 cm base offset, z table-relative;
-    the finger keyframes blend each open/close over its row like Newton's per-row activation target."""
-    wps, fingers, t = [WP(0.0, P0)], [(0.0, OPEN)], 0.0
-    closed = False
-    for dur, x, y, z, tilted, close in ROWS:
-        pos = (0.12 + SCALE * 0.01 * x, -0.05 + SCALE * 0.01 * y, TT + 0.01 * (z - 20.0))
-        if close != closed:
-            fingers += [(t, SHUT if closed else OPEN), (t + dur, SHUT if close else OPEN)]
-            closed = close
-        t += dur
-        wps.append(WP(t, pos, tilt=(TILT_L if tilted else 0.0), tilt_axis=(0.0, 1.0, 0.0)))
-    return wps, fingers
-
-
-_WAYPOINTS, _FINGERS = _newton_policy()
+GRAB = (0.35, -0.45)                           # middle of the shirt's +x edge region (~11 cm inside;
+                                               # x=0.37 untilted is q6-limit-bound: 20 mm IK miss)
+DROP = (-0.11, -0.45)                          # GRAB mirrored across the shirt centre (x=0.12): the
+                                               # +x edge lands on the -x edge — a fold in half
+SURF = TT + 0.0                                # fingertip grasp point AT the table top
+UP = TT + 0.11                                 # lift/drag height (Newton's)
+HI = TT + 0.15                                 # approach height
 
 DEMO = DemoSpec(
     scene=[
@@ -106,14 +45,38 @@ DEMO = DemoSpec(
         Obj("cloth", CLOTH, pos=CLOTH_POS, yaw=CLOTH_YAW),
         Obj("proxies"),                                    # standard dynamic-proxy grip (two-way)
     ],
-    waypoints=_WAYPOINTS,
-    finger_schedule=_FINGERS,
+    waypoints=[
+        WP(0.0, P0),                                   # start up & clear
+        WP(0.5, P1),                                   # come down to a hover
+        WP(4.0, P1),                                   # hold while the shirt drops + settles
+        WP(6.0, (GRAB[0], GRAB[1], HI)),               # approach above the +x edge middle
+        WP(8.5, (GRAB[0], GRAB[1], SURF)),             # descend fingertip to the table top
+        WP(14.0, (GRAB[0], GRAB[1], SURF)),            # dwell while the force grip closes, latches,
+                                                       # and the regulator tightens toward target
+        WP(15.5, (GRAB[0], GRAB[1], UP)),              # lift
+        # drag across — the fold. Via-points (via=True) keep the TCP on the straight Cartesian
+        # line at CONSTANT velocity: our executor blends joint keyframes, so one 50 cm segment
+        # would bow the arm ~10 cm downward mid-drag (measured), while easing at every via-point
+        # would pulse/pause the arm at each one.
+        WP(16.25, (0.235, GRAB[1], UP), via=True),
+        WP(17.0, (0.12, GRAB[1], UP), via=True),
+        WP(17.75, (0.005, GRAB[1], UP), via=True),
+        WP(18.5, (DROP[0], DROP[1], UP)),
+        WP(19.5, (DROP[0], DROP[1], UP)),              # hold; release window opens
+        WP(21.0, (-0.015, -0.45, TT + 0.25), via=True),  # retract via-point (same reason)
+        WP(22.0, P1),                                  # retract
+    ],
+    grasp_windows=[GraspWindow(close_start=8.5, close_end=10.5,
+                               release_start=19.5, release_end=20.5,
+                               force_target=8.0)],     # top of the thin-shell range (docs/cloths.md):
+                                                       # engage at 1.2 N -> deep latch; the regulator then
+                                                       # tightens ~0.65 mm/s through the long dwell
     start_at_first_waypoint=True,                      # frame 0 = P0 (up), not home_q inside the shirt
     coupling_soft_ke=CLOTH.soft_contact_ke,            # enable the harvest; framework averages in the
                                                        # shape side centrally (ke_eff = 30 N/m)
     object_solver_kwargs={"rigid_body_contact_buffer_size": 4096,
                           "rigid_body_particle_contact_buffer_size": 65536},
     object_pipeline_kwargs={"soft_contact_margin": CLOTH.contact_margin},
-    substeps=10, vbd_iterations=5, num_frames=int(71.0 * 60),  # Newton's dt (10 @ 60 fps) — part of
+    substeps=10, vbd_iterations=5, num_frames=int(23.0 * 60),  # Newton's dt (10 @ 60 fps) — part of
                                                        # the dimensionless contact parity (docs/cloths.md)
 )

@@ -5,9 +5,10 @@ The proxies are invisible finite-mass bodies that live only in the VBD *object* 
 re-pinned to a robot body (``TwoWayProxyCoupling.sync_proxies``):
 
   * two FINGER proxies  -> the left/right Franka finger bodies, carrying the finger's OWN collider
-    copied one-for-one (the DEFAULT pad: the panda USD's CONVEX_MESH per finger, rendered here as
-    the actual ghosted mesh + its tight AABB wireframe; the FR3 URDF's sparse boxes, rendered as
-    the boxes) — the GRIP pads that are harvested into the grip signal;
+    copied one-for-one by default (the panda USD's CONVEX_MESH per finger, rendered here as the
+    actual ghosted mesh + its tight bounds wireframe; the FR3 URDF's sparse boxes, rendered as the
+    boxes), or optional contained box slices for the panda — the GRIP pads that are harvested into
+    the grip signal;
   * one PALM/EE blocker -> the EE (link7) body (a synthetic box spanning wrist->hand), a blocker
     only (never harvested), stopping a swept cable passing through the gripper palm.
 
@@ -16,10 +17,11 @@ asks ``build_gripper_proxies`` for the proxy geometry, pins each proxy to its mi
 ghost-renders the boxes over the robot with a small self-contained Warp raycaster (headless, no
 display / RT cores needed). Output PNGs land in ``outputs/visualizations/``.
 
-Run:  python visualizations/franka_vbd_proxies.py
+Run:  python visualizations/franka_vbd_proxies.py --all
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -139,16 +141,17 @@ def build_robot_meshes(model, body_q):
     return (np.concatenate(all_v), np.concatenate(all_t).astype(np.int32), np.concatenate(all_c))
 
 
-def current_proxy_geometry(robot_builder, robot_model, body_q, robot: RobotConfig):
+def current_proxy_geometry(robot_builder, robot_model, body_q, robot: RobotConfig, box_slice_proxy: bool = False):
     """World-frame proxy geometry for the CURRENT grip: ``(tri_geoms, outline_boxes)``.
 
     Builds the real proxies via ``build_gripper_proxies`` (the same call the framework makes), then
     pins each proxy body to its mirror robot body exactly as ``TwoWayProxyCoupling.sync_proxies``
     does at runtime: finger proxies -> finger bodies, palm proxy -> EE (link7).
 
-    The DEFAULT finger pad is the finger's own collider copied one-for-one — a CONVEX_MESH on the
-    panda USD (rendered as the actual ghosted mesh, outlined by its tight AABB), sparse BOXes on the
-    FR3 URDF (rendered as the boxes themselves). The palm/EE blocker is always a synthetic box.
+    The default finger pad is the finger's own collider copied one-for-one — a CONVEX_MESH on the
+    panda USD (rendered as the actual ghosted mesh, outlined by its tight bounds), sparse BOXes on the
+    FR3 URDF (rendered as the boxes themselves). With ``box_slice_proxy=True``, mesh fingers use
+    contained box slices instead. The palm/EE blocker is always a synthetic box.
     ``tri_geoms`` is a list of ``(verts_world, tris, color)``; ``outline_boxes`` of
     ``(center, half, quat, color)`` for the depth-independent wireframes."""
     finger_bodies = finger_body_indices(robot_model, robot=robot)
@@ -156,7 +159,7 @@ def current_proxy_geometry(robot_builder, robot_model, body_q, robot: RobotConfi
 
     ob = newton.ModelBuilder()
     proxy_bodies, proxy_shapes = build_gripper_proxies(
-        ob, robot_builder, finger_bodies, object_table_shape=None)
+        ob, robot_builder, finger_bodies, object_table_shape=None, box_slice_proxy=box_slice_proxy)
     # proxy_bodies order: [left finger, right finger, palm/EE]; mirror to robot bodies accordingly.
     mirror = {proxy_bodies[0]: finger_bodies[0], proxy_bodies[1]: finger_bodies[1],
               proxy_bodies[2]: ee_body}
@@ -176,7 +179,7 @@ def current_proxy_geometry(robot_builder, robot_model, body_q, robot: RobotConfi
             tris = np.asarray(src.indices, dtype=np.int32).reshape(-1, 3)
             v_world = quat_rotate(world_tf[3:7], v_local) + world_tf[:3]
             tri_geoms.append((v_world.astype(np.float32), tris, color))
-            # tight local AABB of the pad mesh -> outlined oriented box
+            # tight local bounds of the pad mesh -> outlined oriented box
             lo, hi = v_local.min(axis=0), v_local.max(axis=0)
             c_local = 0.5 * (lo + hi)
             center = world_tf[:3] + quat_rotate(world_tf[3:7], c_local)
@@ -408,8 +411,8 @@ def _save_png(rgb, path):
 
 
 # ---------------------------------------------------------------------------------------------
-def render_robot(robot_type: str, robot_cfg: RobotConfig, device):
-    print(f"[franka_vbd_proxies] rendering {robot_type}")
+def render_robot(gripper_name: str, robot_cfg: RobotConfig, box_slice_proxy: bool, views: list[str], device):
+    print(f"[franka_vbd_proxies] rendering {gripper_name}")
 
     robot_xform = wp.transform((-0.45, -0.45, TABLE.top_z), wp.quat_identity())
     robot_builder = build_franka_robot(xform=robot_xform, table=TABLE, robot=robot_cfg)
@@ -419,7 +422,8 @@ def render_robot(robot_type: str, robot_cfg: RobotConfig, device):
     body_q = state.body_q.numpy()
 
     robot = build_robot_meshes(model, body_q)
-    geoms, boxes = current_proxy_geometry(robot_builder, model, body_q, robot=robot_cfg)
+    geoms, boxes = current_proxy_geometry(
+        robot_builder, model, body_q, robot=robot_cfg, box_slice_proxy=box_slice_proxy)
 
     # Frame the gripper: target = midpoint of the two finger bodies.
     fb = finger_body_indices(model, robot=robot_cfg)
@@ -428,22 +432,56 @@ def render_robot(robot_type: str, robot_cfg: RobotConfig, device):
     robot_mid = 0.5 * (base + grip_center) + np.array([0.0, 0.0, 0.10])
 
     rc = Raycaster(robot, geoms, boxes, device)
-    # 1) whole-robot 3/4 view with the proxies in context
-    rc.render(eye=robot_mid + np.array([0.85, -0.75, 0.45]), target=robot_mid,
-              out_path=OUTPUT_DIR / f"{robot_type}_full.png", fov_deg=40.0)
-    # 2) gripper close-up, 3/4 front (finger AABB pads + palm/EE blocker clearly visible)
-    rc.render(eye=grip_center + np.array([0.40, -0.34, 0.18]), target=grip_center + np.array([0.0, 0.0, -0.02]),
-              out_path=OUTPUT_DIR / f"{robot_type}_gripper.png", fov_deg=40.0)
-    # 3) gripper close-up, side view (shows the palm/EE blocker depth behind the fingers)
-    rc.render(eye=grip_center + np.array([0.34, 0.02, 0.06]), target=grip_center,
-              out_path=OUTPUT_DIR / f"{robot_type}_side.png", fov_deg=34.0)
+    if "full" in views:
+        rc.render(eye=robot_mid + np.array([0.85, -0.75, 0.45]), target=robot_mid,
+                  out_path=OUTPUT_DIR / f"{gripper_name}_full.png", fov_deg=40.0)
+    if "gripper" in views:
+        # Side close-up: shows the finger proxies and the palm/EE blocker depth behind them.
+        rc.render(eye=grip_center + np.array([0.34, 0.02, 0.06]), target=grip_center,
+                  out_path=OUTPUT_DIR / f"{gripper_name}_gripper.png", fov_deg=34.0)
+
+
+GRIPPERS = {
+    "fr3": ("fr3_franka_hand", False),
+    "panda_full_mesh": ("franka_panda_isaacsim", False),
+    "panda_box_slices": ("franka_panda_isaacsim", True),
+}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--full", action="store_true", help="Render the whole-robot view.")
+    parser.add_argument("--gripper", action="store_true", help="Render the side gripper close-up view.")
+    parser.add_argument("--fr3", action="store_true", help="Render the FR3 sparse-box finger proxies.")
+    parser.add_argument("--panda_full_mesh", action="store_true", help="Render Panda full-mesh finger proxies.")
+    parser.add_argument("--panda_box_slices", action="store_true", help="Render Panda box-slice finger proxies.")
+    parser.add_argument("--all", action="store_true", help="Render all views for all gripper proxy types.")
+    return parser.parse_args()
 
 
 def main():
+    args = parse_args()
     wp.init()
     device = wp.get_device("cuda:0") if wp.is_cuda_available() else wp.get_device("cpu")
-    for robot_type, robot_cfg in ROBOTS.items():
-        render_robot(robot_type, robot_cfg, device)
+
+    views = []
+    if args.all or args.full:
+        views.append("full")
+    if args.all or args.gripper:
+        views.append("gripper")
+    if not views:
+        views = ["full", "gripper"]
+
+    selected = []
+    for name in GRIPPERS:
+        if args.all or getattr(args, name):
+            selected.append(name)
+    if not selected:
+        selected = list(GRIPPERS)
+
+    for name in selected:
+        robot_key, box_slice_proxy = GRIPPERS[name]
+        render_robot(name, ROBOTS[robot_key], box_slice_proxy, views, device)
 
 
 if __name__ == "__main__":

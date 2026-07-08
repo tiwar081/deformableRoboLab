@@ -20,7 +20,7 @@ import newton
 
 from .params import FRANKA, GRIP, MUJOCO_GRIP, TABLE
 from .robot import build_franka_robot, finger_body_indices, make_robot_solver, set_mujoco_grip_controller
-from .grip import TwoWayProxyCoupling, KinematicFingerCoupling, restore_proxy_materials, GripController
+from .grip import TwoWayProxyCoupling, restore_proxy_materials, GripController
 from .mathutils import find_body, quat_rotate_xyzw
 from .mesh_collision import rescale_body_mass
 
@@ -67,11 +67,7 @@ class GraspExample:
     gripper_proxy_shapes = ()
     grasp_windows = None                                 # list[GraspWindow]: enables the centralized
     grip_controller: GripController = None               # force-stop finger controller (set in __init__)
-    direct_finger_grip: bool = False                     # solution A: kinematic finger collider IN the VBD
-                                                         # model (KinematicFingerCoupling) instead of proxies
-    box_slice_proxy: bool = False                        # legacy box-slice pad instead of the default
-                                                         # one-for-one finger-collider copy (A/B twin only)
-    finger_grip_mu = None                                # direct_finger_grip HACK: per-demo kinematic-finger μ
+    box_slice_proxy: bool = False                        # optional mesh-finger proxy override
 
     def __init__(self, viewer, args):
         newton.use_coord_layout_targets = True
@@ -234,10 +230,6 @@ class GraspExample:
         for ov in self.material_overrides:
             self._apply_material_override(ov)
         restore_proxy_materials(self.object_model, self.gripper_proxy_shapes)
-        if self.direct_finger_grip and self.finger_grip_mu is not None:
-            # Solution-A HACK: bump ONLY the kinematic finger colliders' friction (post-restore) so a thin
-            # cloth pinch holds through a fold. Demo-local; the proxy path never sets finger_grip_mu.
-            self._apply_material_override({"shapes": list(self.gripper_proxy_shapes), "mu": self.finger_grip_mu})
         # CENTRAL cloth-scene contact profile: VBD body<->particle contact AVERAGES the particle-side
         # soft_contact_* with the touching SHAPE's material, so on a cloth scene every shape the cloth
         # can touch (pads/palm + object-side table) must carry the ClothConfig's SI-converted shape
@@ -322,15 +314,8 @@ class GraspExample:
 
     # ---- seam (VBD path only) ----
     def _make_coupling(self):
-        """Factory for the VBD gripper coupling. Default = the dynamic ``TwoWayProxyCoupling``. When the
-        demo sets ``direct_finger_grip`` (solution A) the gripper bodies built into the object model are
-        KINEMATIC finger colliders, so use the one-way ``KinematicFingerCoupling`` (same surface, so the
-        substep loop is unchanged). Any proxy beyond the two finger proxies (the palm/EE blocker added by
-        ``build_gripper_proxies``) is pinned to the EE body."""
-        if self.direct_finger_grip:
-            return KinematicFingerCoupling(
-                self.robot_model, self.object_model, list(self.robot_finger_bodies),
-                list(self.gripper_proxy_bodies), self.sim_dt)
+        """Factory for the VBD gripper coupling. Any proxy beyond the two finger proxies (the palm/EE
+        blocker added by ``build_gripper_proxies``) is pinned to the EE body."""
         mirror_bodies = list(self.robot_finger_bodies)
         mirror_bodies += [self.ee_body] * (len(self.gripper_proxy_bodies) - len(mirror_bodies))
         return TwoWayProxyCoupling(

@@ -186,7 +186,13 @@
       "Bash(.venv/bin/python -m py_compile deformableManipulationTools/demo_runner.py deformableManipulationTools/robot.py)",
       "Bash(.venv/bin/python -m py_compile deformableManipulationTools/demo_runner.py deformableManipulationTools/framework.py deformableManipulationTools/grip.py examples/cloth_franka.py examples/cloth_franka_sliceProxies.py)",
       "Bash(timeout 300 .venv/bin/python example.py --demo examples/cloth_franka.py --output-style basic --viewer null --device cuda:0 --num-frames 30)",
-      "Bash(.venv/bin/python -m py_compile deformableManipulationTools/params.py deformableManipulationTools/__init__.py examples/pickplace_ycb_franka.py examples/pickplace_ycb_vbd_franka.py examples/cloth_franka.py examples/cloth_franka_hack.py examples/cloth_franka_sliceProxies.py)"
+      "Bash(.venv/bin/python -m py_compile deformableManipulationTools/params.py deformableManipulationTools/__init__.py examples/pickplace_ycb_franka.py examples/pickplace_ycb_vbd_franka.py examples/cloth_franka.py examples/cloth_franka_hack.py examples/cloth_franka_sliceProxies.py)",
+      "Bash(.venv/bin/python -m py_compile examples/cloth_franka.py)",
+      "Bash(DEMO=examples/cloth_franka.py OUT=/tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/forcegrip.csv FRAMES=1200 /mnt/samyak/deformableRoboLab/.venv/bin/python /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/probe_cloth.py)",
+      "Bash(awk 'NR % 2 == 1 || /SUMMARY|finite/')",
+      "Bash(.venv/bin/python -m py_compile examples/cloth_franka.py deformableManipulationTools/demo_runner.py)",
+      "Bash(DEMO=examples/cloth_franka.py OUT=/tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/forcegrip5.csv FRAMES=1200 /mnt/samyak/deformableRoboLab/.venv/bin/python /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/probe_cloth.py)",
+      "Bash(DEMO=examples/cloth_franka.py OUT=/tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/forcegrip8.csv FRAMES=1380 /mnt/samyak/deformableRoboLab/.venv/bin/python /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/scratchpad/probe_cloth.py)"
     ],
     "additionalDirectories": [
       "/dev",

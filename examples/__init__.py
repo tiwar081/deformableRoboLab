@@ -36,8 +36,6 @@ EXAMPLE_NAMES = (
     "pickplace_ycb_franka",
     "pickplace_ycb_vbd_franka",
     "cloth_franka",
-    "cloth_franka_hack",
-    "cloth_franka_sliceProxies",
 )
 
 
@@ -175,8 +173,8 @@ def run(example, args) -> None:
     if (getattr(args, "output", "mp4") in ("graphs", "both")
             and getattr(example, "coupling", None) is not None):
         # grasp_windows is optional: a force-grip demo supplies it (its close/release times draw the
-        # trigger lines); an explicit-finger demo (e.g. cloth_franka / cloth_franka_hack) has none, so
-        # the recorder just omits those lines (PhysicsRecorder handles grasp_windows=None).
+        # trigger lines); an explicit-finger demo has none, so the recorder just omits those lines
+        # (PhysicsRecorder handles grasp_windows=None).
         from deformableManipulationTools.instrumentation import PhysicsRecorder
         recorder = PhysicsRecorder(example.fps, getattr(example, "grasp_windows", None))
 

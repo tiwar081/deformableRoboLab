@@ -7,10 +7,9 @@ config + solver kwargs and a few rules the volumetric block does not need. Every
 in the package (`deformableManipulationTools/`); a demo declares only the scene + policy.
 
 The canonical cloth is **Newton's `example_cloth_franka` shirt converted unit-consistently to SI**
-(`ClothConfig` defaults). The reference demo is `cloth_franka` (vendored T-shirt, dynamic-proxy grip,
-full fold); its twins are `cloth_franka_hack` (kinematic fingers = Newton's own architecture) and
-`cloth_franka_sliceProxies` (documents the box-slice-pad limitation). Copy the demo's shape, change
-the config — do **not** put cloth physics inline in a new demo.
+(`ClothConfig` defaults). The demo is `cloth_franka`: a vendored T-shirt, dynamic-proxy grip, and one
+force-grip hot-dog fold. Copy the demo's shape, change the config — do **not** put cloth physics
+inline in a new demo.
 
 ## TL;DR — adding a new cloth object
 
@@ -24,11 +23,13 @@ cloth needs only scene + policy — the cloth solver physics is centralized:
    <1 squashes a draped/worn mesh flat for a table start), and `density` [kg/m²] if the fabric
    differs. **Leave the stiffness / contact / self-contact fields at the defaults** — they are the
    SI-converted Newton cloth and are matched as a SET (see the conversion law below).
-3. **Declare it in the data file's `scene`**: `Obj("cloth", CFG, pos=…)` + `Obj("proxies")` (or
-   `Obj("finger_colliders")` + `direct_finger_grip=True` for the one-way kinematic path).
-4. **Grasp** (see the recipe below): explicit `finger_schedule` closing to a FIXED ~8 mm total jaw
-   gap, descend so the fingertip point reaches the table top, the default proxy pad (the finger's true collider) on the proxy
-   path. Set `coupling_soft_ke=CFG.soft_contact_ke` to enable the grip-signal harvest (the framework
+3. **Declare it in the data file's `scene`**: `Obj("cloth", CFG, pos=…)` + `Obj("proxies")`.
+4. **Grasp** (see the recipe below): descend so the fingertip point reaches the table top; default
+   proxy pad (the finger's true collider) on the proxy path. Fingers: EITHER an explicit
+   `finger_schedule` closing to a FIXED ~8 mm total jaw gap (Newton's recipe, the proven path), OR a
+   `GraspWindow` with a cloth-scale `force_target` ≤ 2 N (the force-grip trial — engage rides the
+   0.3 N floor and the deadband holds the latched width; see [gripper.md](gripper.md)). Set
+   `coupling_soft_ke=CFG.soft_contact_ke` to enable the grip-signal harvest (the framework
    replaces it with the correct shape-averaged value centrally) and
    `object_pipeline_kwargs={"soft_contact_margin": CFG.contact_margin}`; buffer sizes go in
    `object_solver_kwargs`.
@@ -95,36 +96,30 @@ with instrumented probes — all knobs matter; each was A/B-tested:
 3. **Straight-down pinch** (tilt 0; Newton uses ≤ ~17°), grasp a region near an edge/corner, then
    lift and drag — the fold. Holding force is PHYSICAL friction (μ_eff ≈ 0.61): ~30–50 particles
    stay in the jaw through the whole fold at ~0.2–0.7 N per-pad reaction.
-4. **Proxy path: the DEFAULT pad (the finger's own collider, deep-copied).** The legacy box-slice
-   pad (`box_slice_proxy=True`) captures and lifts identically but its stepped taper carries ~40%
-   fewer pinch contacts and sheds the wad at drag onset (`cloth_franka_sliceProxies` keeps this
-   failure visible; fixing `_finger_box_slices` is an open item).
+4. **Proxy path: the DEFAULT pad is the finger's own collider, deep-copied.** Mesh pads must own
+   their BVH inside the object model, and the left/right finger proxies are collision-filtered.
 
-The cloth demos drive the fingers with an explicit `finger_schedule` (Newton's fixed-width close),
-not the force `GripController` — a thin shell's reaction is newton-scale and the admittance law's
-engage/deadband constants are rigid-object-scale. Retuning the force grip for shells is open work;
-until then the fixed 8 mm close IS the centralized cloth grasp policy.
+Finger drive: `cloth_franka` TRIALS the force `GripController` via a
+`GraspWindow` with `force_target=1 N`: any target ≤ 2 N keeps the engage threshold at its 0.3 N
+floor, so the blind close stops at the shell's first 0.3 N of squeeze and the 2 N deadband then
+freezes that width — effectively a force-triggered fixed-gap pinch. A thin shell's reaction is
+newton-scale, so the rigid-scale constants remain a caveat ([gripper.md](gripper.md)).
 
 ### Both grip paths work — measured comparison (Newton-parity physics, single-fold isolation runs)
 
 | path | mechanism | fold result |
 |---|---|---|
 | dynamic proxies, TWO-WAY (EE feedback on), default finger-collider pad (`cloth_franka`) | proxy bridge | **full fold**, cloth centroid +12.9 cm |
-| kinematic finger colliders IN the VBD solve, one-way (`cloth_franka_hack`) | solution A | **full fold**, +14.2 cm |
-| dynamic proxies, legacy box-slice pad (`cloth_franka_sliceProxies`) | proxy bridge | grasp+lift hold; wad shed at drag onset (+1 cm) |
 
-(The demos themselves run Newton's full four-fold sequence — same timeline, grasp/release poses
-mapped in spirit (scaled about the shirt centre) onto the ONE shared table; see the `cloth_franka`
-docstring and [examples.md](examples.md).)
+(See the `cloth_franka` docstring and [examples.md](examples.md).)
 
 The old claim "the proxy bridge architecturally cannot grip cloth" is **disproven** — it was the
 unit-blind parameters + the close-to-zero jaw. The EE feedback was also exonerated directly (a
 one-way A/B of the proxy path behaves identically; the harvested wrench at correct parameters is
 sub-newton). Note **Newton's own example is NOT a two-way single-solver grasp**: its Featherstone
 robot runs with gravity zeroed and rigid contacts disabled (it feels neither cloth nor table) while
-`SolverVBD(integrate_with_external_rigid_solver=True)` collides cloth against the externally-posed
-finger shapes — i.e. Newton's architecture is exactly our `KinematicFingerCoupling` ("solution A"),
-strictly one-way, fingers position-commanded to the fixed gap.
+`SolverVBD(integrate_with_external_rigid_solver=True)` collides cloth against externally-posed
+finger shapes: strictly one-way, fingers position-commanded to the fixed gap.
 
 ## Solver kwargs — centralized (the demo declares none)
 
@@ -155,17 +150,10 @@ avg(soft, shape) ke so the harvest (`grip.py`, f = ke_eff·pen) matches the true
    `has_particles=True`) or the cloth renders frozen/penetrated.
 7. **A flat settled shirt IS pinch-graspable** — the old "flat cloth can't be top-down grasped"
    conclusion was an artifact of gotchas 1+2 (and a too-shallow descent). With the recipe the pads
-   plow to the table, the sheet buckles into the jaw, and the fixed gap holds it. No friction hack:
-   the historical `finger_grip_mu=200` is unnecessary and was removed.
-8. **The box-slice proxy pad is the one remaining cloth limitation** (drag-onset shedding; it is
-   now the non-default `box_slice_proxy=True` — the default pad is the finger's own collider; keep
-   `rigid_body_particle_contact_buffer_size` large for mesh pads). At parity physics
-   the slice pad captures and lifts like the mesh pad but carries ~40% fewer pinch contacts (stepped,
-   tapered inner face) and sheds the wad when the lateral drag starts — verified NOT to be the
-   coupling (one-way A/B identical). Fix candidates in `grip.py:_finger_box_slices`: slice so the
-   inner GRIP face is flush (taper only the outer face), or more/thinner slices. A full-mesh proxy
-   must DEEP-COPY the finger mesh (`build_gripper_proxies` does) — aliasing the robot's `Mesh` frees
-   its BVH under the object narrow phase (error 700).
+   plow to the table, the sheet buckles into the jaw, and the fixed gap holds it.
+8. **Mesh finger proxies must be deep-copied.** A full-mesh proxy must DEEP-COPY the finger mesh
+   (`build_gripper_proxies` does) — aliasing the robot's `Mesh` frees its BVH under the object narrow
+   phase (error 700). Keep `rigid_body_particle_contact_buffer_size` large for mesh pads.
 
 ## Scale note (metre scale is fine — with converted parameters)
 

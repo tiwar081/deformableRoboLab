@@ -36,28 +36,6 @@ from .params import GRIP, GripConfig
 from .mathutils import wp_smoothstep, quat_rotate_xyzw
 
 
-def _finger_collider_aabb(robot_builder, shape_idx):
-    """Axis-aligned bounds ``(lo, hi)`` in the finger BODY frame over the finger's collider shapes
-    (boxes and/or convex meshes). Used to synthesize a single box finger proxy for robots whose
-    finger collider is a mesh (see :func:`build_gripper_proxies`)."""
-    lo = np.full(3, np.inf)
-    hi = np.full(3, -np.inf)
-    for s in shape_idx:
-        xf = robot_builder.shape_transform[s]
-        off = np.array([float(x) for x in (xf.p if hasattr(xf, "p") else xf[:3])])
-        q = np.array([float(x) for x in (xf.q if hasattr(xf, "q") else xf[3:7])])
-        scale = np.array([float(x) for x in robot_builder.shape_scale[s]])
-        if int(robot_builder.shape_type[s]) == int(newton.GeoType.BOX):
-            pts = np.array([[sx * scale[0], sy * scale[1], sz * scale[2]]
-                            for sx in (-1.0, 1.0) for sy in (-1.0, 1.0) for sz in (-1.0, 1.0)])
-        else:
-            pts = np.asarray(robot_builder.shape_source[s].vertices, dtype=np.float64) * scale[None, :]
-        pts = quat_rotate_xyzw(q, pts) + off
-        lo = np.minimum(lo, pts.min(axis=0))
-        hi = np.maximum(hi, pts.max(axis=0))
-    return lo, hi
-
-
 # Number of thin box SLICES used to approximate a mesh finger collider (see _finger_box_slices). 3-5
 # follows the finger taper far better than one AABB box while staying box-on-box stable in VBD.
 FINGER_BOX_SLICES = 4
@@ -88,10 +66,7 @@ def _finger_collider_points(robot_builder, shape_idx):
 
 
 def _hull_length_range(A, c, length_ax, width_ax, depth_ax, w, d):
-    """The finger's length-axis span ``(floor, ceil)`` INSIDE its convex hull along a line at fixed
-    (width=w, depth=d). Inside means ``A·p + c <= 0`` for every hull face; solving each face for the
-    length coordinate gives an upper bound (face normal points +length) or lower bound (−length). Empty
-    (``floor > ceil``) if that (w, d) line misses the hull."""
+    """The finger's length-axis span ``(floor, ceil)`` inside its convex hull along a line."""
     al = A[:, length_ax]
     rhs = -c - A[:, width_ax] * w - A[:, depth_ax] * d
     floor, ceil = -np.inf, np.inf
@@ -105,19 +80,7 @@ def _hull_length_range(A, c, length_ax, width_ax, depth_ax, w, d):
 
 
 def _finger_box_slices(points, n_slices):
-    """Approximate a finger collider by ``n_slices`` boxes tiling the finger's DEPTH (the pad-normal /
-    gripping direction), each box STRICTLY CONTAINED in the finger's convex hull (the collider IS a
-    convex mesh, so a box is inside iff all 8 corners are — checked analytically via the hull half-spaces,
-    :func:`_hull_length_range`). The finger's LENGTH is its longest axis; of the other two the LARGER is
-    the DEPTH (tiled) and the smaller the WIDTH (kept symmetric about the pad centre).
-
-    The panda finger is a ROUNDED pad: it reaches the tip only near the width-centre, and only over a middle
-    band of depth — it collapses to a thin rounded corner at the pad FACE and at the BACK. So we tile only
-    the FLAT-BASE band of depth (where the finger base sits near z≈0 and the centre line has real length),
-    at a single uniform WIDTH (``FINGER_WIDTH_FRAC`` of the pad half-width — full width can't reach the tip
-    because the pad rounds off at its edges). Each box's length is capped to the hull at its depth-bin
-    CORNERS (so the whole box fits), degenerate bins are dropped, and all TOPS are aligned to the deepest
-    base (flush + contained). Returns ``[(center, half)]`` in the finger BODY frame."""
+    """Approximate a mesh finger collider by contained box slices in the finger BODY frame."""
     from scipy.spatial import ConvexHull                  # build-time only (once per demo)
     hull = ConvexHull(points)
     A = hull.equations[:, :3]
@@ -127,50 +90,43 @@ def _finger_box_slices(points, n_slices):
     ext = hi - lo
     length_ax = int(np.argmax(ext))                      # finger length (toward the tip)
     others = [a for a in (0, 1, 2) if a != length_ax]
-    depth_ax = others[0] if ext[others[0]] >= ext[others[1]] else others[1]   # pad depth (tiled by slices)
+    depth_ax = others[0] if ext[others[0]] >= ext[others[1]] else others[1]
     width_ax = others[1] if depth_ax == others[0] else others[0]
-    wc = 0.5 * (float(lo[width_ax]) + float(hi[width_ax]))    # pad width centre (symmetric slabs about it)
+    wc = 0.5 * (float(lo[width_ax]) + float(hi[width_ax]))
     wr = FINGER_WIDTH_FRAC * 0.5 * (float(hi[width_ax]) - float(lo[width_ax]))
 
-    def cline(d):                                        # hull length range on the width-CENTRE line at depth d
+    def cline(d):
         return _hull_length_range(A, c, length_ax, width_ax, depth_ax, wc, d)
 
-    def span(d):                                         # length [floor, ceil] the ±wr width slab admits at depth d
+    def span(d):
         rr = [_hull_length_range(A, c, length_ax, width_ax, depth_ax, w, d) for w in (wc - wr, wc + wr)]
         return max(rr[0][0], rr[1][0]), min(rr[0][1], rr[1][1])
 
-    # FLAT-BASE, substantial-length depth band: base near z≈0 (skip the rounded FACE corner) AND real
-    # length (skip the collapsing BACK). This is the part of the finger a slab can honestly represent.
     ys = np.linspace(float(lo[depth_ax]), float(hi[depth_ax]), 401)
     band = [float(y) for y in ys if cline(y)[0] < 5.0e-3 and (cline(y)[1] - cline(y)[0]) > 1.2e-2]
     if len(band) < 2:
         return []
-    # Depth edges: ONE wide FRONT box over the tip-reaching half (where the length is ~constant, so
-    # separate slices there would be redundant), then split the TAPER into the remaining n_slices-1 bins.
-    # The FRONT is the end of the depth band with the LONGER length (reaches the tip) — for the LEFT vs
-    # RIGHT finger that is opposite ends of the depth axis (the two finger meshes are mirrored), so key off
-    # the geometry, not min/max, or one finger's boxes come out reversed.
     d0, d1 = min(band), max(band)
     span_len = lambda d: max(span(d)[1] - span(d)[0], 0.0)
-    if span_len(d0) >= span_len(d1):                     # tip-reaching FRONT at the low-depth end
+    if span_len(d0) >= span_len(d1):
         dsplit = d0 + FINGER_FRONT_FRAC * (d1 - d0)
         edges = [d0] + list(np.linspace(dsplit, d1, int(n_slices)))
-    else:                                                # mirrored finger: FRONT at the high-depth end
+    else:
         dsplit = d1 - FINGER_FRONT_FRAC * (d1 - d0)
         edges = list(np.linspace(d0, dsplit, int(n_slices))) + [d1]
     raw = []
     for i in range(int(n_slices)):
         a, b = float(edges[i]), float(edges[i + 1])
-        floor = max(span(a)[0], span(b)[0])              # over both bin edges -> the box fits the whole bin
+        floor = max(span(a)[0], span(b)[0])
         ceil = min(span(a)[1], span(b)[1])
         if ceil - floor > 3.0e-3:
             raw.append([a, b, floor, ceil])
     if not raw:
         return []
-    top = max(r[2] for r in raw)                         # align tops to the deepest base (flush + contained)
+    top = max(r[2] for r in raw)
     boxes = []
     for a, b, floor, ceil in raw:
-        if ceil - top <= 3.0e-3:                         # drop a bin the aligned top would collapse
+        if ceil - top <= 3.0e-3:
             continue
         blo = np.zeros(3)
         bhi = np.zeros(3)
@@ -225,11 +181,8 @@ def build_gripper_proxies(object_builder, robot_builder, finger_bodies: list[int
         #     DEEP-COPIED (below) so the object model owns its own BVH — sharing the robot builder's
         #     Mesh faults Newton's GJK-MPR narrow phase (error 700) when the freed-by-viz BVH pool is
         #     reused. The true pad geometry is what lets a pinched cloth wad survive a lateral drag.
-        #   * ``box_slice_proxy`` opts a CONVEX_MESH finger into the LEGACY approximation instead: a few
-        #     thin AABB box slices stacked along the finger's longest axis (:func:`_finger_box_slices`,
-        #     box-on-box primitive narrow phase). Kept for A/B comparison — the slice stack's stepped
-        #     inner face sheds a pinched cloth wad at drag onset (docs/cloths.md; the limitation twin is
-        #     cloth_franka_sliceProxies, the only demo that sets it).
+        #   * ``box_slice_proxy`` opts a CONVEX_MESH finger into the legacy approximation instead: a few
+        #     thin contained box slices stacked along the finger's longest axis.
         finger_shape_idx = [s for s, fb in enumerate(robot_builder.shape_body)
                             if fb == finger_body
                             and (robot_builder.shape_flags[s] & int(newton.ShapeFlags.COLLIDE_SHAPES))]
@@ -295,57 +248,6 @@ def build_gripper_proxies(object_builder, robot_builder, finger_bodies: list[int
         for shape in proxy_shapes:
             object_builder.add_shape_collision_filter_pair(object_table_shape, shape)
     return proxy_bodies, proxy_shapes
-
-
-def build_kinematic_finger_colliders(object_builder, robot_builder, finger_bodies: list[int],
-                                     grip: GripConfig = GRIP):
-    """Solution A (cloth): add the gripper fingers' OWN collision geometry to the object's VBD model as
-    two KINEMATIC (infinite-mass) bodies, so the fingers contact the cloth DIRECTLY inside the VBD solve
-    — the way Newton's ``example_cloth_franka`` does — instead of through a dynamic finite-mass PROXY
-    that must squeeze between cloth and the rigid table (the proxy jams the table; see docs/ONGOING.md).
-
-    Each kinematic body carries the SAME finger collider ``build_gripper_proxies`` copies (the FR3's
-    sparse boxes, or a synthesized AABB box for a mesh finger), but as ``has_particle_collision`` ONLY
-    (no rigid-shape collision — they grip the cloth particles, never collide the table), and is
-    transform-slaved each substep to the MuJoCo finger pose by :class:`KinematicFingerCoupling`.
-
-    Returns ``(kin_bodies, kin_shapes)`` (left, right). NO palm blocker, NO finite mass, NO force
-    harvest-to-EE: a kinematic body's contact reaction is absorbed by its infinite-mass constraint, so
-    the grip is one-way (robot→cloth), matching Newton's recipe (it zeroes the cloth reaction on the arm)."""
-    cfg = newton.ModelBuilder.ShapeConfig(
-        density=0.0, is_visible=False, has_shape_collision=False, has_particle_collision=True,
-        margin=grip.proxy_margin, ke=grip.proxy_ke, kd=grip.proxy_kd, mu=grip.proxy_mu,
-    )
-    kin_bodies, kin_shapes = [], []
-    for label, finger_body in zip(("left_kin_finger", "right_kin_finger"), finger_bodies, strict=True):
-        body = object_builder.add_body(
-            xform=wp.transform(wp.vec3(0.0, 0.0, 0.0), wp.quat_identity()),
-            is_kinematic=True, label=label)
-        kin_bodies.append(body)
-        # Same finger-collider selection as build_gripper_proxies: copy BOX colliders one-for-one,
-        # else synthesize a single AABB box (a CONVEX_MESH finger is contacted late/explosively by VBD).
-        finger_shape_idx = [s for s, fb in enumerate(robot_builder.shape_body)
-                            if fb == finger_body
-                            and (robot_builder.shape_flags[s] & int(newton.ShapeFlags.COLLIDE_SHAPES))]
-        if not finger_shape_idx:
-            raise RuntimeError(f"No colliding shapes on Franka finger body {finger_body}.")
-        if all(int(robot_builder.shape_type[s]) == int(newton.GeoType.BOX) for s in finger_shape_idx):
-            for n, s in enumerate(finger_shape_idx):
-                shape = object_builder.add_shape(
-                    body=body, type=robot_builder.shape_type[s], xform=robot_builder.shape_transform[s],
-                    cfg=cfg, scale=robot_builder.shape_scale[s], src=robot_builder.shape_source[s],
-                    label=f"{label}_shape_{n}")
-                kin_shapes.append(shape)
-        else:
-            lo, hi = _finger_collider_aabb(robot_builder, finger_shape_idx)
-            center = 0.5 * (lo + hi)
-            half = 0.5 * (hi - lo)
-            shape = object_builder.add_shape_box(
-                body=body, xform=wp.transform(wp.vec3(*center.astype(float)), wp.quat_identity()),
-                hx=float(half[0]), hy=float(half[1]), hz=float(half[2]), cfg=cfg,
-                label=f"{label}_aabb_box")
-            kin_shapes.append(shape)
-    return kin_bodies, kin_shapes
 
 
 def restore_proxy_materials(object_model, proxy_shapes: list[int], grip: GripConfig = GRIP):
@@ -641,103 +543,6 @@ class TwoWayProxyCoupling:
     def grip_signal_values(self):
         """Host readout (debug/tuning): (magnitude-min, closing-axis-projected-min) grip force [N]."""
         return float(self.grip_force_signal.numpy()[0]), float(self.grip_squeeze_signal.numpy()[0])
-
-
-@wp.kernel
-def _sync_kinematic_finger_kernel(
-    robot_body_q: wp.array(dtype=wp.transform),
-    robot_body_qd: wp.array(dtype=wp.spatial_vector),
-    finger_bodies: wp.array(dtype=wp.int32),
-    kin_bodies: wp.array(dtype=wp.int32),
-    object_body_q_0: wp.array(dtype=wp.transform),
-    object_body_qd_0: wp.array(dtype=wp.spatial_vector),
-    object_body_q_1: wp.array(dtype=wp.transform),
-    object_body_qd_1: wp.array(dtype=wp.spatial_vector),
-):
-    # Prescribe each KINEMATIC finger collider to its MuJoCo finger's world pose+velocity (both states,
-    # so a graph-captured loop is order-independent). VBD does not integrate kinematic bodies (inv_mass 0)
-    # — it just collides cloth particles against this transform and reads the velocity for contact
-    # friction (solver_vbd: "Kinematic bodies: set body_q"). No momentum undo (the proxy needed it
-    # because it was a finite-mass dynamic body; a kinematic body holds its prescribed pose exactly).
-    i = wp.tid()
-    fb = finger_bodies[i]
-    kb = kin_bodies[i]
-    q = robot_body_q[fb]
-    qd = robot_body_qd[fb]
-    object_body_q_0[kb] = q
-    object_body_qd_0[kb] = qd
-    object_body_q_1[kb] = q
-    object_body_qd_1[kb] = qd
-
-
-class KinematicFingerCoupling:
-    """Solution A: the gripper fingers are KINEMATIC collider bodies IN the object's VBD model
-    (:func:`build_kinematic_finger_colliders`), transform-slaved each substep to the MuJoCo fingers, so
-    they contact the cloth DIRECTLY inside one VBD solve — like Newton's ``example_cloth_franka`` — with
-    no dynamic proxy to jam between cloth and table (docs/ONGOING.md).
-
-    One-way (robot→cloth): a kinematic body's contact reaction is absorbed by its infinite-mass
-    constraint, never fed to the arm (Newton's example likewise zeroes the cloth reaction on the robot).
-    It exposes the SAME surface as :class:`TwoWayProxyCoupling` — ``sync_proxies`` does the real work and
-    ``apply_to_robot`` / ``snapshot`` / ``harvest`` are no-ops — so the framework's substep loop runs
-    UNCHANGED; the no-op apply/harvest are exactly what makes it one-way."""
-
-    def __init__(self, robot_model, object_model, finger_bodies, kin_bodies, sim_dt,
-                 object_contacts=None, soft_contact_ke=None):
-        device = object_model.device
-        self.object_model = object_model
-        self.object_contacts = object_contacts
-        self.sim_dt = float(sim_dt)
-        self._finger_bodies = wp.array(finger_bodies, dtype=wp.int32, device=device)
-        self._kin_bodies = wp.array(kin_bodies, dtype=wp.int32, device=device)
-        self._n = len(kin_bodies)
-        self.left_proxy, self.right_proxy = int(kin_bodies[0]), int(kin_bodies[1])
-        self.soft_contact_ke = None if soft_contact_ke is None else float(soft_contact_ke)
-        # Grip-force signals — populated READ-ONLY in harvest() (for the physics charts only). They are
-        # NEVER fed back to the robot (apply_to_robot stays a no-op), so the coupling is still one-way;
-        # this just lets instrumentation report the finger↔cloth penalty force, like the proxy path.
-        self.grip_force_signal = wp.zeros(1, dtype=wp.float32, device=device)
-        self.grip_squeeze_signal = wp.zeros(1, dtype=wp.float32, device=device)
-        nb = object_model.body_count
-        self._force_lag = wp.zeros(nb, dtype=wp.vec3, device=device)
-        self._torque_lag = wp.zeros(nb, dtype=wp.vec3, device=device)
-
-    def sync_proxies(self, robot_state, object_state_0, object_state_1):
-        wp.launch(_sync_kinematic_finger_kernel, dim=self._n, inputs=[
-            robot_state.body_q, robot_state.body_qd, self._finger_bodies, self._kin_bodies,
-        ], outputs=[
-            object_state_0.body_q, object_state_0.body_qd,
-            object_state_1.body_q, object_state_1.body_qd,
-        ], device=object_state_0.body_q.device)
-
-    def apply_to_robot(self, robot_state):
-        pass            # one-way: the cloth never pushes the arm (kinematic finger absorbs the reaction)
-
-    def snapshot(self, object_state_0):
-        pass
-
-    def harvest(self, object_state_0):
-        # READ-ONLY: reconstruct the finger↔cloth penalty force (ke·penetration over the public
-        # soft-contact geometry) on the two kinematic fingers, only to populate the grip-force signals
-        # the physics charts read. Nothing is applied to the robot (the grip stays one-way / kinematic).
-        if self.soft_contact_ke is None or self.object_contacts is None:
-            return
-        self._force_lag.zero_()
-        self._torque_lag.zero_()
-        c = self.object_contacts
-        wp.launch(_harvest_soft_wrench_kernel, dim=c.soft_contact_particle.shape[0], inputs=[
-            c.soft_contact_count, c.soft_contact_particle, c.soft_contact_shape,
-            c.soft_contact_body_pos, c.soft_contact_normal, object_state_0.particle_q,
-            self.object_model.particle_radius, self.object_model.shape_body,
-            object_state_0.body_q, self.soft_contact_ke, self.left_proxy, self.right_proxy,
-        ], outputs=[self._force_lag, self._torque_lag], device=self._force_lag.device)
-        wp.launch(_reduce_grip_signal_kernel, dim=1, inputs=[
-            self._force_lag, object_state_0.body_q, self.left_proxy, self.right_proxy,
-        ], outputs=[self.grip_force_signal, self.grip_squeeze_signal], device=self._force_lag.device)
-
-    def raw_force_norms(self):
-        f = self._force_lag.numpy()
-        return [float(np.linalg.norm(f[p])) for p in (self.left_proxy, self.right_proxy)]
 
 
 # ---------------------------------------------------------------------------------------------

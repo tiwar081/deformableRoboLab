@@ -30,12 +30,10 @@ deformable↔rigid interaction** realistically. Primary deformable types: **cabl
 zip-ties, clothing, towels**. The rod (cable) + FEM block are done; the cloth (`ClothConfig` =
 Newton's shirt SI-converted, `add_cloth`) is done including the **flat-sheet grasp**: `cloth_franka`
 reproduces Newton's exact folding sequence through the standard proxy bridge at physical friction
-(Newton's recipe: fingertip to table, FIXED 8 mm jaw — [docs/cloths.md](docs/cloths.md)). Cloth
-demos drive the fingers with an explicit `finger_schedule` (Newton's fixed-width close), NOT the
-force `GripController` — its engage/deadband constants are rigid-scale; retuning it for shells is
-an open item in [docs/gripper.md](docs/gripper.md), as is the legacy box-slice proxy-pad
-limitation (the default pad is now the finger's own collider; [docs/cloths.md](docs/cloths.md)
-gotcha 8).
+(Newton's recipe: fingertip to table, finite jaw gap never 0 — [docs/cloths.md](docs/cloths.md)).
+`cloth_franka` itself TRIALS the force `GripController` on cloth (a `GraspWindow` with a ≤2 N
+target riding the 0.3 N engage floor — [docs/gripper.md](docs/gripper.md), outcome pending); the
+default pad is the finger's own collider. Live status: [docs/ONGOING.md](docs/ONGOING.md).
 
 Final vision: render **custom scenes** (table + background + any combination of deformable
 and rigid assets) and **simulate a robot policy** in them, with high graphical realism
@@ -58,9 +56,10 @@ neither). An example only declares its scene; it never picks the solver.
   Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here the grip is
   FORCE-CONTROLLED** by the centralized `GripController` with ONE unified law for every object (rigid,
   cable, AND soft): a bidirectional asymmetric admittance regulator. A demo declares only a `GraspWindow`
-  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md). (Exception:
-  CLOTH demos close to Newton's fixed 8 mm jaw via an explicit `finger_schedule` — a shell's ~0.5 N
-  reaction is below the controller's rigid-scale engage floor; retune pending, see gripper.md.)
+  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md). (CLOTH:
+  a shell's ~0.5 N reaction sits at the controller's rigid-scale engage floor — `cloth_franka`
+  trials the force grip with a ≤2 N target riding that floor, outcome pending; the four-fold cloth
+  twins close to Newton's fixed 8 mm jaw via an explicit `finger_schedule`. See gripper.md.)
 - **Rigid-only** → robot AND objects in ONE `SolverMuJoCo` (objects merged into the robot builder via
   `add_builder`), true two-way grasp, **CCD on** (`make_robot_solver`). The gripper closes to a FIXED
   target (`MUJOCO_GRIP.close_target`; no object-size preset width — contact + actuator effort hold it,
@@ -183,10 +182,7 @@ now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), 
   filtered:** `build_gripper_proxies` copies the finger collider into the VBD object model (the
   DEFAULT pad = the finger's own collider). Sharing the robot's `Mesh` object frees its BVH under
   the object narrow phase (GJK-MPR faults, CUDA error 700), and the two mesh fingers must be
-  collision-filtered against each other. The legacy `box_slice_proxy=True` opts a mesh finger into
-  thin box SLICES (`_finger_box_slices`, primitive narrow phase) — kept only as the A/B twin
-  `cloth_franka_sliceProxies`: the slice stack's stepped inner face sheds a pinched cloth wad
-  (see [docs/cloths.md](docs/cloths.md) / `grip.py`).
+  collision-filtered against each other.
   (2) **Viz-first BVH:** the robot's mesh BVHs are shared into the viz model; finalizing viz LAST frees
   them and corrupts the robot narrow-phase (SOLVERS §4) — only manifests once the OBJECT side (cable
   capsules / ycb meshes) reuses the freed pool, so it looked like a cable/mesh-only crash.

@@ -41,10 +41,8 @@ lost (grip → 0). Keep the fingers position-controlled and feed the **net** rea
 The Franka hand is collapsed into `link7` and its collider exists only in MuJoCo, so a fast deformable
 (the swept cable) passes straight through the gripper **palm and EE**. The gripper proxy collision is
 **CENTRALIZED and identical for every VBD demo**: (1) each finger proxy carries the finger's collision
-shapes — the FR3's sparse URDF boxes copied one-for-one, or (CONVEX_MESH finger, panda USD) a few thin
-box SLICES tiling the finger (`_finger_box_slices`), since a raw mesh proxy is contacted late/explosively
-by the penalty solver. (The `box_slice_proxy` knob opts into the legacy slice pad; the exact mesh, deep-copied to keep its
-own BVH — see [cloths.md](cloths.md).) The gaps between the sparse boxes let the swept cable clip ~1 mm
+shapes — the FR3's sparse URDF boxes copied one-for-one, or a CONVEX_MESH finger deep-copied so the
+object model owns its BVH. The gaps between sparse boxes let the swept cable clip ~1 mm
 into the **fingers** (accepted; the palm blocker below stops the larger palm/wrist penetration). (2) a THIRD proxy — a single synthetic box
 (`GRIP.palm_box_half/offset`, in the `link7`/EE frame, spanning wrist→hand up to just below the finger
 origins, 6 cm clear of the fingertip grasp zone) mirrors the EE body and blocks the palm/EE; and (3)
@@ -68,12 +66,17 @@ holds unchanged). **ONE unified control law for every object** (rigid, cable, AN
 depend on the object type. **The one per-demo knob is the target grasp force** (`GraspWindow.force_target`); the
 close **speed** is centralized (`GRIP.grip_rate_max`) — identical for every grasp.
 
-**Known limitation — CLOTH is not yet on the force grip.** A pinched thin shell's true reaction is
-~0.2–0.7 N (measured at the working 8 mm pinch, [cloths.md](cloths.md)), below the rigid-scale engage
-floor (`engage_floor=0.3`, deadband 2 N), so the controller either never latches or over-closes — and a
-shell must NEVER be closed to width 0 (the zero-gap pinch expels it). The cloth demos therefore command
-Newton's fixed 8 mm jaw via an explicit `finger_schedule`. Open item: retune the engage/deadband scale
-(or add a min-width floor per grasp) so a cloth demo can declare a `GraspWindow` like every other object.
+**Cloth on the force grip — trial results (`cloth_franka`).** A pinched thin shell's true reaction
+is ~0.2–3 N, around the rigid-scale engage floor (`engage_floor=0.3`, deadband 2 N). Measured
+target ladder on the single-fold demo: **1 N** → engage rode the 0.3 N floor and latched at a loose
+~14 mm jaw whose pinch shed the wad mid-drag; **5 N** → engage 0.75 N latched at 11.8 mm, regulator
+crept ~0.4 mm/s, still faded out during the drag; **8 N** (top of the thin-shell range) → engage
+1.2 N latched at ~9.6 mm and the regulator's continued tightening through a long stationary dwell
+carried the pinch through the whole fold (contacts 57→30, held to release) — WORKS. Caveat: the
+shell can never produce 8 N of squeeze, so the jaw creeps to the `min_close_width` floor (2 mm) by
+release; the slow creep sheds contacts gradually instead of expelling, but a proper shell-aware
+stop (retuned engage/deadband scale or an object-derived min-width floor) remains the open item.
+An abrupt commanded zero-gap pinch still expels a shell — never do that with a schedule.
 
 ### The law: bidirectional ASYMMETRIC admittance (a `dim=1` Warp kernel, CUDA-graph safe)
 

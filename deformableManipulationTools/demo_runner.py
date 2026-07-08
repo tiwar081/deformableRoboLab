@@ -25,7 +25,7 @@ from .params import (FRANKA, TABLE, RIGID_CUBE, CABLE, SOFT_BLOCK, PLATE, RUBIKS
 from .assets import (add_table, add_rigid_box, add_cable, add_soft_block, add_plate, add_ycb_mesh,
                      add_rubiks_cube, ClothConfig, add_cloth)
 from .robot import solve_gripper_ik_path
-from .grip import build_gripper_proxies, build_kinematic_finger_colliders
+from .grip import build_gripper_proxies
 from .mathutils import wp_smoothstep
 
 # Particle-deformable kinds whose presence routes a scene to the VBD path + needs gripper proxies.
@@ -52,12 +52,17 @@ class Obj:
 @dataclass
 class WP:
     """One arm waypoint: at sim time ``t`` the TCP is at ``pos`` (xyz, or callable(ctx)->xyz, or
-    None→home pose) with optional ``yaw``/``tilt``. The executor smoothsteps between consecutive WPs."""
+    None→home pose) with optional ``yaw``/``tilt``. The executor smoothsteps between consecutive WPs.
+    ``via=True`` marks a pass-through point: the segments touching it interpolate LINEARLY (constant
+    velocity, like Newton's pose interpolation) instead of easing to a stop — use it on the
+    intermediate points of a densified straight run (e.g. a long drag split into via-points to keep
+    the TCP on the Cartesian line), or the arm visibly pulses at every keyframe."""
     t: float
     pos: Any = None
     yaw: float = 0.0
     tilt: float = 0.0
     tilt_axis: tuple = (1.0, 0.0, 0.0)
+    via: bool = False
 
 
 @dataclass
@@ -89,20 +94,12 @@ class DemoSpec:
     robot_contact_max: int = 8192
     camera: Any = None                           # None -> framework default
     scenic_check_table: bool = True
-    # solution A (cloth): put the finger collider IN the VBD model (kinematic), declared via the
-    # "finger_colliders" scene object instead of "proxies". Default False -> unchanged proxy grip.
-    direct_finger_grip: bool = False
-    # DEFAULT proxy pad = the finger's own collider copied one-for-one (the panda's CONVEX_MESH is
-    # deep-copied). Set box_slice_proxy=True to opt into the LEGACY box-slice approximation of a mesh
-    # finger (kept for A/B: its stepped taper sheds a pinched cloth wad — cloth_franka_sliceProxies is
-    # the only demo that sets it). Only affects the "proxies" path.
+    # Optional proxy geometry override: for mesh fingers, use contained box slices instead of the
+    # default one-for-one finger collider copy.
     box_slice_proxy: bool = False
     # Start the arm AT its first waypoint (t=0) pose instead of home_q, so frame 0 already has the arm
     # parked out of the way (e.g. clear of a shirt dropping from the air). Default False -> home init.
     start_at_first_waypoint: bool = False
-    # HACK knob (direct_finger_grip only): override the kinematic FINGER friction (μ) post-finalize, to
-    # hold thin cloth through a fold. None -> default finger μ. Demo-local; no other demo is affected.
-    finger_grip_mu: float | None = None
     # run knobs (argparse defaults)
     substeps: int = 16
     vbd_iterations: int = 12
@@ -154,6 +151,7 @@ def _policy_kernel(
     sim_dt: float,
     akf_t: wp.array(dtype=float),            # arm keyframe times [na]
     akf_q: wp.array2d(dtype=float),          # arm keyframe joint targets [na, 7]
+    akf_lin: wp.array(dtype=wp.int32),       # per-segment: 1 = LINEAR blend (via-point), 0 = smoothstep
     n_akf: int,
     fkf_t: wp.array(dtype=float),            # finger keyframe times [nf]
     fkf_w: wp.array(dtype=float),            # finger keyframe widths [nf]
@@ -174,7 +172,8 @@ def _policy_kernel(
             q = akf_q[n_akf - 1, d]
         else:
             a = wp.clamp((t - akf_t[s]) / wp.max(akf_t[s + 1] - akf_t[s], 1.0e-6), 0.0, 1.0)
-            a = a * a * (3.0 - 2.0 * a)
+            if akf_lin[s] == 0:                # via-marked segments stay LINEAR (constant velocity)
+                a = a * a * (3.0 - 2.0 * a)
             q = (1.0 - a) * akf_q[s, d] + a * akf_q[s + 1, d]
         if has_sweep == 1 and t >= sweep_start:
             ramp = wp_smoothstep((t - sweep_start) / sweep_ramp)
@@ -210,9 +209,7 @@ def make_data_driven_example(base_cls):
             self.coupling_soft_ke = s.coupling_soft_ke
             self.object_solver_kwargs = dict(s.object_solver_kwargs)
             self.object_pipeline_kwargs = dict(s.object_pipeline_kwargs)
-            self.direct_finger_grip = s.direct_finger_grip
             self.box_slice_proxy = s.box_slice_proxy
-            self.finger_grip_mu = s.finger_grip_mu
             # has_particles + soft_block are DERIVED from the scene (no demo override needed): the
             # grasped/contacting particle deformable's config sets model.soft_contact_*.
             self._deformable_cfg = self._scene_deformable_cfg()
@@ -264,6 +261,9 @@ def make_data_driven_example(base_cls):
                 a = a * a * (3.0 - 2.0 * a)
                 return (1.0 - a) * w0 + a * w1
             def _gripped(t0, t1):
+                if any(w.close_start < t1 and t0 < w.release_end
+                       for w in (self.spec.grasp_windows or [])):
+                    return True                        # force-grip demos: gripped inside any window
                 return any(_width(t0 + a * (t1 - t0)) < 0.5 * self.gripper_open
                            for a in (0.0, 0.25, 0.5, 0.75, 1.0))
             edge_w = [8.0 if _gripped(a.t, b.t) else 1.0
@@ -275,6 +275,11 @@ def make_data_driven_example(base_cls):
             self._akf_t = wp.array(np.array(akf_t, dtype=np.float32), dtype=wp.float32, device=dev)
             self._akf_q = wp.array(np.stack(akf_q).astype(np.float32), dtype=wp.float32, device=dev)
             self._n_akf = len(akf_t)
+            # Per-segment blend mode: a segment touching a via-marked waypoint interpolates LINEARLY
+            # (constant velocity through the pass-through point); all others keep the smoothstep ease.
+            lin = [1 if (a.via or b.via) else 0
+                   for a, b in zip(self.spec.waypoints, self.spec.waypoints[1:])] or [0]
+            self._akf_lin = wp.array(np.array(lin, dtype=np.int32), dtype=wp.int32, device=dev)
             # Optionally START the arm at its first-waypoint pose (frame 0 = parked), not home_q.
             if self.spec.start_at_first_waypoint:
                 self.initial_arm_q = np.asarray(akf_q[0], dtype=np.float32)
@@ -331,17 +336,12 @@ def make_data_driven_example(base_cls):
                     self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_gripper_proxies(
                         builder, robot_builder, self.robot_finger_bodies, self._obj_table_shape,
                         box_slice_proxy=self.box_slice_proxy)
-                elif o.kind == "finger_colliders":
-                    # Solution A: KINEMATIC finger colliders IN the VBD model (vs the dynamic proxies).
-                    # The demo also sets direct_finger_grip=True so the framework uses the one-way coupling.
-                    self.gripper_proxy_bodies, self.gripper_proxy_shapes = build_kinematic_finger_colliders(
-                        builder, robot_builder, self.robot_finger_bodies)
                 else:
                     raise ValueError(f"unknown scene object kind {o.kind!r}")
 
         def _launch_policy(self, substep, n_out):
             wp.launch(_policy_kernel, dim=n_out, inputs=[
-                self._t_frame, substep, self.sim_dt, self._akf_t, self._akf_q, self._n_akf,
+                self._t_frame, substep, self.sim_dt, self._akf_t, self._akf_q, self._akf_lin, self._n_akf,
                 self._fkf_t, self._fkf_w, self._n_fkf, self._has_sweep,
                 (self._sweep.start if self._sweep else 0.0), (self._sweep.freq if self._sweep else 0.0),
                 (self._sweep.ramp if self._sweep else 1.0), self._sweep_amp, self._sweep_phase,
