@@ -109,12 +109,16 @@ class GripConfig:
     # the jaw axis, so it projects out and the regulator holds steady under load instead of mis-reading the
     # load as over-squeeze and opening. Velocity form (integral → zero steady-state error).
     #
-    # It is ASYMMETRIC — close fast, open slowly — which is what makes a force regulator stable on a
-    # frictional grasp whose contact force is spiky + load-dominated: F_filt = EMA(grip_squeeze_signal,
-    # force_filter_tau); close at grip_rate_max to first contact (F_filt >= engage_force), then regulate
-    # w_dot = k_adm*(F_filt - target). UNDER target it closes fast (chase the target / restore a DECAYING
-    # grip); OVER target it opens VERY slowly (rate <= grip_rate_open) so the lift/sweep LOAD and transient
-    # SPIKES (which transiently dwarf the target) can't open the jaw and drop the object before they pass.
+    # It is ASYMMETRIC — close responsively, open reluctantly — which is what makes a force regulator
+    # stable on a frictional grasp whose contact force is spiky + load-dominated: F_filt =
+    # EMA(grip_squeeze_signal, force_filter_tau); close at grip_rate_max to first contact (F_filt >=
+    # engage_force), then regulate with DIRECTION-DEPENDENT GAINS: w_dot = k_close*(err + db) when
+    # UNDER target (chase the target / restore a DECAYING grip) and w_dot = k_open*(err - db) when
+    # OVER (k_close = k_open_ratio * k_open), so the lift/sweep LOAD and transient SPIKES (which
+    # transiently dwarf the target) back the jaw off only slowly, in proportion to the over-force,
+    # and the EMA + deadband eat the short ones entirely. The RATE CAP is symmetric and PHYSICAL
+    # (grip_rate_max both ways — a real jaw opens as fast as it closes; the old design's separate
+    # 200x-slower open CAP was a controller choice disguised as a limit and lived in the wrong knob).
     # "Grab firmly, release reluctantly" — bidirectional but load-robust. The target is in PROJECTED
     # (closing-axis) N; pick it per demo near the achievable steady squeeze (a thin cable tops out ~4 N at
     # any width so its target sets the cage tightness; a rigid box reaches ~30 N; a soft block ~8 N gentle).
@@ -129,25 +133,30 @@ class GripConfig:
     # actuator gains/effort in RobotConfig) stays absolute — sim2real: those cannot be retuned on
     # hardware per task, so the sim must not either.
     #
-    # k_adm scales ∝ 1/target (relative-error admittance): w_dot = k_w*(err ∓ db_w) with
-    # k_w = k_adm*adm_ref_force/ft — the full-scale-error close speed k_w*ft = 3e-3 m/s is then
+    # k_adm scales ∝ 1/target (relative-error admittance): the CLOSE gain is
+    # k_close = k_adm*adm_ref_force/ft — the full-scale-error close speed k_close*ft = 3e-3 m/s is
     # target-independent, so a 2 N cloth grasp tightens as briskly (in fraction-of-target units) as a
     # 30 N cube grasp instead of being ~15x slower (the old fixed gain made low-target regulation
     # glacial; with the old 2 N ABSOLUTE deadband it was literally dead — w_dot = 0 for any ft <= 2).
-    k_adm: float = 1.0e-4             # admittance gain [m/s per N] AT ft = adm_ref_force
-    adm_ref_force: float = 30.0       # [N] anchor target: window_params(30) == (k_adm, grip_force_deadband)
-    k_adm_cap: float = 2.0e-3         # [m/s per N] gain guard for very low targets — keeps the discrete
-                                       # contact loop stable (k_w*ke*dt << 1 even on the stiffest proxy
-                                       # contact ke=5e4 at dt~1e-3); inactive for ft >= 1.5 N
+    # The OPEN gain is k_close/k_open_ratio: the anti-drop asymmetry lives HERE (a software gain),
+    # not in the rate caps. Jaw retreat under a spike of size a*ft lasting T is then
+    # (3e-3/k_open_ratio)*a*T — at ratio 20, a 2x-target 0.5 s spike retreats ~0.15 mm.
+    k_adm: float = 1.0e-4             # CLOSE admittance gain [m/s per N] AT ft = adm_ref_force
+    k_open_ratio: float = 20.0        # close/open gain ratio (>1): the asymmetry that keeps a spiky,
+                                       # load-dominated grasp from opening; modest by design (the old
+                                       # mechanism was a 200x-slower open RATE CAP). 10 lost the cable
+                                       # cage in cable_soft (its long high-spike sweep); 20 holds.
+    adm_ref_force: float = 30.0       # [N] anchor target: window_params(30) close-side == legacy constants
+    k_adm_cap: float = 2.0e-3         # [m/s per N] close-gain guard for very low targets — keeps the
+                                       # discrete contact loop stable (k*ke*dt << 1 even on the stiffest
+                                       # proxy contact ke=5e4 at dt~1e-3); inactive for ft >= 1.5 N
     force_filter_tau: float = 0.05    # [s] EMA time constant on the squeeze signal (swallows contact
                                        # spikes). FIXED: set by the signal's noise spectrum (a sensor
                                        # property, not a task property).
-    grip_rate_max: float = 0.04       # [m/s] CLOSE / approach rate limit. FIXED (PHYSICAL): just under
-                                       # the real Franka Hand's max finger speed (~0.05 m/s) — identical
-                                       # for every grasp (NOT per-demo, NOT target-scaled).
-    grip_rate_open: float = 0.0002    # [m/s] OPEN rate limit (slow: ride out the spiky, load-dominated
-                                       # force). FIXED: jaw retreat during a load transient is bounded by
-                                       # rate*T where T is set by TASK dynamics (lift/swing), not target.
+    grip_rate_max: float = 0.04       # [m/s] jaw rate limit, BOTH directions + the blind approach speed.
+                                       # FIXED (PHYSICAL) and SYMMETRIC: just under the real Franka Hand's
+                                       # max finger speed (~0.05 m/s), which is direction-independent —
+                                       # identical for every grasp (NOT per-demo, NOT target-scaled).
     # Engage threshold (projected squeeze) to switch from blind approach to force regulation. RELATIVE to
     # the target (clamped) so it scales: a low-target SOFT grip engages at a light touch — BEFORE the fast
     # approach over-compresses the compliant block — while a high-target rigid/cable grip engages firmly (a
@@ -164,14 +173,17 @@ class GripConfig:
     grip_force_deadband: float = 2.0  # [N] deadband around the target AT ft = adm_ref_force
     grip_force_deadband_floor: float = 0.1  # [N] absolute noise floor for the scaled deadband
 
-    def window_params(self, force_target: float) -> tuple[float, float]:
-        """THE centralized per-grasp-window controller derivation: ``(k_adm_w, deadband_w)`` for a
-        window's ``force_target``. Consumed by GripController (packed per window into the kernel's
-        windows array) and by instrumentation (plot reference bands) — never derived anywhere else.
-        Anchored: ``window_params(adm_ref_force) == (k_adm, grip_force_deadband)`` exactly, so the
-        long-tested 30 N demos (cable cage, rigid cube, rubik's) are bit-identical."""
+    def window_params(self, force_target: float) -> tuple[float, float, float]:
+        """THE centralized per-grasp-window controller derivation:
+        ``(k_close_w, k_open_w, deadband_w)`` for a window's ``force_target``. Consumed by
+        GripController (packed per window into the kernel's windows array) and by instrumentation
+        (plot reference bands) — never derived anywhere else. Anchored: the close side of
+        ``window_params(adm_ref_force)`` equals the legacy constants ``(k_adm, grip_force_deadband)``
+        exactly, so the long-tested 30 N closes (cable cage, rigid cube, rubik's) are bit-identical;
+        the open side is ``k_close/k_open_ratio`` (the anti-drop gain asymmetry)."""
         s = float(force_target) / self.adm_ref_force
-        return (min(self.k_adm / s, self.k_adm_cap),
+        k_close = min(self.k_adm / s, self.k_adm_cap)
+        return (k_close, k_close / self.k_open_ratio,
                 max(self.grip_force_deadband * s, self.grip_force_deadband_floor))
     # Hand/palm "blocker" proxy (CENTRALIZED — every VBD demo's gripper gets it; not demo-tweakable).
     # The two finger proxies already carry the finger collision geometry, but the Franka hand is

@@ -139,7 +139,7 @@ class PhysicsRecorder:
         for w in self.windows:
             target = float(w.force_target) if w.force_target is not None else float(GRIP.force_target)
             engage = min(max(GRIP.engage_frac * target, GRIP.engage_floor), GRIP.engage_cap)
-            _, deadband = GRIP.window_params(target)
+            _, _, deadband = GRIP.window_params(target)
             key = (round(target, 6), round(engage, 6))
             if key not in seen:
                 seen.add(key)

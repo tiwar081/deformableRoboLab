@@ -554,17 +554,19 @@ def _grip_force_stop_kernel(
     substep: int,
     sim_dt: float,
     windows: wp.array(dtype=wp.float32),        # flat [close_start, close_end, release_start, release_end,
-                                                #       ft, k_adm_w, deadband_w]*n — the last two are the
-                                                #       TARGET-RELATIVE controller params, pre-resolved per
-                                                #       window by GripConfig.window_params(ft)
+                                                #       ft, k_close_w, k_open_w, deadband_w]*n — the last
+                                                #       three are the TARGET-RELATIVE controller params,
+                                                #       pre-resolved per window by
+                                                #       GripConfig.window_params(ft); the close/open gain
+                                                #       split is the anti-drop asymmetry (the rate cap is
+                                                #       symmetric + physical)
     n_windows: int,
     gripper_open: float,
     close_target: float,                        # width lower bound (0 on the VBD force grip — no floor;
                                                 # mujoco close_target on the rigid-only path)
     force_stop_enabled: int,                    # 1 = VBD admittance regulator; 0 = rigid-only smoothstep
     force_filter_tau: float,                    # [s] EMA time constant on the squeeze signal
-    grip_rate_max: float,                       # [m/s] CLOSE / approach rate limit (centralized squeeze speed)
-    grip_rate_open: float,                      # [m/s] OPEN rate limit (slow: ride out the spiky load)
+    grip_rate_max: float,                       # [m/s] jaw rate limit BOTH ways + approach speed (physical)
     engage_frac: float,                         # engage threshold = clamp(engage_frac*ft, floor, cap)
     engage_floor: float,
     engage_cap: float,
@@ -586,14 +588,15 @@ def _grip_force_stop_kernel(
     sqz = squeeze_signal[0]
     out = gripper_open                          # default (before/between/after all windows): open
     for w in range(n_windows):
-        wb = 7 * w
+        wb = 8 * w
         cs = windows[wb + 0]
         ce = windows[wb + 1]
         rs = windows[wb + 2]
         re = windows[wb + 3]
         ft = windows[wb + 4]                     # pre-resolved force TARGET [N]
-        k_adm = windows[wb + 5]                  # target-relative admittance gain [m/s per N]
-        grip_force_deadband = windows[wb + 6]    # target-relative deadband [N]
+        k_close = windows[wb + 5]                # target-relative CLOSE gain [m/s per N]
+        k_open = windows[wb + 6]                 # target-relative OPEN gain (= k_close/k_open_ratio)
+        grip_force_deadband = windows[wb + 7]    # target-relative deadband [N]
         sb = 3 * w
         if t < cs:
             # before this grasp: open, (re)arm the per-window state for a clean cycle
@@ -641,11 +644,12 @@ def _grip_force_stop_kernel(
                     err = f_filt - ft
                     w_dot = float(0.0)
                     if err < -grip_force_deadband:
-                        w_dot = k_adm * (err + grip_force_deadband)       # < 0: close
-                        w_dot = wp.max(w_dot, -grip_rate_max)             # fast close clamp
+                        w_dot = k_close * (err + grip_force_deadband)     # < 0: close (responsive gain)
+                        w_dot = wp.max(w_dot, -grip_rate_max)             # physical rate cap
                     elif err > grip_force_deadband:
-                        w_dot = k_adm * (err - grip_force_deadband)       # > 0: open
-                        w_dot = wp.min(w_dot, grip_rate_open)             # SLOW open clamp
+                        w_dot = k_open * (err - grip_force_deadband)      # > 0: open (reluctant gain —
+                                                                          # the anti-drop asymmetry)
+                        w_dot = wp.min(w_dot, grip_rate_max)              # physical rate cap (symmetric)
                     width = width + w_dot * sim_dt
                 width = wp.clamp(width, close_target, gripper_open)
             grip_state[sb + 0] = width
@@ -670,8 +674,9 @@ class GripController:
     The projection rejects the load (tangential to the jaw axis). It closes FAST (chase target / restore a
     decaying grip) but opens SLOWLY (so a spiky, load-dominated transient can't open the jaw and drop the
     object) — stable on the stiff contact via EMA low-pass + asymmetric rate limits + deadband
-    (the per-window gain/deadband from ``GripConfig.window_params(force_target)``; the fixed
-    ``force_filter_tau`` / ``grip_rate_max`` / ``grip_rate_open`` / engage clamp).
+    (the per-window close/open gains + deadband from ``GripConfig.window_params(force_target)`` —
+    the open gain is k_close/k_open_ratio, the anti-drop asymmetry; the fixed ``force_filter_tau`` /
+    the symmetric physical ``grip_rate_max`` / engage clamp).
 
     On the rigid-only MuJoCo path (no coupling) ``force_stop_enabled=0``: it degrades to a plain smoothstep
     close to ``close_target`` (= MUJOCO_GRIP.close_target) and lets true two-way contact stop the pads."""
@@ -690,7 +695,6 @@ class GripController:
         self.close_target = float(close_target if close_target is not None else 0.0)
         self.force_filter_tau = float(grip.force_filter_tau)
         self.grip_rate_max = float(grip.grip_rate_max)
-        self.grip_rate_open = float(grip.grip_rate_open)
         self.engage_frac = float(grip.engage_frac)
         self.engage_floor = float(grip.engage_floor)
         self.engage_cap = float(grip.engage_cap)
@@ -702,10 +706,10 @@ class GripController:
             # TARGET-RELATIVE controller params (gain, deadband) are resolved HERE, once, by the ONE
             # centralized derivation GripConfig.window_params, and packed per window for the kernel.
             ft = float(win.force_target if win.force_target is not None else grip.force_target)
-            k_adm_w, deadband_w = grip.window_params(ft)
+            k_close_w, k_open_w, deadband_w = grip.window_params(ft)
             flat += [float(win.close_start), float(win.close_end),
                      float(win.release_start), float(win.release_end), ft,
-                     float(k_adm_w), float(deadband_w)]
+                     float(k_close_w), float(k_open_w), float(deadband_w)]
         self._windows = wp.array(flat, dtype=wp.float32, device=device)
         self._grip_state = wp.zeros(self.n_windows * 3, dtype=wp.float32, device=device)
 
@@ -714,7 +718,7 @@ class GripController:
             self._t_frame, int(substep), self.sim_dt, self._windows, self.n_windows,
             self.gripper_open, self.close_target, self.force_stop_enabled,
             self.force_filter_tau, self.grip_rate_max,
-            self.grip_rate_open, self.engage_frac, self.engage_floor, self.engage_cap, self.squeeze_signal,
+            self.engage_frac, self.engage_floor, self.engage_cap, self.squeeze_signal,
             finger_q, self.finger_dof0, self.finger_dof1,
         ], outputs=[self._grip_state, self.joint_target_q], device=self.joint_target_q.device)
 

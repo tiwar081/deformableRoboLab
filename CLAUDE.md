@@ -56,7 +56,7 @@ neither). An example only declares its scene; it never picks the solver.
   reaction is harvested and the net external load fed to the arm/EE one step later). VBD is the only
   Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here the grip is
   FORCE-CONTROLLED** by the centralized `GripController` with ONE unified law for every object (rigid,
-  cable, AND soft): a bidirectional asymmetric admittance regulator. A demo declares only a `GraspWindow`
+  cable, AND soft): a bidirectional admittance regulator, asymmetric in its GAINS (opens ~20× more reluctantly than it closes; the jaw-speed cap is symmetric and physical). A demo declares only a `GraspWindow`
   and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md). (The
   controller's gain/deadband are derived PER TARGET by `GripConfig.window_params` — anchored
   bit-exact at 30 N, so low targets like the 2 N cloth pinch regulate briskly and converge instead
