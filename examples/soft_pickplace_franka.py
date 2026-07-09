@@ -30,7 +30,7 @@ DEMO = DemoSpec(
         WP(11.2, None),                                   # home
     ],
     grasp_windows=[GraspWindow(close_start=3.2, close_end=4.4, release_start=8.0,
-                               release_end=8.6, force_target=5.0)],
+                               release_end=8.6, force_target=3.0)],
     coupling_soft_ke=SOFT_BLOCK.soft_contact_ke,
     object_solver_kwargs={"rigid_body_contact_buffer_size": 2048,
                           "rigid_body_particle_contact_buffer_size": 4096},

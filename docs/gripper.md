@@ -21,9 +21,11 @@ Each substep (`grip.TwoWayProxyCoupling`, NVIDIA's recipe — staggered one-step
    stays slaved to the finger while still participating as a finite-mass contact body.
 4. object (VBD) solves the squeeze; swap.
 5. `harvest` — collect the object→proxy reaction for next step (rigid via
-   `SolverVBD.collect_rigid_contact_forces`; **soft** FEM blocks via a recomputed
-   `n·ke·penetration` over the public `Contacts.soft_contact_*` geometry, enabled by passing
-   `soft_contact_ke=` and building the proxies with `has_particle_collision=True`).
+   `SolverVBD.collect_rigid_contact_forces`; **soft** particle objects (FEM block, cloth) via a
+   recomputed `n·ke_eff·penetration` over the public `Contacts.soft_contact_*` geometry, where
+   `ke_eff = avg(model.soft_contact_ke, pad shape ke)` — the SAME mean VBD itself uses for the
+   contact, derived centrally in the framework for EVERY particle object (the demo's
+   `coupling_soft_ke` is only the opt-in), with `has_particle_collision=True` on the pads).
 
 **Feedback is net-to-EE, not per-finger.** The two pad wrenches summed cancel the internal
 squeeze and leave the external load (weight + motion reaction), which goes to the arm; the
@@ -105,7 +107,7 @@ the **closing-axis projection** (`grip_squeeze_signal`, below), not the raw magn
 the jaw axis) is partly rejected before the asymmetry even sees it.
 
 **The target is the only thing that differs between objects** (and the target-scaled engage threshold falls out of
-it automatically). A soft block needs a gentle target (~5 N) — its engage threshold is then small, so it is held
+it automatically). A soft block needs a gentle target (~3 N) — its engage threshold is then small, so it is held
 without crush; no "freeze" mode is needed, the regulator simply settles there. A rigid box (~30 N) has a steep
 force-width curve, so the target is a true squeeze setpoint. The cable is the degenerate case (below), where the
 target instead sets the cage geometry. Tune the per-object target up if it slips, down if it crushes.
@@ -113,7 +115,7 @@ target instead sets the cage geometry. Tune the per-object target up if it slips
 ```python
 self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6, force_target=30.0)]                  # cable: held to end
 self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6)]                       # rigid: GRIP default target
-self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6, force_target=5.0)]     # soft: gentle target
+self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6, force_target=3.0)]     # soft: gentle target
 ```
 
 ### Why the cable target is what it is

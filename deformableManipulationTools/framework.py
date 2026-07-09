@@ -235,8 +235,8 @@ class GraspExample:
         # can touch (pads/palm + object-side table) must carry the ClothConfig's SI-converted shape
         # material — the GRIP/table values restored above are FEM/cable-scale (ke~5e4) and would
         # dominate the averaged cloth contact 1000:1, recreating the expulsion that broke the grasp.
-        # Applied AFTER restore_proxy_materials on purpose. The harvest ke is the same averaged value,
-        # derived here centrally so a demo never wires it (grip.py reconstructs f = ke_eff * pen).
+        # Applied AFTER restore_proxy_materials on purpose (the harvest ke below then reads the
+        # pads' FINAL material, so it stays consistent automatically).
         from .assets import ClothConfig as _ClothConfig
         if isinstance(self.soft_block, _ClothConfig):
             cloth_shapes = list(self.gripper_proxy_shapes)
@@ -246,9 +246,16 @@ class GraspExample:
             self._apply_material_override({
                 "shapes": cloth_shapes, "ke": self.soft_block.shape_contact_ke,
                 "kd": self.soft_block.shape_contact_kd, "mu": self.soft_block.shape_contact_mu})
-            if self.coupling_soft_ke is not None:
-                self.coupling_soft_ke = 0.5 * (self.soft_block.soft_contact_ke
-                                               + self.soft_block.shape_contact_ke)
+        # CENTRAL effective harvest ke — IDENTICAL derivation for EVERY particle object (cloth, FEM
+        # block, any future shell/volume): the soft harvest reconstructs the pad reaction as
+        # f = ke_eff * penetration, and VBD's body<->particle contact uses the ARITHMETIC MEAN of the
+        # particle side (model.soft_contact_ke) and the touching pad shape's FINAL material — so the
+        # harvest must mirror exactly that mean, whatever material profile the pads ended up with
+        # (GRIP restore on FEM/cable scenes, the ClothConfig shape profile on cloth scenes). The
+        # demo's coupling_soft_ke is only the harvest OPT-IN; its value is replaced here.
+        if self.coupling_soft_ke is not None and len(self.gripper_proxy_shapes):
+            pad_ke = float(self.object_model.shape_material_ke.numpy()[self.gripper_proxy_shapes[0]])
+            self.coupling_soft_ke = 0.5 * (float(self.object_model.soft_contact_ke) + pad_ke)
         for body, mass in self.mass_overrides:
             rescale_body_mass(self.object_model, body, mass)
 

@@ -66,16 +66,17 @@ demos are therefore directly cross-comparable.
   path. The A/B twin of `pickplace_ycb_franka` demonstrating the centralized solver routing (≈2.2×
   slower than the rigid-only MuJoCo path). Two `GraspWindow`s — rubik's cube (`force_target=30`)
   then banana (`force_target=80`, the firmest stable value for the slip-prone curved mesh). 16 substeps.
-  Known imperfections (deferred): the banana's grip is intermittent (curved, slip-prone mesh — 80 N is
-  the firmest stable target), and the rubik's cube sticks briefly at release on this VBD path (a
-  penalty-contact stiction artifact; the rigid-only twin releases cleanly).
+  Known imperfection (deferred): the banana's grip is intermittent (curved, slip-prone mesh — 80 N is
+  the firmest stable target). The rubik's cube releases cleanly in BOTH ycb demos; its drop point is
+  INTENTIONALLY offset from the bowl centre to observe the bowl–cube collision at an odd angle, so
+  the cube bouncing on/off the rim is expected behaviour, not a defect.
 
 ## Cloth — the shirt fold (recipe + history in [cloths.md](cloths.md))
 
 The shirt (the SI-converted Newton cloth, `ClothConfig` defaults) drops inflated from clear of the
 table and arm, settles flat and centred on the ONE shared table, and the Franka folds it following
 Newton's grasp recipe: descend the fingertip to the TABLE TOP, pinch to a finite jaw gap (never 0),
-lift, drag, release. Physical friction only (μ_eff ≈ 0.61). All three run the standard split
+lift, drag, release. Physical friction only (μ_eff ≈ 0.61). Runs on the standard split
 MuJoCo-robot + VBD-cloth path at 10 substeps / 5 VBD iterations (Newton's dt — part of the contact
 parity).
 
@@ -84,6 +85,7 @@ parity).
   `force_target=2 N`, inside the shell's achievable squeeze) through the standard dynamic proxies —
   the target-relative admittance law converges to a stable ~8–9 mm pinch
   ([gripper.md](gripper.md)). 1380 frames (23 s).
+
 ## Scenic rendering
 
 There are no separate `_robolab` files anymore: scenic rendering is built into every demo via

@@ -205,7 +205,10 @@
       "Bash(.venv/bin/python example.py --demo examples/soft_pickplace_franka.py --output graphs --viewer null --device cuda:0 --test)",
       "Bash(grep -E \"OK$|test|Error|Traceback|graphs\" /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/tasks/bxr31vndu.output)",
       "Bash(grep -E \"OK$|Assertion|Error|Traceback|physics graphs\" /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/tasks/bxr31vndu.output)",
-      "Bash(.venv/bin/python example.py --demo examples/cable_soft_franka.py --device cuda:0 --output both)"
+      "Bash(.venv/bin/python example.py --demo examples/cable_soft_franka.py --device cuda:0 --output both)",
+      "Bash(.venv/bin/python -m py_compile deformableManipulationTools/framework.py)",
+      "Bash(.venv/bin/python example.py --demo examples/cloth_franka.py --output graphs --viewer null --device cuda:0 --test)",
+      "Bash(grep -E \"OK$|Error|Traceback\" /tmp/claude-0/-mnt-samyak-deformableRoboLab/efae5a47-8f9f-491a-be5e-3058aba2770b/tasks/bz7jj3iqn.output)"
     ],
     "additionalDirectories": [
       "/dev",

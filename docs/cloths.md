@@ -30,8 +30,9 @@ cloth needs only scene + policy — the cloth solver physics is centralized:
    `GraspWindow` with a cloth-scale `force_target` INSIDE the shell's achievable squeeze (~2 N —
    the target-relative admittance law then converges to a stable ~8–9 mm pinch and stays live to
    re-tighten; see [gripper.md](gripper.md)). Set
-   `coupling_soft_ke=CFG.soft_contact_ke` to enable the grip-signal harvest (the framework
-   replaces it with the correct shape-averaged value centrally) and
+   `coupling_soft_ke=CFG.soft_contact_ke` to enable the grip-signal harvest — the value is just the
+   opt-in; the framework centrally derives the effective ke as avg(particle ke, pad material ke),
+   the SAME derivation for every particle object — and
    `object_pipeline_kwargs={"soft_contact_margin": CFG.contact_margin}`; buffer sizes go in
    `object_solver_kwargs`.
 5. **Timestep**: `substeps=10, vbd_iterations=5` (Newton's). dt is part of the contact parity — the
