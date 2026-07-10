@@ -54,8 +54,19 @@ class RobotConfig:
     )
     gripper_open: float = 0.04                        # URDF prismatic upper limit [m]
     # PD actuator gains (position mode) — arm DOFs 0-6, finger DOFs 7-8.
-    arm_target_ke: float = 420.0
-    arm_target_kd: float = 42.0
+    # arm_target_ke/kd are the arm's joint impedance — they SET how much the arm sags/jolts under
+    # the harvested EE load (docs/gripper.md "net-to-EE"). 400/80 EXACTLY matches RoboLab's DROID
+    # Franka (_external/RoboLab robolab/robots/droid.py, ImplicitActuatorCfg stiffness=400,
+    # damping=80 on all 7 arm joints) — RoboLab is the sim2real reference, so the arm must feel
+    # loads the same way. The old 420/42 had matching stiffness but HALF the damping (transients
+    # under-damped → visible jolt on grasp/load). Known, accepted differences: a real stiff
+    # position-controlled Franka is ~5-10x stiffer still (libfranka joint impedance 2000-3000,
+    # menagerie kp 2000-4500 — a 20 N payload sags our TCP ~1-2.5 cm, which RoboLab would too);
+    # Newton's own Franka demos drive the arm KINEMATICALLY (infinitely stiff, no force feedback),
+    # so ours is softer than Newton's by construction. RoboLab also splits arm effort 87 (j1-4) /
+    # 12 (j5-7) N*m where we use 87 uniformly — noted, not adopted (single-scalar schema).
+    arm_target_ke: float = 400.0
+    arm_target_kd: float = 80.0
     arm_effort: float = 87.0                          # Franka arm joint torque limit [N·m]
     finger_target_ke: float = 300.0
     finger_target_kd: float = 30.0

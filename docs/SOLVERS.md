@@ -54,11 +54,12 @@ kinematic-proxy era fixed this with the non-default VBD setting
 accumulates the ALM multiplier into a 1e4–1e6 N phantom grip (a kinematic proxy early-outs
 so the runaway is computed-but-not-applied — stable, uncontrolled — but a dynamic proxy
 *applies* it and diverges; see the "current dynamic proxy" section below). The object side
-now runs **NVIDIA default-hard contacts** (`alpha=0.95`, no `rigid_contact_history`) and keeps
-only `rigid_contact_stick_motion_eps=0.0` (no sticky contact-point replay) — see
-`framework.py` `_build_split_mujoco_vbd` (`solver_kwargs = dict(iterations=…,
-rigid_contact_stick_motion_eps=0.0)`) and [solver-architecture.md](solver-architecture.md).
-Pinch stability now comes from physical contact damping (the re-derived `kd`), not `alpha=0`.
+runs **NVIDIA default-hard contacts** with the ALM state zeroed every substep (`alpha=0.95`,
+no `rigid_contact_history`, `rigid_contact_stick_motion_eps=0.0` — see `framework.py`
+`_build_split_mujoco_vbd`). This kills the runaway at a known, measured cost: **no static
+friction** (grasped objects can creep below the Coulomb cone — §6 documents the full trade
+study, including the soft-contact alternative that restores stick). Pinch stability comes from
+physical contact damping (the re-derived `kd`), not `alpha=0`.
 
 ### 4. Mesh rigid bodies are fragile in the narrow phase
 
@@ -110,15 +111,102 @@ each a hard segfault or an eject-to-infinity, not a clean error:
   The absolute-damping `kd` semantics must be re-derived on every Newton bump — see
   CLAUDE.md **Newton version** (current pin: Newton `v0.2.3-665`).
 
+### 6. Static friction trade study (2026-07-09) — the current config has none, by choice
+
+The grasp-slip investigation (instrumented headless A/B, `deformableManipulationTools` + a
+scratch metrics harness). **Outcome: the codebase KEEPS the default-hard + per-substep-zeroed
+config** (calm arm, no grasp jolt) and accepts the slip symptoms below as known limitations.
+The soft-contact alternative that fixes them is documented at the end of this section, but it is
+**reserved for whenever the object-slippage problem is explicitly taken on again** — slipping may
+well persist in other demos in the meantime; do NOT reach for the contact mode as routine
+per-symptom tuning. Everything here is measured — don't re-walk the dead ends.
+
+**Symptoms.** The ~2 kg PLATE held by its handle pivoted about the jaw axis like a frictionless
+pin joint (24.5° during the carry, squeeze decaying −19 N/s); the ycb banana squirted out of the
+closing jaws (no grip even at the 80 N band-aid target). Ruled out empirically: friction mu (pad
+1.5 × banana 2.0, geometric mean ≈ 1.73 — the Coulomb cone was never the binding constraint) and
+contact-manifold degeneracy (measured ≈ 8.6 pad↔handle contacts with ≈ 2–5 cm lever arms — plenty
+of torque capacity IF friction sticks).
+
+**Root cause.** In hard/ALM mode with the ALM state cold-started every substep (the CURRENT
+config: `stick_motion_eps=0`, no history, and the framework collides every substep so the
+tangential multiplier `λ_t` is `zero_()`'d 960×/s), friction has no memory: any tangential load
+below the cone still creeps every substep. Rotational creep about the grasp line is exactly the
+plate pivot and the banana roll-out.
+
+**The dead end — do NOT "fix" this by enabling persistence.** Measured: Newton-default stick eps
+alone (config B) leaves the creep (the deadzone freeze needs the body to be near-stationary in
+WORLD space, so it is inert during any carry). `rigid_contact_history=True` (configs C/D, with and
+without anchor replay) arrests the creep but turns the ALM multiplier into a **force integrator on
+the kinematically-imposed pinch**: the teleported pads cannot yield, the violation never resolves,
+so `λ` grows to its decay balance (~10× the penalty force) — measured 460–670 N at a 30 N target;
+the width regulator is the only relief valve, it overshoots, and the object is ejected. This is
+the same mechanism as the old `alpha=0` phantom grip, merely capped by the `α·γ` decay. It is
+structural: ALM's job is to grow `λ` until the violation resolves, and an imposed pinch never
+resolves. (No upstream Newton example pinches an object between externally-driven bodies, so
+upstream never hits it.)
+
+**The OPTION — reserved for an explicit future attack on the object-slippage problem — soft
+rigid contacts (`rigid_contact_hard=False, friction_epsilon=0.05`), Newton's other rigid path**
+(their rj45 insertion example runs it): penalty normal force — the honest `ke·pen` pinch the
+framework already assumes — plus **IPC-regularized Coulomb friction** whose (regularized) static
+branch is evaluated fresh each substep. No cross-substep state, no integrator; residual creep is
+bounded ∝ `friction_epsilon`. Verified end-to-end (one line in `framework.py`
+`_build_split_mujoco_vbd` replacing the `rigid_contact_stick_motion_eps=0.0` kwarg): plate pivot
+24.5° → 3.9° with the regulator holding target and a calm hold; every VBD demo passed `--test`
+at unchanged runtimes. **WARNING — the reason it is NOT enabled: the initial grasp is measurably
+jerkier.** The restored stiction is near-rigid tangentially, and through the bridge's
+one-substep-lagged EE feedback the contact onset JOLTS the robot (and transients rattle it —
+worse at higher grip force); it was judged a worse artifact than the slow slip it cures. Two
+rules if that future effort happens: (1) `rigid_contact_hard` and `friction_epsilon` are
+**central physics config — set them ONCE in `framework.py`'s `solver_kwargs`, identically for
+every demo** (never per-demo via `object_solver_kwargs`; cross-demo consistency is the point of
+the centralized solver build), and (2) re-run the full demo matrix watching hand-speed swing,
+not just test_final.
+
+**`friction_epsilon=0.05` is a measured two-sided constraint inside that option.** The stiction's
+near-zero-slip tangential response has effective damping `≈ 2μ·f_n/ε` — at Newton's default
+`ε=1e-2` and a realistic 50–100 N pinch that is ~10⁴ N·s/m, and fed to the arm/EE through the
+**one-substep-lagged** coupling it drives a ~20–60 Hz arm↔contact limit cycle: the robot visibly
+shakes while holding ANY rigid object, scaling with grip force and payload (the object-side solve
+is implicit and stays calm; only the arm-side injection is explicit+lagged). Measured: at
+ε=0.01–0.02 the arm buzzes (hand-speed swing 0.37–0.46 m/s on a 30 N cube hold, worse at higher
+force); at ε=0.05 it is calm during holds (0.126 cube, 0.013 plate) while the plate still holds
+at 3.9° tilt (BETTER than ε=0.01's 7.5° — less chatter also means less micro-slip). Dead ends
+measured so you don't re-walk them:
+- **Low-passing the EE wrench fails both ways.** τ=10 ms removes the arm's contact "flinch" — its
+  fast force relief (the width regulator is far too slow) — and the unrelieved pinch ran to
+  1656 N and launched the object; τ=2 ms changes nothing because the limit cycle sits in the SAME
+  ~20–60 Hz band as the flinch. There is no frequency separation; the feedback must stay raw.
+- **Heavier proxies don't help** (`proxy_mass` 10→40 kg: cube-hold swing 0.46→0.37) — the loop is
+  arm-side, not proxy-noise.
+
+**The banana-class edge grasp is marginal in EVERY config.** A grasp on a steep curved wedge
+converts squeeze into a self-ejection load in the SAME proportion at any force (load/cone ≈
+`sinθ/μ`, grip-force-independent — measured slide-out at 10/30/45 N under soft ε=0.05, and the
+same grasp is "intermittent at 80 N" under the current hard mode). Raising the force target does
+NOT help — it only buys over-squeeze rattle (the projected squeeze signal under-reads the tilted
+faces, so the true pinch runs ~3× the reading). The real fix is future work: compliant fingertips
+(model the pad as a deformable) or a flatter grasp point (a policy choice).
+
+**Honest open item from the same investigation:** the regulated squeeze signal is the min per-pad
+force **projected onto the jaw closing axis**; on tilted contact normals (the banana wedge) it
+under-reads (~30 N reading vs 90–140 N true pad force), so the regulator over-squeezes. The
+physical fix direction is measuring the squeeze as the contact-NORMAL component per pad (what a
+real gripper's force sensing reports), but the cable cage currently depends on the projected
+signal's behaviour — needs a full-demo revalidation. Tracked in [ONGOING.md](ONGOING.md).
+
 ### Bottom line
 
 VBD is fine as a shared rigid+deformable contact world *if* you treat its rigid
 contacts as stiff penalty contacts: keep the cross-solver feedback **net-to-EE and
 one-step-lagged** (never per-finger), run **NVIDIA default-hard contacts** with physical
-contact damping (NOT `alpha=0` — that diverges a dynamic proxy), convex-decompose any
+contact damping (NOT `alpha=0` — that diverges a dynamic proxy; and know the measured
+static-friction trade in §6 before touching the contact mode), convex-decompose any
 dynamic concave mesh, keep mesh BVHs small and unshared, and use realistic masses. The
-public API is enough (`collect_rigid_contact_forces`, `soft_contact_*`, `State.body_f`
-on the MuJoCo side) — we never modified or imported `newton._src`.
+public API is enough (`collect_rigid_contact_forces` — it handles both contact modes —
+`soft_contact_*`, `State.body_f` on the MuJoCo side) — we never modified or imported
+`newton._src`.
 
 ## How object↔gripper two-way physics is implemented (current: dynamic proxy)
 
@@ -145,8 +233,9 @@ reaction is never fed to the gripper DOFs (that pushes the pads open and loses t
 This **supersedes** the earlier *kinematic*-proxy + force-triggered-latch design (Troubles #1–3
 above were its symptoms). A kinematic proxy can't return body forces and, with `alpha=0`+history,
 accumulated the ALM multiplier into a 1e4–1e6 N phantom grip; the dynamic proxy with NVIDIA
-default-hard contacts and re-derived physical `kd` is stable and gives a bounded ~10–90 N grip.
-Full analysis in [gripper.md](gripper.md) and [solver-architecture.md](solver-architecture.md).
+default-hard contacts and re-derived physical `kd` is stable and gives a bounded ~10–90 N grip
+(static-friction trade study: §6). Full analysis in [gripper.md](gripper.md) and
+[solver-architecture.md](solver-architecture.md).
 
 # Newton Example Reference
 
@@ -302,7 +391,7 @@ implicit solve. Differences are in topology and what is kinematically driven.
 - `SolverVBD` with hard contact (`rigid_avbd_contact_alpha=0`); first capsules
   kinematically driven by writing `body_q` each substep (one-way). (This repo's object side
   once borrowed this `alpha=0` choice but has since reverted to NVIDIA default-hard contacts —
-  `alpha=0` diverges the dynamic gripper proxy; see the dynamic-proxy notes above.)
+  `alpha=0` diverges the dynamic gripper proxy; see the dynamic-proxy notes above and §6.)
 
 `example_cable_pile`:
 - a dense pile of many wavy rods (40 segments) stacked in alternating-orientation

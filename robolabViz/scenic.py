@@ -4,21 +4,28 @@ Every demo's ``Example`` subclasses :class:`ScenicGraspExample` instead of
 :class:`~deformableManipulationTools.GraspExample` and implements the usual
 ``configure`` / ``plan`` / ``build_scene`` / ``set_robot_targets`` plus
 ``check_physics`` (the per-demo finite/grasp assertions — formerly the body of
-``test_final``). The ``--output-style`` flag then selects how the run is rendered:
+``test_final``). The canonical ``--output-style`` (resolved by ``examples.init``)
+then selects how the run is rendered:
 
-- ``basic``  — the Newton USD viewer writes ``outputs/<name>.usd`` (no scene look,
-  the original demo behaviour). Selected when ``args.output_style == "basic"``.
-- ``scenic`` (default) — robolabViz renders ``outputs/<name>/`` with a
-  ``frames/`` folder (a per-camera still every ``--frames-per-image`` frames) and
-  ``simulation.mp4`` containing BOTH the over-shoulder-left and the gripper wrist
-  camera side by side. Produced on any CUDA GPU via the warp-raycast preview.
+- ``usd`` — the Newton USD viewer writes ``outputs/<robot>/<name>/<name>.usd``
+  (no scene look); this class stays inert apart from the artifact check.
+- ``mp4`` (default) — the warp-raycast preview renders ``simulation.mp4`` with
+  BOTH the over-shoulder-left and the gripper wrist camera side by side, flat
+  shaded with no background/texture loads (fast, any CUDA GPU).
+- ``mp4_advanced`` — the full RoboLab look (HDRI-lit PBR ray tracing) plus a
+  ``frames/`` folder (a per-camera still every ``--frames-per-image`` frames)
+  and ``wrist_coverage.json``.
 
 All the RoboLab wiring (DROID scene placed from the physics table, the FK mirror,
 the raycast preview, optional ``--usd`` / ``--npz`` outputs, and the viz/sim
 parity + table-footprint + wrist-occlusion checks) lives here so every demo —
 and every future demo — inherits it identically and never repeats it. The robot
 base pose, table placement, and (optional) soft-object position are read from the
-physics example, so this base needs no per-demo configuration.
+physics example, so this base needs no per-demo configuration. A demo MAY
+customize the look by declaring ``DemoSpec.render = robolabViz.RenderSpec(...)``
+(background, table, lights, cameras, object styles, advanced-quality knobs);
+the resolution order for fields that also exist as CLI flags is
+CLI flag > RenderSpec > settings.yaml.
 
 This module is the one place robolabViz depends on the physics package
 (``deformableManipulationTools.GraspExample``); the import is kept here, not in
@@ -33,20 +40,23 @@ import numpy as np
 import newton.utils
 
 from deformableManipulationTools import GraspExample, FRANKA
+from deformableManipulationTools.settings import SETTINGS
 
-from .config import CameraConfig, droid_scene_config, fixture_world_bbox, look_at_quat_wxyz
+from .config import CameraConfig, RenderQuality, droid_scene_config, fixture_world_bbox, look_at_quat_wxyz
 from .raycast import RaycastPreviewRenderer
 from .robot_fk import RobotVisualFK
 from .robot_usd import ensure_robot_usd
 from .stage import RoboLabStageWriter
 
-# The two policy cameras RoboLab records and the scenic simulation.mp4 shows.
+# The two policy cameras RoboLab records and the default simulation.mp4 shows.
+# A demo's RenderSpec.preview_cameras overrides this set.
 SCENIC_CAMERAS = ["over_shoulder_left_camera", "wrist_camera"]
 
 
 class ScenicGraspExample(GraspExample):
-    """``GraspExample`` + optional RoboLab scenic rendering, driven by
-    ``--output-style``. Subclasses implement ``check_physics`` for their asserts."""
+    """``GraspExample`` + optional RoboLab rendering, driven by the canonical
+    ``--output-style`` (``usd`` / ``mp4`` / ``mp4_advanced``). Subclasses
+    implement ``check_physics`` for their asserts."""
 
     # Assert the visible work table covers the whole physics contact footprint and
     # its top aligns. True for the corner-mounted-robot demos (where the visual and
@@ -56,9 +66,10 @@ class ScenicGraspExample(GraspExample):
 
     def __init__(self, viewer, args):
         super().__init__(viewer, args)
-        self._scenic = getattr(args, "output_style", "scenic") == "scenic"
+        self._mode = getattr(args, "output_style", "mp4")  # canonical, resolved by examples.init
+        self._scenic = self._mode in ("mp4", "mp4_advanced")
         # --output graphs emits ONLY the gripper physics PNG (run harness), so skip the (expensive)
-        # scenic raycast render + simulation.mp4 entirely; mp4/both still render the video.
+        # raycast render + simulation.mp4 entirely; mp4/both still render the video.
         self._emit_video = getattr(args, "output", "mp4") in ("mp4", "both")
         if self._scenic:
             self._setup_scenic(args)
@@ -90,12 +101,21 @@ class ScenicGraspExample(GraspExample):
             float(self.table_pos[0] + sim_to_viz[0]),
             float(self.table_pos[1] + sim_to_viz[1]),
         )
+        # Per-demo render look (DemoSpec.render -> configure() -> render_spec). Fields that also
+        # exist as CLI flags resolve as: explicit CLI flag > RenderSpec > settings.yaml default.
+        spec = getattr(self, "render_spec", None)
+        table = args.table if args.table is not None else (getattr(spec, "table", None) or SETTINGS.render_table)
+        background = (args.background if args.background is not None
+                      else (getattr(spec, "background", None) or SETTINGS.render_background))
         scene = droid_scene_config(
             table_top_z=table_top_viz,
             table_center_xy=table_center_viz,
-            table=args.table,
-            background=args.background,
+            table=table,
+            background=background,
         )
+        if spec is not None:
+            # Demo deltas first; the central assignments + CLI overrides below still win.
+            spec.apply(scene)
         scene.robot_usd = robot_usd
         scene.fps = self.fps
         scene.sim_to_viz_translation = sim_to_viz
@@ -108,12 +128,20 @@ class ScenicGraspExample(GraspExample):
         if args.wrist_target is not None:
             scene.wrist_camera.target = tuple(args.wrist_target)
 
+        # Cameras rendered each frame: the default policy pair, or the demo's own list.
+        preview_cameras = list(getattr(spec, "preview_cameras", None) or SCENIC_CAMERAS)
+        known = {c.name for c in scene.cameras()}
+        unknown = [n for n in preview_cameras if n not in known]
+        if unknown:
+            raise ValueError(
+                f"RenderSpec.preview_cameras {unknown} not found in the scene cameras {sorted(known)}."
+            )
+
         # Optional fixed "object view" camera: a still, elevated 3/4 view framed on
         # the soft object, posed from its viz-frame position so it tracks the
         # layout. Rendered + dumped as PNG frames only (in_combined_video=False
         # keeps it out of simulation.mp4). Only available when the demo exposes a
         # soft_start_pos to aim at.
-        preview_cameras = list(SCENIC_CAMERAS)
         if args.objectview:
             if not hasattr(self, "soft_start_pos"):
                 print("[robolabViz] --objectview ignored: this demo has no soft_start_pos to frame.")
@@ -159,6 +187,17 @@ class ScenicGraspExample(GraspExample):
                 object_model=viz_obj_model,
                 num_frames=args.num_frames,
             )
+        # PNG stills cadence: explicit flag wins; else stills are an mp4_advanced artifact only.
+        fpi = args.frames_per_image if args.frames_per_image is not None else (
+            30 if self._mode == "mp4_advanced" else 0
+        )
+        if args.objectview and fpi == 0:
+            print("[robolabViz] --objectview renders PNG stills only; pass --frames-per-image N "
+                  "or use --output-style mp4_advanced to keep them.")
+        # Render tier for the mode, with the demo's quality-knob overrides applied on top.
+        quality = RenderQuality.for_mode(self._mode)
+        if spec is not None:
+            quality = spec.resolve_quality(quality)
         self.preview = RaycastPreviewRenderer(
             scene=scene,
             object_model=viz_obj_model,
@@ -166,11 +205,16 @@ class ScenicGraspExample(GraspExample):
             output_dir=self._scenic_dir,
             device=self.robot_model.device,
             camera_names=preview_cameras,
-            frames_per_image=args.frames_per_image,
+            frames_per_image=fpi,
             object_body_min=object_body_min,
             gripper_color=FRANKA.viz_gripper_color,
             robot_model=self.robot_model,
             robot_from_physics=FRANKA.render_from_physics,
+            quality=quality,
+            write_coverage_json=(self._mode == "mp4_advanced"),
+            # One shared outputs/<robot>/<name>/ folder for every style; the filename
+            # carries the tier so mp4 and mp4_advanced runs never clobber each other.
+            video_name=("simulation_advanced.mp4" if self._mode == "mp4_advanced" else "simulation.mp4"),
         )
         # geometry.pkl is only useful alongside the state cache (rerender needs both).
         if args.npz:
@@ -245,6 +289,12 @@ class ScenicGraspExample(GraspExample):
     def test_final(self) -> None:
         self.check_physics()
         if not self._scenic:
+            # usd style: the Newton USD is the primary artifact. It is saved by viewer.close(),
+            # which examples.run() calls before test_final. Skipped under --viewer gl/null.
+            if self._mode == "usd" and getattr(self.args, "viewer", "usd") == "usd":
+                usd = Path(self.args.output_path)
+                if not usd.exists() or usd.stat().st_size < 1024:
+                    raise ValueError(f"Expected Newton USD {usd} was not written.")
             return
         self._finalize_viz()
 
@@ -301,9 +351,9 @@ class ScenicGraspExample(GraspExample):
                     f"Wrist camera sees {robot_cov:.0%} robot pixels on average — view is blocked by the gripper."
                 )
 
-        # simulation.mp4 is the primary scenic output: it must exist and be non-empty (only when the
-        # run was asked to emit video — --output graphs skips the render).
+        # The video is the primary output of the mp4 styles: it must exist and be non-empty
+        # (only when the run was asked to emit video — --output graphs skips the render).
         if self._emit_video:
-            mp4 = self.preview.output_dir / "simulation.mp4"
+            mp4 = self.preview.output_dir / self.preview.video_name
             if not mp4.exists() or mp4.stat().st_size < 1024:
-                raise ValueError(f"Expected scenic video {mp4} was not written.")
+                raise ValueError(f"Expected video {mp4} was not written.")

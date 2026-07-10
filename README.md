@@ -68,17 +68,26 @@ OMNI_KIT_ACCEPT_EULA=yes python -c "import isaaclab; print('isaaclab ok')"
 ## Running the demos
 
 Each Franka manipulation demo is a single file in `examples/` (list them with
-`python -m examples --list`). The `--output-style` flag selects how a run is rendered:
+`python -m examples --list`). The `--output-style` flag selects how a run is rendered
+(all artifacts land in `outputs/<robot>/<name>/`):
 
 ```bash
-# scenic (default): RoboLab-look render to outputs/<name>/ —
-#   simulation.mp4 (over-shoulder-left + wrist cameras) + frames/ stills.
+# mp4 (default): lightweight video — simulation.mp4 with the over-shoulder-left +
+#   wrist cameras side by side (flat shading, no HDRI decode; table texture kept).
 python -m examples cable_soft_franka --device cuda:0
 
-# basic: a plain Newton USD at outputs/<name>.usd (no scene look).
-python -m examples cable_soft_franka --output-style basic --device cuda:0
+# mp4_advanced: the RoboLab look — HDRI-lit PBR ray tracing (shadows, textures, AA) →
+#   simulation_advanced.mp4 + frames/ stills + wrist_coverage.json. Per-demo
+#   customization via DemoSpec.render.
+python -m examples cable_soft_franka --output-style mp4_advanced --device cuda:0
+
+# usd: the lightest — a plain time-sampled Newton USD at outputs/<robot>/<name>/<name>.usd.
+python -m examples cable_soft_franka --output-style usd --device cuda:0
 ```
+
+(Deprecated aliases still accepted: `basic`→`usd`, `scenic`→`mp4_advanced`. The default
+style comes from `settings.yaml` `render.style`.)
 
 Add `--test` to run the demo's physics + render assertions. See
 [docs/examples.md](docs/examples.md) for the full demo list and flags, and
-[docs/robolab-graphics.md](docs/robolab-graphics.md) for the scenic renderer.
+[docs/robolab-graphics.md](docs/robolab-graphics.md) for the renderer.

@@ -94,6 +94,9 @@ class DemoSpec:
     robot_contact_max: int = 8192
     camera: Any = None                           # None -> framework default
     scenic_check_table: bool = True
+    # Optional per-demo render look for the mp4 styles (background/table/lights/cameras/object
+    # styles): a robolabViz.RenderSpec. Typed Any so this physics package never imports robolabViz.
+    render: Any = None
     # Optional proxy geometry override: for mesh fingers, use contained box slices instead of the
     # default one-for-one finger collider copy.
     box_slice_proxy: bool = False
@@ -205,6 +208,7 @@ def make_data_driven_example(base_cls):
             if s.camera is not None:
                 self.camera = s.camera
             self.scenic_check_table = s.scenic_check_table
+            self.render_spec = s.render
             self.grasp_windows = s.grasp_windows
             self.coupling_soft_ke = s.coupling_soft_ke
             self.object_solver_kwargs = dict(s.object_solver_kwargs)

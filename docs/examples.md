@@ -1,31 +1,41 @@
 # Examples
 
 Each demo is a **DATA FILE** `examples/<name>.py` declaring one `DEMO = DemoSpec(...)` (scene +
-policy only; schema in `deformableManipulationTools/demo_runner.py`). The single runner `example.py`
-plays it — to add a demo, write one data file and change nothing else. The `--output-style` flag picks
-how a run is rendered (default `scenic`):
+policy + optional render look; schema in `deformableManipulationTools/demo_runner.py`). The single
+runner `example.py` plays it — to add a demo, write one data file and change nothing else. The
+`--output-style` flag picks how a run is rendered (default from `settings.yaml` `render.style`,
+which ships as `mp4`); every style writes into `outputs/<robot>/<name>/` (`<robot>` = the active
+robot's short_name, so the two robots' outputs never collide):
 
 ```bash
-# scenic (default): robolabViz renders outputs/<robot>/<name>/{frames/, simulation.mp4}
-#   (<robot> = the active robot's short_name, so the two robots' renders never collide),
-#   (over-shoulder-left + wrist cameras, side by side), on any CUDA GPU.
+# mp4 (default): lightweight simulation.mp4 (over-shoulder-left + wrist cameras, side by
+#   side, flat shading — no HDRI decode; table texture kept for motion cues), on any CUDA GPU.
 python example.py --demo examples/<name>.py --device cuda:0
 python -m examples <name> --device cuda:0          # equivalent shim
-python -m examples <name> --device cuda:0 --frames-per-image 60   # PNG still cadence
 
-# basic: a plain Newton USD at outputs/<name>.usd (the old `--viewer usd` behaviour).
-python -m examples <name> --output-style basic --device cuda:0
+# mp4_advanced: the RoboLab look — HDRI image-based lighting, soft shadows, PBR materials,
+#   textured catalog objects, anti-aliasing; full-res simulation_advanced.mp4 + frames/ PNG
+#   stills (every --frames-per-image frames, default 30) + wrist_coverage.json.
+python -m examples <name> --output-style mp4_advanced --device cuda:0
+
+# usd: a plain time-sampled Newton USD at outputs/<robot>/<name>/<name>.usd (lightest).
+python -m examples <name> --output-style usd --device cuda:0
 # CPU 1-frame smoke:
-python -m examples cable_rigidCube_franka --output-style basic --device cpu --num-frames 1 \
+python -m examples cable_rigidCube_franka --output-style usd --device cpu --num-frames 1 \
   --output-path /tmp/robolab_vbd_smoke.usd --quiet
 ```
 
-Scenic opt-in extras: `--usd` (also write the full time-sampled RoboLab USD scene to
+Deprecated aliases (accepted with a warning): `basic`→`usd`, `scenic`→`mp4_advanced`.
+
+mp4-style opt-in extras: `--usd` (also write the full time-sampled RoboLab USD scene to
 `outputs/<robot>/<name>/<name>.usd`), `--npz` (state cache `<name>.state.npz` + `geometry.pkl` for
-`robolabViz.rerender`),
-`--objectview` (extra object-inspection still camera, soft demos only), `--table` / `--background`
-(vendored work-table / dome by name), `--wrist-eye` / `--wrist-target`. See
-[docs/robolab-graphics.md](robolab-graphics.md).
+`robolabViz.rerender`; captured from an `mp4` run the pickled geometry is untextured),
+`--objectview` (extra object-inspection still camera, soft demos only; PNG-only, so pair with
+`--frames-per-image`/`mp4_advanced`), `--table` / `--background` (vendored work-table / dome by
+name; precedence CLI > the demo's `RenderSpec` > `settings.yaml`), `--wrist-eye` / `--wrist-target`.
+A demo customizes its own look (background, table, lights, cameras, object styles, quality knobs)
+by declaring `render=robolabViz.RenderSpec(...)` in its `DemoSpec` — `rigidCube_soft_franka` is the
+exemplar. See [docs/robolab-graphics.md](robolab-graphics.md).
 
 Terminal output is tee'd to `outputs/terminal`.
 
@@ -37,7 +47,7 @@ objects are added via the `deformableManipulationTools.assets` builders; all par
 `deformableManipulationTools.params`. Physical, bounded grip force (~10–90 N), no cap. Each example
 subclasses `ScenicGraspExample` (`robolabViz.scenic`, itself a `GraspExample`) and defines ONLY its
 **scene** (`configure` + `build_scene`) and **policy** (`plan` + `set_robot_targets`) + the per-demo
-`check_physics` asserts; all pass `--test` (in either output style).
+`check_physics` asserts; all pass `--test` (in all three output styles).
 
 Every non-YCB demo draws from **one** shared object set: the same `CABLE`, the same `SOFT_BLOCK`
 (medium-stiffness 5 cm FEM block), the same 1 kg `RIGID_CUBE`, and the centralized `PLATE`. The
@@ -50,7 +60,11 @@ demos are therefore directly cross-comparable.
 - **`rigidCube_soft_franka`** — grasps the shared 1 kg `RIGID_CUBE` via a pre-grasp waypoint,
   carries it, drops it half-offset onto the shared `SOFT_BLOCK` to squash it. 16 substeps.
 - **`soft_compression_franka`** — grasps the centralized `PLATE` (sheet + handle, ~2 kg) by its
-  handle, presses/drops it onto the shared `SOFT_BLOCK` to compress it. 16 substeps.
+  handle, presses/drops it onto the shared `SOFT_BLOCK` to compress it. 16 substeps. Known
+  imperfection (root-caused 2026-07-09, deferred): the held plate slowly pivots about the jaw
+  axis during the carry (~18° since the 2026-07-10 arm-damping fix; was ~25°) — the current
+  contact config has no static friction to arrest rotational creep; the measured fix trades it
+  for a jerkier grasp and is reserved for a future slippage effort (SOLVERS.md §6).
 - **`soft_pickplace_franka`** — picks up the shared `SOFT_BLOCK` (5 cm) and places it at a
   target. 16 substeps. The proxies carry particle collision and the coupling harvests the
   proxy↔particle reaction (soft grip).
@@ -65,11 +79,14 @@ demos are therefore directly cross-comparable.
   corner, whose particles auto-route the whole workspace to the **split MuJoCo+VBD** dynamic-proxy
   path. The A/B twin of `pickplace_ycb_franka` demonstrating the centralized solver routing (≈2.2×
   slower than the rigid-only MuJoCo path). Two `GraspWindow`s — rubik's cube (`force_target=30`)
-  then banana (`force_target=80`, the firmest stable value for the slip-prone curved mesh). 16 substeps.
-  Known imperfection (deferred): the banana's grip is intermittent (curved, slip-prone mesh — 80 N is
-  the firmest stable target). The rubik's cube releases cleanly in BOTH ycb demos; its drop point is
-  INTENTIONALLY offset from the bowl centre to observe the bowl–cube collision at an odd angle, so
-  the cube bouncing on/off the rim is expected behaviour, not a defect.
+  then banana (`force_target=80`). 16 substeps. Known imperfection (root-caused 2026-07-09,
+  deferred): the banana's EDGE grasp is intermittent and NO force target fixes it — the wedge
+  converts squeeze into a self-ejection load in the same proportion at ANY force (measured at
+  10/30/45/80 N across both contact modes), and the current config has no static friction to pin
+  it (SOLVERS.md §6). Real fix = compliant fingertips or a flatter grasp point. The rubik's cube
+  releases cleanly in BOTH ycb demos; its drop point is INTENTIONALLY offset from the bowl centre
+  to observe the bowl–cube collision at an odd angle, so the cube bouncing on/off the rim is
+  expected behaviour, not a defect.
 
 ## Cloth — the shirt fold (recipe + history in [cloths.md](cloths.md))
 
@@ -86,9 +103,11 @@ parity).
   the target-relative admittance law converges to a stable ~8–9 mm pinch
   ([gripper.md](gripper.md)). 1380 frames (23 s).
 
-## Scenic rendering
+## Rendering
 
-There are no separate `_robolab` files anymore: scenic rendering is built into every demo via
-`--output-style scenic` (the default). The shared wiring lives in `robolabViz.scenic.ScenicGraspExample`
-— it reads the robot base pose, table, and (optional) soft-object position straight off the physics
-example, so a new demo gets the RoboLab look for free. See [docs/robolab-graphics.md](robolab-graphics.md).
+There are no separate `_robolab` files anymore: rendering is built into every demo via
+`--output-style` (`usd` / `mp4` default / `mp4_advanced`). The shared wiring lives in
+`robolabViz.scenic.ScenicGraspExample` — it reads the robot base pose, table, and (optional)
+soft-object position straight off the physics example, so a new demo gets the render for free.
+A demo may declare its own look with `DemoSpec.render = robolabViz.RenderSpec(...)`
+(only `rigidCube_soft_franka` does today). See [docs/robolab-graphics.md](robolab-graphics.md).

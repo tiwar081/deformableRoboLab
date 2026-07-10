@@ -1,6 +1,7 @@
 """DATA FILE — rigidCube_soft_franka: pick a rigid cube, carry it over a soft block, drop it to squash."""
 from deformableManipulationTools import SOFT_BLOCK, RIGID_CUBE, TABLE, GraspWindow
 from deformableManipulationTools.demo_runner import DemoSpec, Obj, WP
+from robolabViz import ObjectStyle, RenderSpec
 
 TT = TABLE.top_z
 CH = RIGID_CUBE.half_extent
@@ -29,4 +30,12 @@ DEMO = DemoSpec(
                           "rigid_body_particle_contact_buffer_size": 4096},
     object_pipeline_kwargs={"soft_contact_margin": SOFT_BLOCK.contact_margin},
     substeps=16, vbd_iterations=12, num_frames=720,
+    # Per-demo render look (exemplar): matte black work table in a garage, terracotta
+    # soft block, glossy blue cube. CLI --table/--background still override.
+    render=RenderSpec(
+        table="black",
+        background="garage",
+        soft_body_style=ObjectStyle(color=(0.83, 0.35, 0.20), roughness=0.85),
+        object_styles={"cube": ObjectStyle(color=(0.16, 0.42, 0.85), roughness=0.35)},
+    ),
 )

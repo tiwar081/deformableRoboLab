@@ -23,7 +23,7 @@ Conventions:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 import numpy as np
@@ -159,6 +159,11 @@ class FixtureConfig:
     # ``texture_uv_scale`` is world meters per texture tile (smaller = more tiles).
     texture_file: Path | None = None
     texture_uv_scale: float = 0.5
+    # Optional tangent-space normal map + ORM (occlusion/roughness/metallic) map,
+    # planar-mapped alongside ``texture_file``. Only the advanced (PBR) render
+    # tier samples these; the flat preview ignores them.
+    normal_file: Path | None = None
+    orm_file: Path | None = None
 
 
 def _asset_world_extents(
@@ -229,15 +234,16 @@ def table_fixture_from_footprint(
 # in this package reads ``_external/`` (assume that checkout can be deleted).
 
 # Vendored work tables (RoboLab fixtures): name -> (fixture usd, top-surface
-# base-color image relative to ``assets/``, flat fallback color). The four
-# tables share identical geometry and differ only in the top-slab material; the
-# raycast preview planar-maps the base-color image onto the table block while
-# the RTX/USD path uses the table's own MDL material. ``black`` is a flat matte
-# paint (no wood texture).
+# material directory relative to ``assets/`` holding ``<stem>_BaseColor.png``
+# (+ ``_N.png`` normal and ``_ORM.png`` roughness maps, sampled by the advanced
+# PBR tier only), flat fallback color). The four tables share identical geometry
+# and differ only in the top-slab material; the raycast preview planar-maps the
+# base-color image onto the table block while the RTX/USD path uses the table's
+# own MDL material. ``black`` is a flat matte paint (no wood texture).
 TABLE_TEXTURES: dict[str, tuple[str, str | None, tuple[float, float, float]]] = {
-    "maple": ("table_maple.usda", "materials/Base/Wood/Walnut_Planks/Walnut_Planks_BaseColor.png", (0.45, 0.31, 0.19)),
-    "oak": ("table_oak.usda", "materials/Base/Wood/Oak/Oak_BaseColor.png", (0.62, 0.46, 0.29)),
-    "bamboo": ("table_bamboo.usda", "materials/Base/Wood/Bamboo/Bamboo_BaseColor.png", (0.74, 0.60, 0.36)),
+    "maple": ("table_maple.usda", "materials/Base/Wood/Walnut_Planks", (0.45, 0.31, 0.19)),
+    "oak": ("table_oak.usda", "materials/Base/Wood/Oak", (0.62, 0.46, 0.29)),
+    "bamboo": ("table_bamboo.usda", "materials/Base/Wood/Bamboo", (0.74, 0.60, 0.36)),
     "black": ("table_black.usda", None, (0.05, 0.05, 0.06)),
 }
 
@@ -258,7 +264,7 @@ def work_table_fixture(
     the physics footprint (see ``table_fixture_from_footprint``)."""
     if table not in TABLE_TEXTURES:
         raise ValueError(f"Unknown table {table!r}; available: {available_tables()}")
-    usd_name, tex_rel, color = TABLE_TEXTURES[table]
+    usd_name, mat_rel, color = TABLE_TEXTURES[table]
     fix = table_fixture_from_footprint(
         name="work_table",
         usd_path=ASSETS_DIR / "fixtures" / usd_name,
@@ -267,8 +273,12 @@ def work_table_fixture(
         rotate_z_deg=rotate_z_deg,
         preview_color=color,
     )
-    if tex_rel is not None:
-        fix.texture_file = ASSETS_DIR / tex_rel
+    if mat_rel is not None:
+        mat_dir = ASSETS_DIR / mat_rel
+        stem = mat_dir.name
+        fix.texture_file = mat_dir / f"{stem}_BaseColor.png"
+        fix.normal_file = mat_dir / f"{stem}_N.png"
+        fix.orm_file = mat_dir / f"{stem}_ORM.png"
     return fix
 
 
@@ -421,6 +431,124 @@ class RoboLabSceneConfig:
         if self.wrist_camera is not None:
             cams.append(self.wrist_camera)
         return cams
+
+
+@dataclass
+class RenderQuality:
+    """Raycast-renderer tier knobs: which features are on and how many samples they get.
+
+    ``RenderQuality()`` (all defaults) reproduces the historical preview exactly —
+    HDRI backdrop + table texture with the flat shade — so call sites that predate
+    the render tiers (``robolabViz.rerender``) behave unchanged. The runner builds
+    a tier with :meth:`for_mode` from ``--output-style``; a demo overrides single
+    knobs via ``RenderSpec.quality``.
+    """
+
+    use_hdri: bool = True          # decode the dome EXR/HDR (backdrop; + IBL when use_pbr)
+    use_textures: bool = True      # fixture planar maps + catalog object UV textures
+    use_pbr: bool = False          # advanced kernel: GGX + shadows + IBL + ACES tone map
+    smooth_normals: bool = False   # per-vertex normals recomputed each frame (advanced)
+    aa_samples: int = 1            # primary rays per pixel (sample 0 is always the pixel center)
+    shadow_samples: int = 0        # sphere-light shadow rays per primary sample
+    ibl_key_lights: int = 0        # importance-sampled dome "suns", shadow-tested (1 ray each/sample)
+    video_scale: float = 0.5       # per-camera scale when concatenating into simulation.mp4
+    fps: float | None = None       # video fps override (None = scene fps)
+    tex_tile: int = 1024           # square tile size textures are resized to in the GPU atlas
+    irradiance_size: tuple[int, int] = (64, 32)   # (W, H) cosine-convolved dome (diffuse IBL)
+    env_spec_size: tuple[int, int] = (256, 128)   # (W, H) of each prefiltered specular dome level
+    sphere_light_scale: float = 3.0  # sphere-light radiance in auto-exposure-normalized units
+    noise_seed: int = 7919         # fixed, frame-independent RNG seed -> deterministic video
+
+    @staticmethod
+    def for_mode(mode: str) -> "RenderQuality":
+        """The tier for an ``--output-style``: ``mp4`` = the flat preview without the
+        (slow) HDRI decode — fixture textures stay ON so the wrist camera keeps motion
+        cues over the table; ``mp4_advanced`` = the full PBR path."""
+        if mode == "mp4_advanced":
+            return RenderQuality(
+                use_pbr=True, smooth_normals=True, aa_samples=4, shadow_samples=2,
+                ibl_key_lights=2, video_scale=1.0, tex_tile=2048,
+            )
+        if mode == "mp4":
+            return RenderQuality(use_hdri=False)
+        raise ValueError(f"No render tier for output style {mode!r} (expected mp4 or mp4_advanced).")
+
+
+@dataclass
+class RenderSpec:
+    """Per-demo visual customization, declared in a DEMO data file via ``DemoSpec.render``.
+
+    Every field defaults to "keep the centralized DROID look" (``droid_scene_config``),
+    so a demo only states its deltas. Camera fields apply to BOTH mp4 render modes;
+    appearance fields (background, textures, lights, styles) are fully visible only in
+    ``mp4_advanced`` — the lightweight ``mp4`` mode strips backgrounds/textures and
+    keeps flat base colors. Precedence for fields that also exist as CLI flags
+    (``--table``, ``--background``, ``--wrist-eye/-target``): explicit CLI flag >
+    this spec > ``settings.yaml``.
+    """
+
+    # -- look (droid_scene_config inputs, consumed by the caller BEFORE the factory) --
+    background: str | None = None                  # dome HDRI stem/path (resolve_background)
+    table: str | None = None                       # TABLE_TEXTURES key (maple/oak/bamboo/black)
+    # -- look (scene mutations, applied by :meth:`apply` AFTER the factory) --
+    dome_intensity: float | None = None
+    sphere_lights: list[SphereLightConfig] | None = None   # REPLACES the default ([] = none)
+    object_styles: dict[str, ObjectStyle] = field(default_factory=dict)  # prefix->style, MERGED over defaults
+    soft_body_style: ObjectStyle | None = None
+    default_object_style: ObjectStyle | None = None
+    extra_fixtures: list[FixtureConfig] = field(default_factory=list)    # visual-only props (appended)
+    # -- cameras (both mp4 modes) --
+    exterior_cameras: list[CameraConfig] | None = None     # REPLACES the DROID exterior pair
+    extra_cameras: list[CameraConfig] = field(default_factory=list)      # appended
+    preview_cameras: list[str] | None = None       # names rendered per frame (default: the runner's
+                                                   # SCENIC_CAMERAS); each joins simulation.mp4 iff its
+                                                   # in_combined_video flag is True
+    wrist_camera: WristCameraConfig | None = None  # full replace (parent_link still robot-retargeted)
+    wrist_eye: tuple[float, float, float] | None = None    # pose-only tweaks of the default wrist cam
+    wrist_target: tuple[float, float, float] | None = None
+    # -- advanced-tier knobs --
+    quality: "RenderQuality | dict | None" = None  # dict = per-field overrides of the mode tier;
+                                                   # a RenderQuality instance replaces the tier wholesale
+
+    def apply(self, scene: RoboLabSceneConfig) -> None:
+        """Mutate a freshly built scene config with this demo's deltas.
+
+        ``background``/``table`` are NOT applied here — they parameterize
+        ``droid_scene_config`` itself, so the caller resolves them first.
+        """
+        if self.dome_intensity is not None:
+            scene.dome_light.intensity = float(self.dome_intensity)
+        if self.sphere_lights is not None:
+            scene.sphere_lights = list(self.sphere_lights)
+        scene.object_styles.update(self.object_styles)
+        if self.soft_body_style is not None:
+            scene.soft_body_style = self.soft_body_style
+        if self.default_object_style is not None:
+            scene.default_object_style = self.default_object_style
+        scene.fixtures.extend(self.extra_fixtures)
+        if self.exterior_cameras is not None:
+            scene.exterior_cameras = list(self.exterior_cameras)
+        scene.exterior_cameras.extend(self.extra_cameras)
+        if self.wrist_camera is not None:
+            scene.wrist_camera = self.wrist_camera
+        if scene.wrist_camera is not None:
+            if self.wrist_eye is not None:
+                scene.wrist_camera.eye = tuple(self.wrist_eye)
+            if self.wrist_target is not None:
+                scene.wrist_camera.target = tuple(self.wrist_target)
+
+    def resolve_quality(self, base: RenderQuality) -> RenderQuality:
+        """The mode tier ``base`` with this spec's ``quality`` overrides applied."""
+        if self.quality is None:
+            return base
+        if isinstance(self.quality, RenderQuality):
+            return self.quality
+        from dataclasses import replace
+
+        unknown = set(self.quality) - {f.name for f in fields(RenderQuality)}
+        if unknown:
+            raise ValueError(f"RenderSpec.quality has unknown knobs {sorted(unknown)}.")
+        return replace(base, **self.quality)
 
 
 def droid_scene_config(

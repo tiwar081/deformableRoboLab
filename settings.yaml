@@ -10,8 +10,10 @@
 # only in the end-effector geometry and the loader (USD vs URDF), so all physics/policy code is shared.
 robot: franka_panda_isaacsim
 
-# Default scenic-render look (per-run CLI --table / --background still override).
+# Default render output (per-run CLI --output-style / --table / --background still override).
+#   style: usd (lightweight Newton USD) | mp4 (lightweight video, default) | mp4_advanced (RoboLab look)
 render:
+  style: mp4
   table: maple
   background: home_office
 

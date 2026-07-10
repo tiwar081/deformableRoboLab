@@ -27,10 +27,29 @@ Each substep (`grip.TwoWayProxyCoupling`, NVIDIA's recipe — staggered one-step
    contact, derived centrally in the framework for EVERY particle object (the demo's
    `coupling_soft_ke` is only the opt-in), with `has_particle_collision=True` on the pads).
 
-**Feedback is net-to-EE, not per-finger.** The two pad wrenches summed cancel the internal
-squeeze and leave the external load (weight + motion reaction), which goes to the arm; the
-position-held fingers keep their grip. The per-pad reaction is available as tactile data via
-`TwoWayProxyCoupling.raw_force_norms()` but is **never** fed to the finger DOFs.
+**Feedback is net-to-EE, not per-finger — and RAW (do not filter it).** The two pad wrenches summed
+cancel the internal squeeze and leave the external load (weight + motion reaction), which goes to
+the arm; the position-held fingers keep their grip. How much that load visibly deflects/jolts the
+arm is set by the arm's joint impedance `RobotConfig.arm_target_ke/kd` (400/80 — the EXACT
+RoboLab/DROID Franka actuator values, kept identical for sim2real behavior consistency; see the
+params.py comment for the audit against RoboLab/Newton/real-Franka references). The per-pad reaction is available as tactile
+data via `TwoWayProxyCoupling.raw_force_norms()` but is **never** fed to the finger DOFs. The raw
+per-substep wrench is load-bearing: the arm's ~20–60 Hz contact "flinch" (yielding to the reaction)
+is the grasp's fast force relief — the width regulator is far too slow. Low-passing the wrench was
+MEASURED to fail both ways (during the SOLVERS.md §6 trade study): τ=10 ms removes the flinch
+(pinch force ran to 1656 N and ejected the object), τ=2 ms changes nothing (the arm↔contact
+oscillation lives in the same ~20–60 Hz band as the flinch — no frequency separation to exploit).
+
+**Static friction: the pad↔object contact has NONE (a known, chosen limitation).** The object
+solver runs hard/ALM contacts with the multiplier zeroed per substep (`framework.py`,
+`rigid_contact_stick_motion_eps=0.0`), so tangential loads below the Coulomb cone still creep:
+a heavy grasped object slowly pivots about the jaw axis, and a steep wedge can work its way out
+of the closing jaws. The measured alternative (`rigid_contact_hard=False, friction_epsilon=0.05`
+— restores regularized stiction, fixes the plate pivot 24.5°→3.9°) is deliberately NOT enabled
+(the restored stiction makes the initial grasp JOLT the robot through the one-substep-lagged EE
+feedback) and is RESERVED for whenever the object-slippage problem is explicitly taken on again —
+not for routine per-demo tuning. If that happens, both knobs stay CENTRAL in framework.py's
+solver_kwargs, identical for every demo. Full trade study + warnings: SOLVERS.md §6.
 
 ### Stability invariant (do not violate)
 

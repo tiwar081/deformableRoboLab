@@ -23,7 +23,7 @@ SETTINGS_PATH = REPO_ROOT / "settings.yaml"
 # Defaults applied when settings.yaml (or a given key) is absent.
 _DEFAULTS = {
     "robot": "franka_panda_isaacsim",
-    "render": {"table": "maple", "background": "home_office"},
+    "render": {"style": "mp4", "table": "maple", "background": "home_office"},
     "device": "cuda:0",
 }
 
@@ -31,6 +31,7 @@ _DEFAULTS = {
 @dataclass(frozen=True)
 class Settings:
     robot: str                 # active robot key into params.ROBOTS
+    render_style: str          # default --output-style: usd | mp4 | mp4_advanced (CLI overrides)
     render_table: str          # default scenic work-table texture (CLI --table overrides)
     render_background: str     # default scenic dome background (CLI --background overrides)
     device: str | None         # default compute device (CLI --device overrides; None = Warp default)
@@ -43,6 +44,7 @@ def _load() -> Settings:
     render = {**_DEFAULTS["render"], **(data.get("render") or {})}
     return Settings(
         robot=data.get("robot", _DEFAULTS["robot"]),
+        render_style=render["style"],
         render_table=render["table"],
         render_background=render["background"],
         device=data.get("device", _DEFAULTS["device"]),

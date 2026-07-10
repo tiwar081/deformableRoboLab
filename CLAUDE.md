@@ -9,7 +9,8 @@ recurring gotchas an agent must know before editing.
 
 The one place OUTSIDE the package to flip project-wide options, loaded by
 `deformableManipulationTools/settings.py` (missing keys fall back to defaults, so it may be partial).
-Today it holds the **active robot** plus default scenic render look + device. Switch robots by editing
+Today it holds the **active robot** plus default render output (`render.style`: `usd` | `mp4` |
+`mp4_advanced`, default `mp4`; plus table/background look) + device. Switch robots by editing
 `robot:` — no code change. The two robots are **kinematically identical** (same arm, same TCP/finger
 world pose at the shared `home_q`); they differ ONLY in the end-effector geometry and the load path,
 so ALL physics/policy/IK code is shared:
@@ -85,6 +86,9 @@ Details: [docs/solver-architecture.md](docs/solver-architecture.md).
   pose via the momentum-consistent undo); they must not directly move, attach, or constrain
   objects. Object reaction goes back to the **arm/EE** (net load), never into the gripper DOF.
 - **No velocity clamps on objects** (robot/table excepted).
+- **Nothing that makes sim2real harder**: the robot must not gain capabilities it lacks in the
+  real world (e.g. retuning parameters that are fixed physical hardware properties, sensing
+  signals a real gripper couldn't measure, or contact behavior no physical pad could produce).
 - **Never read or depend on `_external/` at runtime.** Import or copy what you need; assume
   `_external/` (newton, RoboLab) can be deleted and the codebase must still run.
 
@@ -139,15 +143,23 @@ more. If a grasp needs tuning beyond the target force, fix it centrally in the p
 `examples/<name>.py` declares a single `DEMO = DemoSpec(...)` (in `deformableManipulationTools/demo_runner.py`)
 holding ONLY the **scene** (a list of `Obj(kind, config, pos, …)`) and the **policy** — arm `WP`
 waypoints (TCP pos + optional `yaw`/`tilt`), the grasp (`grasp_windows` → the force GripController, OR
-an explicit `finger_schedule`), and an optional `Sweep`. To add a demo, write one data file; nothing
+an explicit `finger_schedule`), and an optional `Sweep` — plus OPTIONALLY the **render look**
+(`render=robolabViz.RenderSpec(...)`: background/table/lights/cameras/object styles/quality knobs;
+precedence CLI flag > RenderSpec > settings.yaml). To add a demo, write one data file; nothing
 in `example.py`/`demo_runner.py` changes. Run with `python example.py --demo examples/<name>.py` or the
-shim `python -m examples <name>`; `--output-style` picks the renderer (`scenic` default →
-`outputs/<robot>/<name>/{frames/, simulation.mp4}`, `<robot>`=active robot `short_name`; or `basic` →
-`outputs/<name>.usd`). The generic `DataDrivenExample` (subclass of `robolabViz.scenic.ScenicGraspExample`)
+shim `python -m examples <name>`; `--output-style` picks the renderer — all artifacts in
+`outputs/<robot>/<name>/` (`<robot>`=active robot `short_name`): `usd` (lightest, Newton time-sampled
+`<name>.usd`), `mp4` (DEFAULT: lightweight flat-shaded `simulation.mp4`, both cameras), or
+`mp4_advanced` (RoboLab look: HDRI-lit PBR ray tracing → `simulation_advanced.mp4` + `frames/` +
+`wrist_coverage.json`;
+deprecated aliases `basic`→`usd`, `scenic`→`mp4_advanced`). The generic `DataDrivenExample`
+(subclass of `robolabViz.scenic.ScenicGraspExample`)
 turns the spec into the configure/plan/build_scene/policy the framework expects, so a demo gets the
-RoboLab look + force grip + solver routing for free. A demo file must contain NO physics/solver/grip
-detail — only scene + policy (the one grasp knob is `GraspWindow.force_target`). Import the public API
-with `from deformableManipulationTools import …`. Grip-force tuning: [docs/gripper.md](docs/gripper.md).
+render + force grip + solver routing for free. A demo file must contain NO physics/solver/grip
+detail — only scene + policy + optional render look (the one grasp knob is `GraspWindow.force_target`).
+Import the physics API with `from deformableManipulationTools import …` and the render-look classes
+with `from robolabViz import RenderSpec, ObjectStyle, …`. Grip-force tuning: [docs/gripper.md](docs/gripper.md).
+Renderer details: [docs/robolab-graphics.md](docs/robolab-graphics.md).
 
 ## Newton version (environment gotcha)
 
@@ -205,6 +217,19 @@ now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), 
   "dynamic proxies NaN structurally" claim was the overdamped `kd`, not the proxy).
 - **Stiff penalty contact + light element ejects** (`η = ke·dt²/m_reduced > 1`, with VBD
   `alpha=0` over-correction). Prefer default-hard contacts + physical damping over `alpha=0`.
+- **The rigid grasp has NO static friction, by measured choice** (SOLVERS.md §6 trade study).
+  The current hard/ALM config zeroes the multiplier per substep → sub-cone creep (a heavy held
+  object slowly pivots about the jaw axis; a steep wedge can slide out; raising mu does NOT help —
+  the cone limit isn't what's binding). The measured dead ends — do NOT re-walk them:
+  `rigid_contact_history=True` (any alpha) integrates ~10× on the kinematically-imposed pinch and
+  EJECTS the object; low-passing the EE feedback wrench removes the arm's load-bearing contact
+  flinch (10 ms → 1656 N pinch, object launched; 2 ms → no effect). The one working alternative,
+  soft contacts (`rigid_contact_hard=False, friction_epsilon=0.05`), fixes the slip (plate pivot
+  24.5°→3.9°) but makes the initial grasp JOLT/rattle the robot through the one-substep-lagged EE
+  feedback — it is RESERVED for an explicit future re-opening of the object-slippage problem,
+  NOT for routine tuning when some object slips. If that happens: both knobs are central physics
+  config (ONE framework.py solver_kwargs line, identical for every demo — never per-demo), and
+  re-run the full demo matrix watching hand-speed swing, not just test_final.
 - **Don't `shape_material_mu.fill_()` after finalize** — it clobbers per-shape friction that
   the grasp relies on (cable/pads set high on purpose).
 - Verify changes with **instrumented headless `--viewer null --device cuda:0`** runs +

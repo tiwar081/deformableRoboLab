@@ -48,14 +48,24 @@ only declares its scene + policy; it never selects the solver.
   poses once at startup.
 
 - `SolverVBD`, 12 iterations, `rigid_contact_stick_motion_eps=0.0`, **NVIDIA default-hard
-  contacts** (`alpha=0.95`, no cross-step history).
-  - *History (now resolved):* the cable path once used `rigid_avbd_contact_alpha=0.0` +
+  contacts** (`alpha=0.95`, no cross-step history). Central config; a demo must not override it.
+  Known, chosen limitation: NO static friction (sub-cone creep — a heavy grasped object slowly
+  pivots about the jaw axis). The measured alternative, soft contacts
+  (`rigid_contact_hard=False, friction_epsilon=0.05`), restores stiction and fixes the pivot but
+  makes the initial grasp JOLT the robot through the one-substep-lagged EE feedback — it is
+  RESERVED for an explicit future re-opening of the object-slippage problem (not routine tuning);
+  the full trade study lives in SOLVERS.md §6. Both contact-mode knobs are CENTRAL (one
+  `framework.py` solver_kwargs line shared by every demo — never per-demo `object_solver_kwargs`),
+  and any switch requires re-running the full demo matrix.
+  - *History (resolved):* the cable path once used `rigid_avbd_contact_alpha=0.0` +
     `rigid_contact_history=True` to hold the lifted cable with a *kinematic* proxy. That
     accumulates the ALM multiplier `λ` (`f_n = ke·pen + λ`, unbounded → 1e4–1e6 N grip): a
     kinematic proxy early-outs so the runaway is computed-but-not-applied (stable, uncontrolled),
-    but a **dynamic** proxy applies it → divergence. The fix was to drop alpha=0+history (default
-    contacts) AND re-derive the overdamped contact `kd` (a second, independent cause); the cable
-    is then held by honest squeeze friction at a bounded force. Full analysis in ONGOING.md.
+    but a **dynamic** proxy applies it → divergence. The fix was to drop alpha=0+history AND
+    re-derive the overdamped contact `kd` (a second, independent cause). NOTE (measured 2026-07-09):
+    re-enabling `rigid_contact_history=True` even at `alpha=0.95` is still wrong — the decay-capped
+    λ integrates ~10× on the kinematically-imposed pinch (460–670 N at a 30 N target → ejection);
+    SOLVERS.md §6.
 - Object contacts: `CollisionPipeline(contact_matching="latest", soft_contact_margin=0.01)`.
 - The object model contains the visible table, manipulated objects, the soft block (where
   present), and the **dynamic** gripper proxies.

@@ -30,6 +30,8 @@ from .config import (  # noqa: F401
     DomeLightConfig,
     FixtureConfig,
     ObjectStyle,
+    RenderQuality,
+    RenderSpec,
     RoboLabSceneConfig,
     SphereLightConfig,
     WristCameraConfig,

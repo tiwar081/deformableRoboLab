@@ -3,12 +3,21 @@ demo itself). Each example script in this package opens with its motion summary
 and run command.
 
 Every demo is a single file ``<name>.py``. The ``--output-style`` flag selects
-how a run is rendered:
+how a run is rendered (all artifacts land in ``outputs/<robot>/<name>/``):
 
-- ``scenic`` (default) — robolabViz renders ``outputs/<name>/`` with a ``frames/``
-  folder (a still every ``--frames-per-image`` frames) and ``simulation.mp4``
-  (over-shoulder-left + wrist cameras, side by side), on any CUDA GPU.
-- ``basic`` — the Newton USD viewer writes ``outputs/<name>.usd`` (no scene look).
+- ``usd`` — lightest: the Newton USD viewer writes a time-sampled ``<name>.usd``
+  (no scene look, no frames, no video).
+- ``mp4`` (default) — lightweight video: the warp-raycast preview renders
+  ``simulation.mp4`` (over-shoulder-left + wrist cameras, side by side) with
+  flat shading and no HDRI decode (table textures kept for motion cues), on
+  any CUDA GPU.
+- ``mp4_advanced`` — the RoboLab look: HDRI-lit PBR ray tracing with shadows,
+  textures, and anti-aliasing, written as ``simulation_advanced.mp4``; also dumps
+  ``frames/`` stills (every ``--frames-per-image`` frames) and
+  ``wrist_coverage.json``. A demo customizes it via ``DemoSpec.render`` (a
+  ``robolabViz.RenderSpec``).
+
+Deprecated aliases: ``basic`` -> ``usd``, ``scenic`` -> ``mp4_advanced``.
 
 Run: python -m examples <name> --device cuda:0   (list: python -m examples --list)
 """
@@ -25,6 +34,10 @@ os.environ.setdefault("WARP_CACHE_PATH", "/tmp/warp-cache")
 
 
 USD_EXTENSIONS = {".usd", ".usda", ".usdc"}
+
+# Canonical output styles + the deprecated aliases still accepted on the CLI.
+OUTPUT_STYLES = ("usd", "mp4", "mp4_advanced")
+_STYLE_ALIASES = {"basic": "usd", "scenic": "mp4_advanced"}
 
 # The single-file demos in this package (each defines `Example` + a `__main__`).
 EXAMPLE_NAMES = (
@@ -59,31 +72,35 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output-style",
         type=str,
-        default="scenic",
-        choices=["basic", "scenic"],
-        help="scenic: robolabViz frames/ + simulation.mp4 in outputs/<name>/. "
-             "basic: a plain Newton USD at outputs/<name>.usd.",
+        default=None,
+        choices=[*OUTPUT_STYLES, *_STYLE_ALIASES],
+        help="usd: a plain Newton USD (lightest). mp4: lightweight robolabViz video (both cameras). "
+             "mp4_advanced: the full RoboLab look + frames/ stills + wrist_coverage.json. "
+             "Deprecated aliases: basic->usd, scenic->mp4_advanced. "
+             "Default: settings.yaml render.style (mp4).",
     )
     parser.add_argument(
         "--output",
         type=str,
         default="mp4",
         choices=["mp4", "graphs", "both"],
-        help="What to emit: mp4 (scenic video), graphs (per-frame gripper physics PNG), or both. "
-             "graphs are produced on the VBD (proxy) demos only; graphs-only skips the scenic render.",
+        help="What to emit: mp4 (the render), graphs (per-frame gripper physics PNG), or both. "
+             "graphs work in every output style (VBD/proxy demos only); graphs-only skips the "
+             "raycast render in the mp4 styles.",
     )
     parser.add_argument(
         "--viewer",
         type=str,
         default="usd",
         choices=["gl", "usd", "null"],
-        help="Viewer for --output-style basic (scenic forces null).",
+        help="Viewer for --output-style usd (the mp4 styles force null; gl gives an interactive window).",
     )
     parser.add_argument(
         "--output-path",
         type=str,
         default=None,
-        help="basic: USD file/dir (dirs receive <name>.usd). scenic: output dir (default outputs/<name>).",
+        help="Output dir for every style (a .usd path pins the USD file instead). "
+             "Default: outputs/<robot>/<name>/.",
     )
     parser.add_argument("--num-frames", type=int, default=240, help="Total number of frames.")
     parser.add_argument("--headless", action=argparse.BooleanOptionalAction, default=False)
@@ -91,16 +108,18 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--test", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--quiet", action=argparse.BooleanOptionalAction, default=False)
 
-    # ---- scenic (--output-style scenic) rendering options ----
-    scenic = parser.add_argument_group("scenic rendering (--output-style scenic)")
-    scenic.add_argument("--frames-per-image", type=int, default=30,
-                        help="Dump a per-camera still into frames/ every N frames (0 = off).")
-    scenic.add_argument("--table", default=SETTINGS.render_table,
-                        help="Vendored work-table texture (settings.yaml: render.table; "
-                             "see robolabViz.config.available_tables).")
-    scenic.add_argument("--background", default=SETTINGS.render_background,
-                        help="Vendored dome background (settings.yaml: render.background; e.g. "
-                             "home_office, garage_2k; see robolabViz.config.available_backgrounds).")
+    # ---- render options (--output-style mp4 / mp4_advanced) ----
+    scenic = parser.add_argument_group("render options (--output-style mp4 / mp4_advanced)")
+    scenic.add_argument("--frames-per-image", type=int, default=None,
+                        help="Dump a per-camera still into frames/ every N frames (0 = off). "
+                             "Default: 30 in mp4_advanced, 0 otherwise.")
+    scenic.add_argument("--table", default=None,
+                        help="Vendored work-table texture (see robolabViz.config.available_tables). "
+                             "Precedence: this flag > the demo's RenderSpec > settings.yaml render.table.")
+    scenic.add_argument("--background", default=None,
+                        help="Vendored dome background (e.g. home_office, garage_2k; see "
+                             "robolabViz.config.available_backgrounds). Precedence: this flag > "
+                             "the demo's RenderSpec > settings.yaml render.background.")
     scenic.add_argument("--usd", type=_str2bool, nargs="?", const=True, default=False,
                         help="Also write the full time-sampled RoboLab USD scene to outputs/<name>/<name>.usd.")
     scenic.add_argument("--npz", type=_str2bool, nargs="?", const=True, default=False,
@@ -115,14 +134,6 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _resolve_output_path(value: str | None, example_name: str) -> str:
-    output_path = Path(value) if value else Path("outputs")
-    if output_path.suffix.lower() not in USD_EXTENSIONS:
-        output_path = output_path / f"{example_name}.usd"
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    return str(output_path)
-
-
 def init(parser: argparse.ArgumentParser | None = None, example_name: str = "example"):
     import warp as wp
 
@@ -131,21 +142,34 @@ def init(parser: argparse.ArgumentParser | None = None, example_name: str = "exa
     parser = parser or create_parser()
     args = parser.parse_args()
 
-    if getattr(args, "output_style", "scenic") == "scenic":
-        # scenic renders through robolabViz; everything lands in outputs/<robot>/<name>/
-        # (<robot> = the active robot's short_name, so the two robots' renders never collide).
-        args.viewer = "null"
-        from deformableManipulationTools.params import FRANKA
-        out_dir = Path(args.output_path) if args.output_path else Path("outputs") / FRANKA.short_name / example_name
-        if out_dir.suffix.lower() in USD_EXTENSIONS:
-            out_dir = out_dir.parent
-        out_dir.mkdir(parents=True, exist_ok=True)
-        args.output_dir = str(out_dir)
-        # Used only by the opt-in --usd / --npz outputs.
-        args.output_path = str(out_dir / f"{example_name}.usd")
+    style = getattr(args, "output_style", None) or SETTINGS.render_style
+    if style in _STYLE_ALIASES:
+        print(f"[examples] --output-style {style!r} is deprecated; using {_STYLE_ALIASES[style]!r} "
+              f"(choices: {', '.join(OUTPUT_STYLES)}).")
+        style = _STYLE_ALIASES[style]
+    if style not in OUTPUT_STYLES:
+        raise ValueError(f"Unknown output style {style!r} (from --output-style or settings.yaml "
+                         f"render.style); choices: {', '.join(OUTPUT_STYLES)}.")
+    args.output_style = style  # canonical for everything downstream
+
+    # ONE output home for every style: outputs/<robot>/<name>/ (<robot> = the active robot's
+    # short_name, so the two robots' outputs never collide). The <name>.usd slot inside it holds
+    # the Newton USD (usd style) or the opt-in --usd RoboLab stage (mp4 styles).
+    from deformableManipulationTools.params import FRANKA
+    if args.output_path:
+        p = Path(args.output_path)
+        if p.suffix.lower() in USD_EXTENSIONS:
+            out_dir, usd_path = p.parent, p
+        else:
+            out_dir, usd_path = p, p / f"{example_name}.usd"
     else:
-        args.output_dir = None
-        args.output_path = _resolve_output_path(args.output_path, example_name)
+        out_dir = Path("outputs") / FRANKA.short_name / example_name
+        usd_path = out_dir / f"{example_name}.usd"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    args.output_dir = str(out_dir)
+    args.output_path = str(usd_path)
+    if style in ("mp4", "mp4_advanced"):
+        args.viewer = "null"  # robolabViz renders; the Newton viewer stays inert
 
     if args.quiet:
         wp.config.log_level = max(wp.config.log_level, wp.LOG_WARNING)
@@ -199,12 +223,14 @@ def run(example, args) -> None:
         recorder.save(png, title=f"{out_dir.name} — gripper physics")
         print(f"[instrumentation] physics graphs -> {png}")
 
+    # Close the viewer BEFORE test_final: ViewerUSD only saves its stage on close, so the
+    # usd-style artifact check needs it — and a failing assertion can't discard the USD.
+    viewer.close()
+
     if args.test:
         if not hasattr(example, "test_final"):
             raise NotImplementedError("Example does not define test_final().")
         example.test_final()
-
-    viewer.close()
 
 
 def _print_examples(examples: dict[str, str]) -> None:
