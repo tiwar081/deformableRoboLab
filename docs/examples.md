@@ -41,33 +41,39 @@ Terminal output is tee'd to `outputs/terminal`.
 
 ## Physics demos
 
-All examples share the **centralized** physics: `class Example(GraspExample)` from
-`deformableManipulationTools` owns the whole build + the dynamic-proxy `TwoWayProxyCoupling`;
-objects are added via the `deformableManipulationTools.assets` builders; all params come from
-`deformableManipulationTools.params`. Physical, bounded grip force (~10–90 N), no cap. Each example
-subclasses `ScenicGraspExample` (`robolabViz.scenic`, itself a `GraspExample`) and defines ONLY its
-**scene** (`configure` + `build_scene`) and **policy** (`plan` + `set_robot_targets`) + the per-demo
-`check_physics` asserts; all pass `--test` (in all three output styles).
+All examples share the **centralized** physics: the generic `DataDrivenExample`
+(`deformableManipulationTools.demo_runner`) turns each demo's `DemoSpec` into the build + policy
+the framework expects; objects are added via the `deformableManipulationTools.assets` builders and
+all params come from `deformableManipulationTools.params` (realistic, per-object authored — see
+solver-architecture.md "Contact materials"). Physical, bounded grip force, no cap; all pass
+`--test` in all three output styles.
 
-Every non-YCB demo draws from **one** shared object set: the same `CABLE`, the same `SOFT_BLOCK`
-(medium-stiffness 5 cm FEM block), the same 1 kg `RIGID_CUBE`, and the centralized `PLATE`. The
-demos are therefore directly cross-comparable.
+Every non-YCB demo draws from **one** shared object set: the same `CABLE` (rubber-jacketed), the
+same `SOFT_BLOCK` (a raspberry-like 5 cm fruit: E ≈ 5.7 kPa, 81 g, delicate), the same 1 kg
+`RIGID_CUBE` (solid steel), and the centralized `PLATE` (~2 kg metal presser). The demos are
+therefore directly cross-comparable.
 
 - **`cable_rigidCube_franka`** — descends to a cable on the table, grasps, lifts, sweeps
   side to side; the shared 1 kg rigid cube sits on the table as an obstacle. 8 substeps.
 - **`cable_soft_franka`** — same cable demo + the shared soft FEM block the swept cable dents/nudges.
   16 substeps.
 - **`rigidCube_soft_franka`** — grasps the shared 1 kg `RIGID_CUBE` via a pre-grasp waypoint,
-  carries it, drops it half-offset onto the shared `SOFT_BLOCK` to squash it. 16 substeps.
+  carries it, drops it half-offset onto the shared `SOFT_BLOCK`. 16 substeps. Since the block
+  became a raspberry-like fruit (2026-07-11) the dropped steel cube squashes it and rolls off —
+  honest physics; the old foam block used to catch and cradle the cube.
 - **`soft_compression_franka`** — grasps the centralized `PLATE` (sheet + handle, ~2 kg) by its
-  handle, presses/drops it onto the shared `SOFT_BLOCK` to compress it. 16 substeps. Known
+  handle, presses/drops it onto the shared `SOFT_BLOCK` to compress it. 16 substeps. Since the
+  block became a raspberry-like fruit, the 2 kg plate flattens it nearly to the table (its
+  ~900 Pa of press stress vs 5.7 kPa tissue plus extrusion) — expected physics. Known
   imperfection (root-caused 2026-07-09, deferred): the held plate slowly pivots about the jaw
   axis during the carry (~18° since the 2026-07-10 arm-damping fix; was ~25°) — the current
   contact config has no static friction to arrest rotational creep; the measured fix trades it
   for a jerkier grasp and is reserved for a future slippage effort (SOLVERS.md §6).
-- **`soft_pickplace_franka`** — picks up the shared `SOFT_BLOCK` (5 cm) and places it at a
-  target. 16 substeps. The proxies carry particle collision and the coupling harvests the
-  proxy↔particle reaction (soft grip).
+- **`soft_pickplace_franka`** — the delicate-fruit pick-and-place: slow ~4.4 s squeeze dwell,
+  slow lift, grasp 1 cm below the equator, `force_target=3.5 N` (peak ~3.2 N on the fruit vs the
+  5–10 N raspberry crush range; every sub-2 N target measurably sheds — see deformables.md).
+  16 substeps. The proxies carry particle collision and the coupling harvests the proxy↔particle
+  reaction (soft grip).
 
 - **`pickplace_ycb_franka`** — picks a rubik's cube and a banana and drops them into a bowl; a
   rigid-mesh friction/impact demo. **Rigid-only → routes to a single `SolverMuJoCo`** (no
@@ -92,8 +98,10 @@ demos are therefore directly cross-comparable.
 
 The shirt (the SI-converted Newton cloth, `ClothConfig` defaults) drops inflated from clear of the
 table and arm, settles flat and centred on the ONE shared table, and the Franka folds it following
-Newton's grasp recipe: descend the fingertip to the TABLE TOP, pinch to a finite jaw gap (never 0),
-lift, drag, release. Physical friction only (μ_eff ≈ 0.61). Runs on the standard split
+Newton's grasp recipe: command the fingertip 5 mm BELOW the table top (the stopper converts the
+excess into pressing normal force — the μ·N anchor), pinch to a finite jaw gap (never 0), lift,
+drag, release. Fully per-object physical friction (pads eff ≈ 0.45, table eff ≈ 0.35). Runs on the
+standard split
 MuJoCo-robot + VBD-cloth path at 10 substeps / 5 VBD iterations (Newton's dt — part of the contact
 parity).
 
@@ -102,6 +110,15 @@ parity).
   `force_target=2 N`, inside the shell's achievable squeeze) through the standard dynamic proxies —
   the target-relative admittance law converges to a stable ~8–9 mm pinch
   ([gripper.md](gripper.md)). 1380 frames (23 s).
+- **`cloth_franka_full`** — Newton's FULL four-fold sequence **in spirit** (top-left, bottom-left,
+  top-right, bottom-right folds, then the bottom hem carried all the way to the shirt's TOP edge —
+  a full half fold): Newton's pose offsets mapped about the shirt centre at SCALE 0.8 onto the
+  shared table, every grasp TOP-DOWN (no tilted wrist), grip = Newton's explicit finger schedule
+  (finite 8 mm jaw). Each fold is the same clean cycle — glide empty at cruise height (15 cm) to
+  above the grasp point, vertical descent to the table top (the two weakest grasps press 5 mm
+  below it, the μ·N anchor), close, vertical lift, carry at height, release, rise clear — so the
+  empty gripper never plows the cloth and the held cloth is carried, not scraped. 4590 frames
+  (76.0 s).
 
 ## Rendering
 

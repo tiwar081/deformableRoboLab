@@ -72,7 +72,7 @@ def fix_dae_visual_orientation(robot_usd_path: Path | str, urdf_path: Path | str
     import re
     import xml.etree.ElementTree as ET
 
-    from pxr import Gf, Usd, UsdGeom
+    from pxr import Usd, UsdGeom
 
     robot_usd_path = Path(robot_usd_path)
     base_layer = robot_usd_path.parent / "configuration" / f"{robot_usd_path.stem}_base.usd"

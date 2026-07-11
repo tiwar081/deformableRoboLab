@@ -1,7 +1,6 @@
 """DATA FILE — pickplace_ycb_vbd_franka: pick a rubik's cube then a banana into a bowl. A token soft
 cube routes the workspace to the VBD path (force-grip via proxies). A/B twin of pickplace_ycb_franka."""
 import numpy as np
-import warp as wp
 
 from deformableManipulationTools import (TABLE, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB, SOFT_BLOCK,
                                           GraspWindow, OBJECTS_DIR, load_usd_mesh)

@@ -31,7 +31,8 @@ cloth needs only scene + policy — the cloth solver physics is centralized:
    the target-relative admittance law then converges to a stable ~8–9 mm pinch and stays live to
    re-tighten; see [gripper.md](gripper.md)). Set
    `coupling_soft_ke=CFG.soft_contact_ke` to enable the grip-signal harvest — the value is just the
-   opt-in; the framework centrally derives the effective ke as avg(particle ke, pad material ke),
+   opt-in; the framework centrally derives the effective ke as the HARMONIC mean of the cloth's and
+   the pad's own authored ke (central compensation, solver-architecture.md "Contact materials"),
    the SAME derivation for every particle object — and
    `object_pipeline_kwargs={"soft_contact_margin": CFG.contact_margin}`; buffer sizes go in
    `object_solver_kwargs`.
@@ -39,8 +40,10 @@ cloth needs only scene + policy — the cloth solver physics is centralized:
    config's dimensionless stiffness η = ke_eff·dt²/m matches Newton's at 10 substeps @ 60 fps.
 6. **That's it for solver physics** — the framework auto-detects cloth (a shell: surface tris/edges,
    no tets) from the finalized model and applies `cloth_particle_kwargs(CFG)` (self-contact + radii)
-   AND the cloth-scene shape material profile (pads + object-side table get `CFG.shape_contact_*`)
-   centrally. It also auto-routes to the split MuJoCo-robot + VBD-cloth path with gripper proxies.
+   AND the central particle-contact material coupling (shape-side ke/kd DERIVED from each shape's
+   own authored material so the contact lands on the harmonic mean; friction is fully per-object —
+   no stamp, no exception) centrally. It also auto-routes to the split MuJoCo-robot + VBD-cloth
+   path with gripper proxies.
 
 ## The config (`ClothConfig` in `assets.py`) — SI-converted Newton cloth
 
@@ -55,9 +58,8 @@ cloth needs only scene + policy — the cloth solver physics is centralized:
 | `tri_kd` | `1.5e-5` | `1.5e-2` | ×1e-3 |
 | `edge_ke` | `5e-5` | `5` | ×1e-5 ([M·L/T²]: VBD bending force ≈ edge_ke·θ) |
 | `edge_kd` | `5e-6` | `0.5` | ×1e-5 |
-| `soft_contact_ke`/`kd`/`kf` | `10` / `0.01` / `1.0` | `1e4`/`1e1`/`1e3` | ×1e-3 |
+| `soft_contact_ke`/`kd`/`kf` | `15` / `0.015` / `1.0` | `1e4`/`1e1`/`1e3` | ×1e-3, then re-authored ×1.5 so the central harmonic coupling lands on Newton's proven EFFECTIVE 30 N/m / 0.03 (measured requirement; see below) |
 | `soft_contact_mu` | `0.25` | `0.25` | dimensionless |
-| `shape_contact_ke`/`kd`/`mu` | `50` / `0.05` / `1.5` | `5e4`/`5e1`/`1.5` | ×1e-3 — pads + table (framework-applied) |
 | `self_contact_radius`/`margin` | `0.002`/`0.002` | `0.2`/`0.2` cm | ×0.01; the radius sets the settled layer spacing (~2 mm) |
 | `self_contact_rest_exclusion_radius` | `0.005` | `0.5` cm | ×0.01 |
 
@@ -70,10 +72,15 @@ shirt **10× too light** (density "0.02" read as kg/m²). Individually each numb
 dimensionlessly the grasp physics was 3–4 orders of magnitude off:
 
 - VBD body↔particle contact uses the **arithmetic mean** of `model.soft_contact_*` (particle side)
-  and the touching **shape's material** (`mu`: geometric mean). Newton-effective pad↔cloth:
-  ke_eff = avg(10, 50) = **30 N/m**, kd_eff = **0.03** ≈ 0.5× critical, μ_eff = √(0.25·1.5) ≈ 0.61.
-  The old values gave ke_eff 3e4 N/m (η = ke_eff·dt²/m ≈ 12 000 vs Newton's 3.2) and kd_eff 55
-  (≈ 100× critical).
+  and the touching **shape's stored material** (`mu`: geometric mean). Newton's example authors a
+  shape profile giving pad↔cloth ke_eff = avg(10, 50) = **30 N/m**, kd_eff = **0.03** ≈ 0.5×
+  critical, μ_eff = √(0.25·1.5) ≈ 0.61. This repo instead DERIVES the shape side centrally
+  (harmonic coupling with the pads'/table's own authored ke=5e4 — solver-architecture.md "Contact
+  materials") and authors the cloth's own ke/kd = **15 / 0.015** so the derivation lands on the
+  SAME proven effective values: ke_eff = harm(15, 5e4) = **30 N/m** (η = 3.2), kd_eff = **0.03** =
+  0.5× critical. The effective contact is the tuned quantity — at authored 10/0.01 (eff 20, η 2.1)
+  the marginal pinch sheds at lift, measured 2026-07-10. The original verbatim cm-gram copy gave
+  ke_eff 3e4 N/m (η ≈ 12 000) and kd_eff 55 (≈ 100× critical).
 - Consequences, all measured on the failing demo: newton-scale grip forces became 50–80 N spikes
   that **expelled the shell from the pinch** (watermelon-seed ejection) and the over-critical kd
   acted as viscous glue that ratcheted particles out of the jaw during any motion.
@@ -87,9 +94,14 @@ dimensionlessly the grasp physics was 3–4 orders of magnitude off:
 Measured from Newton's recorded result (`_external/newton/cloth_franka.usd`) and reproduced here
 with instrumented probes — all knobs matter; each was A/B-tested:
 
-1. **Descend so the fingertip grasp point reaches the TABLE TOP** (`SURF = table_top + 0`), plowing
-   the pad through the full cloth stack. (Newton even commands 5 mm below.) Hovering at the cloth
-   surface leaves the stack below the pinch plane.
+1. **Descend so the fingertip is COMMANDED 5 mm BELOW the table top** (`SURF = table_top − 0.005`,
+   exactly Newton's recipe): the robot-side stopper holds the fingers at the surface and the excess
+   becomes pressing normal force. This is what makes the grasp work at PHYSICAL per-object friction
+   (cloth↔table eff √(0.25·0.5) ≈ 0.35): anchoring is μ·N, so N compensates μ. Measured 2026-07-11:
+   without the press the pinch sheds at the drag onset even at eff 0.45 (fold fails, x-extent
+   0.585); pressed, the fold is robust at the TRUE eff 0.35 (x-extent 0.454, engaged 615 frames,
+   94 captured contacts — the plow actually gathers cloth into the jaw MORE easily on the
+   slipperier table). Hovering at the cloth surface leaves the stack below the pinch plane.
 2. **Close to a FIXED ~8 mm total jaw gap** (`SHUT = 0.004` per finger) and **never 0**: the cloth
    between the pads buckles up into a multi-layer pucker (~20 mm effective thickness against the
    8 mm-radius contact), and the finite gap holds it in deep, stable penalty penetration. Closing to
@@ -128,10 +140,12 @@ finger shapes: strictly one-way, fingers position-commanded to the fixed gap.
 Particle solver config is applied **centrally** by `framework._particle_solver_config`, which picks by
 deformable type: an FEM block (has tets) → `PARTICLE_SOLVER_KWARGS` (self-contact **off**); a cloth
 (a shell: surface tris/edges, no tets) → `cloth_particle_kwargs(cfg)` (self-contact **on** + radii).
-The framework also applies the cloth-scene **shape material profile** (`shape_contact_*` on the
-pads/fingers + object-side table, AFTER `restore_proxy_materials` — the GRIP/FEM-scale ke≈5e4 would
-dominate the averaged cloth contact 1000:1) and overrides `coupling_soft_ke` to the effective
-avg(soft, shape) ke so the harvest (`grip.py`, f = ke_eff·pen) matches the true contact. A demo's
+The framework also applies the **central particle-contact material coupling** (every stored shape
+ke/kd in the band re-targeted so Newton's arithmetic body↔particle mean lands on the HARMONIC mean
+of the two objects' own authored values — a raw GRIP/FEM-scale ke≈5e4 would dominate the cloth
+contact 1000:1; friction is fully per-object, no stamp) and overrides `coupling_soft_ke` to that
+same effective ke so
+the harvest (`grip.py`, f = ke_eff·pen) matches the true contact. A demo's
 `object_solver_kwargs` holds only the scene-specific `rigid_body_*` buffer sizes.
 
 ## Gotchas (cloth-specific; ordered by how badly they bite)
@@ -144,9 +158,12 @@ avg(soft, shape) ke so the harvest (`grip.py`, f = ke_eff·pen) matches the true
 3. **Self-contact must be ON for any folding/draping** (centralized via `cloth_particle_kwargs`).
    Without it layers pass through each other. The 2 mm self-contact radius sets the settled
    two-layer spacing; there is no authored gap between the shirt's layers (one closed shell).
-4. **Any shape the cloth touches needs `shape_contact_*`-scale material.** VBD averages the shape
-   material into the contact; one FEM-scale shape (ke 5e4) re-breaks the grasp. The framework
-   covers pads + table; a future mixed cloth+rigid scene must extend the profile to the new shapes.
+4. **The shape side of the cloth contact is DERIVED, never hand-authored.** VBD averages the
+   shape's stored material into the contact, and one raw FEM-scale shape (ke 5e4) re-breaks the
+   grasp — the framework therefore re-targets EVERY in-band shape's stored ke/kd in a particle
+   scene onto the harmonic mean of the two objects' own authored values. A mixed cloth+rigid scene
+   is covered automatically for the cloth contact; note the compensated stored values also soften
+   that scene's rigid↔rigid pairs (solver-architecture.md "Contact materials").
 5. **`particle_max_velocity` does nothing under VBD** — stability comes from the contact material.
 6. **Copy `particle_q`/`particle_qd` to the viz state** (`_sync_viz_state` does this when
    `has_particles=True`) or the cloth renders frozen/penetrated.

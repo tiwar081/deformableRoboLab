@@ -2,7 +2,6 @@
 two-way grasp). Pick a rubik's cube then a banana into a bowl; the gripper follows an explicit
 open/close schedule and MuJoCo contact holds each object (no force controller / proxies)."""
 import numpy as np
-import warp as wp
 
 from deformableManipulationTools import (FRANKA, MUJOCO_GRIP, TABLE, RUBIKS_CUBE, BOWL_YCB,
                                           BANANA_YCB, OBJECTS_DIR, load_usd_mesh)

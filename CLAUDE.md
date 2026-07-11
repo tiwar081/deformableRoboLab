@@ -30,8 +30,9 @@ Building a simulation environment on Newton that handles **deformable bodies and
 deformable↔rigid interaction** realistically. Primary deformable types: **cables/wires,
 zip-ties, clothing, towels**. The rod (cable) + FEM block are done; the cloth (`ClothConfig` =
 Newton's shirt SI-converted, `add_cloth`) is done including the **flat-sheet grasp**: `cloth_franka`
-reproduces Newton's exact folding sequence through the standard proxy bridge at physical friction
-(Newton's recipe: fingertip to table, finite jaw gap never 0 — [docs/cloths.md](docs/cloths.md)).
+reproduces Newton's folding sequence through the standard proxy bridge at fully per-object
+PHYSICAL friction (recipe: fingertip pressed 5 mm below the table top — mu*N anchoring — and a
+finite jaw gap never 0; [docs/cloths.md](docs/cloths.md)).
 `cloth_franka` grips via the force `GripController` (`force_target=2 N`, inside the shell's
 achievable squeeze — the target-relative admittance law converges to a stable ~8–9 mm pinch,
 [docs/gripper.md](docs/gripper.md)); the default pad is the finger's own collider. Live status:
@@ -112,6 +113,17 @@ preset widths, no compressible/object-type flags, no per-object gains or biases.
 *when* to grasp (the `GraspWindow` times, a policy concern) and *how hard* (`force_target`), nothing
 more. If a grasp needs tuning beyond the target force, fix it centrally in the package, not the demo.
 
+**CONTACT-MATERIAL OWNERSHIP (two standing constraints; mechanics + numbers in
+[docs/solver-architecture.md](docs/solver-architecture.md) "Contact materials").** (1) An object
+authors ONLY its own contact properties — it never defines another object's property FOR it, and
+its builder must REGISTER them (`assets._register_material`) or the blanket proxy-fill silently
+replaces them post-finalize (the 2026-07-11 table bug). (2) The coupling of two objects' materials
+into one contact is ONE central pairing-blind law (geometric mu; band-limited harmonic ke/kd) —
+never a per-pairing branch. Materials are REALISTIC per object (RoboLab friction anchors, contact
+kd from per-pairing critical damping) with NO friction exceptions — the cloth fold compensates
+physical friction with pressing normal force, not a mu stamp. Do NOT quietly re-inflate a mu/kd to
+fix a grasp — grasp problems are policy (dwell/speed/force_target) or central-model problems.
+
 - **`params.py`** — single source of truth for ALL physics parameters (frozen dataclasses):
   `FRANKA`, `GRIP`, `TABLE`, `CABLE`, `SOFT_BLOCK`, `RIGID_CUBE`, `PLATE`, and the
   DISTINCT YCB objects `RUBIKS_CUBE`/`BOWL_YCB`/`BANANA_YCB`. **ONE table (`TABLE`) is shared by
@@ -173,8 +185,10 @@ injects energy for yawed finite-radius/small-radius cable contacts).
 `add_rod`-internal damping (`stretch_damping`, `bend_damping`) and tet `k_damp` are tuned for this
 build. But the per-shape **contact** `kd` values (cable `20·ke=4e5`, proxy `1e2·ke=5e6`) were
 ~1e4× the contact critical damping; once the alpha=0 force-runaway was removed they dominated the
-grip with a spurious velocity-proportional force (~4e4 N). The re-derived physical contact `kd≈1e2`
-now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), not in any example.
+grip with a spurious velocity-proportional force (~4e4 N). The contact `kd` now lives centrally in
+`params.py`, re-derived 2026-07-10 from per-pairing critical damping (`CableConfig.contact_kd` and
+`GRIP.proxy_kd` = 30 ≈ 0.9× critical for a cable node; `TABLE.object_kd` = 1e2 ≈ 0.22× critical for
+the 1 kg cube), not in any example.
 **If you bump Newton again, re-check both the internal damping AND the contact `kd`.**
 
 ## Recurring mistakes to avoid (update as they recur)
@@ -185,9 +199,10 @@ now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), 
   metre-kg world were ~1000×/100×/0.1× off *relative to particle weight* — each number looked
   plausible alone. Convert the whole set ([M/T²] ×1e-3, [M/T] ×1e-3, bending ×1e-5, area density
   ×10, lengths ×0.01, and match dt), then verify the dimensionless groups η = ke_eff·dt²/m and
-  kd_eff/kd_crit against the source. Also: VBD body↔particle contact AVERAGES the shape material
-  into the contact, so the pad/table shape ke is part of the cloth contact — see
-  [docs/cloths.md](docs/cloths.md).
+  kd_eff/kd_crit against the source. Also: VBD body↔particle contact mixes the SHAPE's stored
+  material into the contact (arithmetic mean); the framework re-targets stored shape ke/kd
+  centrally onto the harmonic mean of the two objects' own authored values (the contact-material
+  rule above) — see [docs/cloths.md](docs/cloths.md).
 - **A penalty pinch on a thin shell must close to a FINITE gap, never 0.** The MuJoCo fingers feel
   no VBD object, so they really do reach a commanded 0 width, and a zero-gap pinch EXPELS the cloth
   (measured: 17 captured particles → 0). Newton closes to 8 mm; `cloth_franka` does the same.
@@ -231,7 +246,7 @@ now lives centrally in `params.py` (`CableConfig.contact_kd`, `GRIP.proxy_kd`), 
   config (ONE framework.py solver_kwargs line, identical for every demo — never per-demo), and
   re-run the full demo matrix watching hand-speed swing, not just test_final.
 - **Don't `shape_material_mu.fill_()` after finalize** — it clobbers per-shape friction that
-  the grasp relies on (cable/pads set high on purpose).
+  the grasp relies on (per-object AUTHORED values — see the contact-material rule).
 - Verify changes with **instrumented headless `--viewer null --device cuda:0`** runs +
   `test_final`, not just by looking at a video.
 

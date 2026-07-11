@@ -100,9 +100,17 @@ class GripConfig:
     """
     proxy_mass: float = 10.0          # kg per proxy (reflected articulated-chain inertia, scaled for stability)
     proxy_inertia: float = 0.1        # kg·m², isotropic
-    proxy_ke: float = 5.0e4           # proxy contact stiffness [N/m]
-    proxy_kd: float = 1.0e2           # proxy contact damping [N·s/m] (absolute; re-derived, was 5e6 ~1e4x critical)
-    proxy_mu: float = 1.5             # proxy/pad friction
+    proxy_ke: float = 5.0e4           # proxy contact stiffness [N/m]: a 30 N cable grasp dents the
+                                       # 8 mm rubber jacket ~0.9 mm at the pair eff 3.5e4 — plausible
+    proxy_kd: float = 30.0            # proxy contact damping [N·s/m], re-derived 2026-07-10 against
+                                       # the LIGHTEST routinely-gripped partner (a 8.4 g cable node:
+                                       # kd_crit = 2*sqrt(3.5e4*0.0084) ~ 34 -> pair eff 30 ~ 0.9x
+                                       # critical). The old 1e2 was ~3x critical there (the first
+                                       # re-derivation only removed the 1e4x-critical runaway scale).
+    proxy_mu: float = 0.8             # rubber fingertip pads: "0.8 is rubber like" (RoboLab
+                                       # physics_utils — the sim2real reference; RoboLab's OWN
+                                       # add_friction default of 5.0 is an explicit grasp cheat we
+                                       # do NOT copy). Was 1.5 (Newton's cloth-example cheat value).
     proxy_margin: float = 0.001       # contact margin [m]
     # Centralized proxy contact gap [m]: force builds over this distance (f≈ke·(gap−separation)), so it
     # sets how far the pad sits off the object at a given squeeze. SMALL on purpose — a large gap (the
@@ -248,14 +256,25 @@ class MujocoGripConfig:
 class TableConfig:
     pos: tuple[float, float, float] = (0.12, -0.45, 0.035)
     half: tuple[float, float, float] = (0.45, 0.35, 0.035)
+    # Worktop height ABOVE the robot's mount plane (2026-07-10). The base used to sit exactly AT
+    # the table top, so the worktop was FLUSH with the franka_stand top and the visible table body
+    # hung down THROUGH the stand. Dropping the BASE (not raising the table) keeps every object and
+    # world-frame waypoint exactly where it was — only the arm's IK posture changes — and gives the
+    # visual slab real height above the stand (robolabViz solves the slab's underside to sit just
+    # above the base plane).
+    base_drop: float = 0.03
     robot_ke: float = 5.0e4
     robot_kd: float = 5.0e2
-    robot_mu: float = 1.0
+    robot_mu: float = 0.5             # same physical table as the object side: wood/laminate ~0.5
     robot_margin: float = 1.0e-3
     robot_density: float = 1000.0
-    object_ke: float = 5.0e4
-    object_kd: float = 1.0e2
-    object_mu: float = 0.8
+    object_ke: float = 5.0e4          # rigid worktop: 1 kg cube rests at ~0.2 mm penetration
+    object_kd: float = 1.0e2          # ~0.22x critical vs the 1 kg cube (mild realistic bounce);
+                                       # light objects (cable nodes) land overdamped — also physical
+    object_mu: float = 0.5            # wood/laminate: PhysX/Isaac default material 0.5 — what
+                                       # RoboLab's un-materialed fixtures actually get (their
+                                       # explicit add_friction is only for graspables, and is a
+                                       # cheat). Was 0.8 ("rubber-like") — a worktop is not rubber.
     color: tuple[float, float, float] = (0.52, 0.52, 0.48)
 
     @property
@@ -277,9 +296,13 @@ class CableConfig:
     stretch_damping: float = 1.25e3   # absolute: 0.05·stretch_stiffness
     bend_stiffness: float = 1.5e1
     bend_damping: float = 0.3         # absolute: 0.02·bend_stiffness
-    friction: float = 1.5
-    contact_ke: float = 2.0e4
-    contact_kd: float = 1.0e2         # absolute; re-derived (was 20·ke=4e5, ~1e4x critical)
+    friction: float = 0.7             # rubber/PVC jacket (rubber ~0.8, PVC ~0.4-0.6). Was 1.5, a
+                                       # grasp-cheat: eff vs pads is now sqrt(0.7*0.8)=0.75 (was 1.5),
+                                       # vs table sqrt(0.7*0.5)=0.59 — the cage must hold geometrically.
+    contact_ke: float = 2.0e4         # compliant jacket (mm-scale dent under grasp forces)
+    contact_kd: float = 30.0          # re-derived 2026-07-10: pair eff vs pads 30 ~ 0.9x critical for
+                                       # a 8.4 g node (2*sqrt(3.5e4*0.0084) ~ 34). The old 1e2 was ~3x
+                                       # critical (first re-derivation only killed the 1e4x scale).
     contact_margin: float = 0.001
     bow: float = 0.02                 # geometric layout bow that locks the free rolling mode
 
@@ -287,21 +310,47 @@ class CableConfig:
 @dataclass(frozen=True)
 class SoftBlockConfig:
     """FEM block (add_soft_grid). ONE canonical block shared by every soft demo (cable sweep,
-    cube-drop squash, plate compression, pick-and-place) so they are cross-comparable. Medium
-    stiffness (k_mu≈5e2): soft enough to visibly dent/squash, firm enough to grasp and lift
-    without squishing out of the pads. Damping/contact in the absolute objective-C=FᵀF metric."""
+    cube-drop squash, plate compression, pick-and-place) so they are cross-comparable.
+
+    Re-authored 2026-07-10 to REPRESENT A RASPBERRY-LIKE OBJECT: very squishy, delicate fruit
+    flesh rather than tuned foam. Tissue E = k_mu*(3*k_lambda+2*k_mu)/(k_lambda+k_mu) ~ 5.7 kPa,
+    nu ~ 0.42 (soft-berry range; sags ~8% under its own weight, bruise-scale forces are a few N),
+    density ~ water-ish flesh (113 g for the 5 cm cube, ~0.9 mN weight per particle). Damping /
+    contact are in the absolute objective-C=FᵀF metric and are the fruit's OWN properties — the
+    central harmonic coupling (framework.py) pairs them with whatever the fruit touches."""
     dim: tuple[int, int, int] = (4, 4, 4)
     cell: float = 0.0125              # 4 cells × 0.0125 = 0.05 m cube
-    density: float = 150.0
-    k_mu: float = 5.0e2
-    k_lambda: float = 2.5e3
-    k_damp: float = 1.0e1
+    density: float = 650.0            # EFFECTIVE whole-berry density: a raspberry is a hollow
+                                       # drupelet aggregate (thimble void — berries float easily),
+                                       # so the homogenized block is well below flesh density
+                                       # (~1000). 81 g / 0.80 N for the 5 cm cube. (was 150 = foam)
+    k_mu: float = 2.0e3               # tissue shear: E ~ 5.7 kPa (raspberry ~3-10 kPa)
+    k_lambda: float = 1.0e4           # keeps nu = lambda/(2(lambda+mu)) ~ 0.42 (near-incompressible)
+    k_damp: float = 4.0e1             # tissue viscosity, k_damp/k_mu = 0.02 as before (pulp is lossy)
     particle_radius: float = 0.0035
     contact_margin: float = 0.01
-    soft_contact_ke: float = 1.0e5
-    soft_contact_kd: float = 1.0e-4
-    soft_contact_kf: float = 1.0e3
-    soft_contact_mu: float = 0.8
+    soft_contact_ke: float = 2.5e4    # the fruit's contact SKIN penalty — deliberately at rigid-
+                                       # comparable scale: a soft FEM BODY gets its compliance from
+                                       # the TISSUE (k_mu: a cell column is E*cell ~ 71 N/m, ~500x
+                                       # softer than the contact), so under grasp the contact
+                                       # penetrates ~um while the tissue squishes ~mm. Keeping the
+                                       # scale comparable ALSO keeps every rigid shape out of the
+                                       # harmonic band in FEM scenes -> the scene's rigid<->rigid
+                                       # pairs (the cable cage!) keep authored materials. VBD is
+                                       # implicit: contact eta ~ 40 here vs ~540 in the old proven
+                                       # block — stability is not the constraint. (A thin SHELL is
+                                       # the opposite: no volume compliance, so the cloth genuinely
+                                       # needs the band-compensated soft effective contact.)
+    soft_contact_kd: float = 13.0     # re-derived from contact critical damping: berry<->pad crit =
+                                       # 2*sqrt(3.75e4*9e-4 kg) ~ 11.6; pair eff 0.5*(13+30) ~ 21 ~
+                                       # 1.9x critical — a berry lands DEAD, zero bounce, without
+                                       # viscous-glue scale (the pre-ownership eff was ~50, ~7x
+                                       # critical even for the old foam). 13 also keeps the
+                                       # pads/cable (kd 30) OUT of the band with margin (2.5*13 =
+                                       # 32.5), so rigid-pair damping in FEM scenes stays authored.
+    soft_contact_kf: float = 2.5e2    # friction stiffness, kept at ~0.01*ke like the old authoring
+    soft_contact_mu: float = 0.5      # waxy berry skin (was 0.8 = rubber); eff vs pads
+                                       # sqrt(0.5*0.8) ~ 0.63, vs table sqrt(0.5*0.5) = 0.5
 
 
 @dataclass(frozen=True)
@@ -309,11 +358,13 @@ class RigidBoxConfig:
     """Rigid box object. ``mass`` (when not None) is the exact body mass [kg]; otherwise the mass
     is density-derived from the shape volume (used by the distinct YCB rubik's cube)."""
     half_extent: float = 0.025
-    mass: float | None = 1.0          # kg — the canonical rigid cube is 1 kg in every demo
+    mass: float | None = 1.0          # kg — the canonical rigid cube is 1 kg in every demo. At
+                                       # 5 cm that is solid-steel density (~8000): a machined steel
+                                       # test cube — physically real, deliberately heavy.
     density: float = 250.0            # pre-mass seed / used only when ``mass`` is None
     contact_ke: float = 5.0e4
-    contact_kd: float = 1.0e2
-    contact_mu: float = 0.8
+    contact_kd: float = 1.0e2         # ~0.22x critical vs the table (mild metallic bounce)
+    contact_mu: float = 0.4           # machined steel (was 0.8 = rubber-like; steel-on-wood ~0.4)
     contact_margin: float = 1.0e-3
 
 
@@ -323,10 +374,15 @@ class PlateConfig:
     boxes). A distinct centralized presser tool — built by ``add_plate``, never inline in a demo."""
     sheet_half: tuple[float, float, float] = (0.09, 0.06, 0.004)
     handle_half: tuple[float, float, float] = (0.016, 0.012, 0.024)
-    density: float = 9300.0           # ~2 kg over the sheet+handle volume (≈2× the rigid cube)
+    density: float = 9300.0           # ~2 kg over the sheet+handle volume (≈2× the rigid cube) —
+                                       # a dense metal presser; the 2 kg mass is the design intent
     contact_ke: float = 1.0e5         # firm plate↔block press
-    contact_kd: float = 1.0e-4
-    contact_mu: float = 0.8
+    contact_kd: float = 1.0e2         # uniform rigid-object derivation (2026-07-11): ~0.13x critical
+                                       # vs the table for the 2 kg plate; vs the berry the central
+                                       # band coupling caps the pair at ~2x the berry's critical
+                                       # (dead landing). The legacy 1e-4 (~zero) was a pre-ownership
+                                       # relic from when the berry side authored ~0 damping.
+    contact_mu: float = 0.4           # metal plate (was 0.8 = rubber-like)
     contact_margin: float = 1.0e-3
     sheet_color: tuple[float, float, float] = (0.62, 0.65, 0.68)
     handle_color: tuple[float, float, float] = (0.40, 0.42, 0.45)
@@ -349,7 +405,12 @@ class YcbMeshConfig:
     density: float = 400.0            # pre-rescale seed only
     ke: float = 5.0e4
     kd: float = 1.0e2
-    mu: float = 1.0
+    mu: float = 0.5                   # generic household-object default (PhysX-default scale). The
+                                       # legacy per-object values (bowl 1.0, banana 2.0, rubiks 1.2)
+                                       # were grasp-era tuning, not RoboLab/measured — banana 2.0 was
+                                       # even documented ineffective against its wedge self-ejection
+                                       # (ONGOING/SOLVERS §6) — AND they were silently INERT on the
+                                       # VBD path until the 2026-07-11 material-restore fix.
     color: tuple[float, float, float] = (0.7, 0.7, 0.7)
     # coacd convex decomposition (preprocess_mode='on' is forced in the worker — 'auto' segfaults
     # on raw non-watertight YCB scans).
@@ -397,13 +458,13 @@ PLATE = PlateConfig()
 
 # The YCB rubik's cube is a DISTINCT object (its own size/mass/material) — no relationship to the
 # canonical RIGID_CUBE. Density-derived mass (mass=None).
-RUBIKS_CUBE = RigidBoxConfig(half_extent=0.029, mass=None, density=1025.0, contact_ke=5.0e4,
-                             contact_kd=1.0e2, contact_mu=1.2, contact_margin=0.0)
+RUBIKS_CUBE = RigidBoxConfig(half_extent=0.029, mass=None, density=550.0, contact_ke=5.0e4,  # ~107 g, a real cube's weight (was 1025 -> 200 g)
+                             contact_kd=1.0e2, contact_mu=0.4, contact_margin=0.0)  # ABS plastic (was 1.2, grasp-era tuning)
 
 # YCB mesh objects (pickplace_ycb). coacd-decomposed for collision; realistic YCB masses.
 BOWL_YCB = YcbMeshConfig(
-    usd_subpath="ycb/bowl.usd", target_mass=0.147, density=400.0, mu=1.0,
+    usd_subpath="ycb/bowl.usd", target_mass=0.147, density=400.0, mu=0.4,   # glazed ceramic/plastic
     color=(0.75, 0.22, 0.18), coacd_threshold=0.10, coacd_max_convex_hull=12)   # YCB 024_bowl
 BANANA_YCB = YcbMeshConfig(
-    usd_subpath="ycb/banana.usd", target_mass=0.066, density=300.0, mu=2.0,
+    usd_subpath="ycb/banana.usd", target_mass=0.066, density=300.0, mu=0.4,  # waxy peel (2.0 was a cheat, and a documented-ineffective one)
     color=(0.93, 0.82, 0.12), coacd_threshold=0.08, coacd_max_convex_hull=8)    # YCB 011_banana

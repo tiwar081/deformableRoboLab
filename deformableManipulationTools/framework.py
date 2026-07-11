@@ -44,7 +44,7 @@ class GraspExample:
       * ``plan(ik_model, ik_state)`` — solve IK keyframes; stash device arrays for the policy.
       * ``build_scene(object_builder, robot_builder)`` — add the table/objects/proxies via the
         :mod:`assets` builders; set ``gripper_proxy_bodies``/``gripper_proxy_shapes`` and record
-        body indices; optionally append to ``self.material_overrides`` / ``self.mass_overrides``.
+        body indices; optionally append to ``self.mass_overrides``.
       * ``set_robot_targets(substep)`` — launch the policy kernel onto ``robot_control.joint_target_q``.
       * ``test_final()``.
     """
@@ -65,9 +65,9 @@ class GraspExample:
     robot_contact_max: int = 8192                        # MuJoCo contact buffer (raise for mesh scenes)
     gripper_proxy_bodies = ()                            # set by build_scene on the VBD path (proxies)
     gripper_proxy_shapes = ()
+    box_slice_proxy: bool = False                        # optional mesh-finger proxy override
     grasp_windows = None                                 # list[GraspWindow]: enables the centralized
     grip_controller: GripController = None               # force-stop finger controller (set in __init__)
-    box_slice_proxy: bool = False                        # optional mesh-finger proxy override
 
     def __init__(self, viewer, args):
         newton.use_coord_layout_targets = True
@@ -80,12 +80,17 @@ class GraspExample:
         self.sim_time = 0.0
         self.gripper_open = FRANKA.gripper_open
         self.home_q = np.array(FRANKA.home_q, dtype=np.float32)
-        self.material_overrides: list[dict] = []
         self.mass_overrides: list[tuple[int, float]] = []
 
         self.configure(args)
         if self.robot_base_xform is None:
-            self.robot_base_xform = wp.transform((-0.45, -0.45, self.table_top_z), wp.quat_identity())
+            # The base sits BELOW the worktop by TableConfig.base_drop (the worktop stands proud of
+            # the robot's mount plane, like a real rig where the work table is taller than the
+            # robot pedestal). Demo layouts are world/TT-relative and unaffected; only the arm's
+            # IK posture changes. base_drop also gives the VISUAL work-table slab its height above
+            # the franka_stand (robolabViz solves the slab between the base plane and the top).
+            drop = float(getattr(self.robot_table, "base_drop", 0.0) or 0.0) if self.robot_table is not None else 0.0
+            self.robot_base_xform = wp.transform((-0.45, -0.45, self.table_top_z - drop), wp.quat_identity())
         # Convenience copies of the table placement (the robolab object-view cameras read these).
         if self.robot_table is not None:
             self.table_pos = np.array(self.robot_table.pos, dtype=np.float32)
@@ -107,7 +112,7 @@ class GraspExample:
         object_builder = newton.ModelBuilder()
         object_builder.default_shape_cfg.ke = GRIP.proxy_ke
         object_builder.default_shape_cfg.kd = GRIP.object_contact_kd
-        object_builder.default_shape_cfg.mu = 0.8
+        object_builder.default_shape_cfg.mu = GRIP.proxy_mu   # fallback only; content shapes author + register their own
         self.build_scene(object_builder, robot_builder)
         object_builder.color(balance_colors=False)
 
@@ -224,34 +229,54 @@ class GraspExample:
         if self.blanket_fill:
             self.object_model.shape_material_ke.fill_(GRIP.proxy_ke)
             self.object_model.shape_material_kd.fill_(GRIP.object_contact_kd)
-            self.object_model.shape_material_mu.fill_(0.8)
+            self.object_model.shape_material_mu.fill_(GRIP.proxy_mu)   # placeholder; every content shape re-applies its AUTHORED material below
         for ov in getattr(object_builder, "_robolab_material_restores", []):
             self._apply_material_override(ov)
-        for ov in self.material_overrides:
-            self._apply_material_override(ov)
         restore_proxy_materials(self.object_model, self.gripper_proxy_shapes)
-        # CENTRAL cloth-scene contact profile: VBD body<->particle contact AVERAGES the particle-side
-        # soft_contact_* with the touching SHAPE's material, so on a cloth scene every shape the cloth
-        # can touch (pads/palm + object-side table) must carry the ClothConfig's SI-converted shape
-        # material — the GRIP/table values restored above are FEM/cable-scale (ke~5e4) and would
-        # dominate the averaged cloth contact 1000:1, recreating the expulsion that broke the grasp.
-        # Applied AFTER restore_proxy_materials on purpose (the harvest ke below then reads the
-        # pads' FINAL material, so it stays consistent automatically).
-        from .assets import ClothConfig as _ClothConfig
-        if isinstance(self.soft_block, _ClothConfig):
-            cloth_shapes = list(self.gripper_proxy_shapes)
-            table_shape = getattr(self, "_obj_table_shape", None)
-            if table_shape is not None:
-                cloth_shapes.append(int(table_shape))
-            self._apply_material_override({
-                "shapes": cloth_shapes, "ke": self.soft_block.shape_contact_ke,
-                "kd": self.soft_block.shape_contact_kd, "mu": self.soft_block.shape_contact_mu})
+        # CENTRAL particle-contact material coupling — pairing-blind, applied in EVERY particle
+        # scene. Ownership rule: an object authors ONLY its own contact material; no object defines
+        # another object's property for it. Coupling rule (ONE law for all pairings): Newton's VBD
+        # kernel mixes a body<->particle contact as the ARITHMETIC mean of the particle side
+        # (model.soft_contact_*) and the shape's stored material (mu: geometric mean — scale-free,
+        # authored mu used as-is). Arithmetic ke/kd is a PARALLEL-spring law (the stiff side
+        # dominates): a rigid-penalty shape value (ke~5e4) swamps a cloth (ke=15) 1000:1 — the
+        # "watermelon-seed" expulsion. Touching surfaces are springs/dashpots in SERIES: the
+        # physical effective value is the HARMONIC mean 2ab/(a+b) (softer side dominates; equals
+        # the arithmetic mean at a=b). Newton's mean is hard-coded, so store the DERIVED shape
+        # value m = 2*harm(s,k) - s (s = particle side, k = the shape's own authored value): the
+        # kernel's 0.5*(s+m) then lands exactly on harm(s,k). ACTIVE REGION: only shapes
+        # DECISIVELY stiffer than the particle side (k > 2.5*s) are compensated — the regime where
+        # the arithmetic mean is dominated by the wrong side and eta explodes (cloth vs rigid
+        # shapes: ratios 1e3+). At comparable or softer scales authored values pass through:
+        # harm ~= arith there (<=25% apart), a softer-than-particle shape never dominates, and —
+        # MEASURED (2026-07-10) — compensating comparable-scale shapes wrecks the scene's
+        # rigid<->rigid pairs through the shared stored arrays (pads 5e4 -> 3.3e4 softened the
+        # cable<->pad cage 3.5e4 -> 2.67e4 and the swept cable slipped out of the hold;
+        # band-limited, the cage is bit-preserved and the hold returns). A soft FEM body therefore
+        # authors its contact skin at rigid-comparable scale (its compliance lives in the TISSUE),
+        # keeping FEM scenes' rigid pairs authored; a thin SHELL has no volume compliance, so the
+        # cloth genuinely needs the band-compensated soft effective contact (and cloth scenes have
+        # no live rigid<->rigid pairs — proxies are filtered against the table).
+        if self.soft_block is not None:
+            for arr, s in ((self.object_model.shape_material_ke, float(self.object_model.soft_contact_ke)),
+                           (self.object_model.shape_material_kd, float(self.object_model.soft_contact_kd))):
+                if s <= 0.0:
+                    continue                            # no particle-side value -> leave authored
+                k = arr.numpy()
+                m = 2.0 * (2.0 * s * k / (s + k)) - s   # arithmetic-mean preimage of harm(s, k)
+                arr.assign(np.where(k > 2.5 * s, m, k).astype(k.dtype))
+        # (FRICTION has NO exception anymore: every shape's authored mu enters every contact via
+        # Newton's geometric mixing, cloth included. The old cloth-scene mu=1.5 stamp — needed when
+        # the recipe relied on Newton's cheat friction — was retired 2026-07-10 after the realistic
+        # material re-derivation: the fold recipe compensates the physical, lower cloth<->table
+        # friction with pressing normal force instead (fingertips COMMANDED below the table top,
+        # the robot-side stopper converts the excess into N, and anchoring is mu*N). See
+        # docs/cloths.md "grasp recipe".)
         # CENTRAL effective harvest ke — IDENTICAL derivation for EVERY particle object (cloth, FEM
         # block, any future shell/volume): the soft harvest reconstructs the pad reaction as
         # f = ke_eff * penetration, and VBD's body<->particle contact uses the ARITHMETIC MEAN of the
-        # particle side (model.soft_contact_ke) and the touching pad shape's FINAL material — so the
-        # harvest must mirror exactly that mean, whatever material profile the pads ended up with
-        # (GRIP restore on FEM/cable scenes, the ClothConfig shape profile on cloth scenes). The
+        # particle side (model.soft_contact_ke) and the touching pad shape's FINAL (possibly
+        # band-compensated) material — so this mean tracks the true contact automatically. The
         # demo's coupling_soft_ke is only the harvest OPT-IN; its value is replaced here.
         if self.coupling_soft_ke is not None and len(self.gripper_proxy_shapes):
             pad_ke = float(self.object_model.shape_material_ke.numpy()[self.gripper_proxy_shapes[0]])

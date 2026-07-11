@@ -203,6 +203,7 @@ def table_fixture_from_footprint(
     center_xy: tuple[float, float],
     rotate_z_deg: float = 0.0,
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
+    bottom_z: float | None = None,
     preview_color: tuple[float, float, float] = (0.55, 0.42, 0.30),
 ) -> FixtureConfig:
     """Place a tabletop asset so its *visible top surface coincides with a
@@ -215,7 +216,20 @@ def table_fixture_from_footprint(
     invisible physics table it replaces: pass the physics table's top height
     and footprint center, and the visual table lines up with where objects
     actually rest. The asset must be a tabletop whose top face is its bbox max.
+
+    ``bottom_z`` (optional) additionally solves the z-scale so the asset's
+    UNDERSIDE lands at ``bottom_z``: the workspace footprint overlaps the
+    franka_stand in x/y, so a full-height table asset (native ~0.7 m tall)
+    pierces the stand's body — its underside must sit ABOVE the stand's top
+    (the robot-base plane, viz z=0) or the two fixtures visibly interpenetrate.
+    Objects/physics are untouched: the visible top stays pinned at ``top_z``.
     """
+    if bottom_z is not None:
+        mn0, mx0 = _asset_world_extents(usd_path, rotate_z_deg, scale)
+        native_h = float(mx0[2] - mn0[2])
+        if top_z - bottom_z <= 0 or native_h <= 0:
+            raise ValueError(f"table fixture: need top_z ({top_z}) > bottom_z ({bottom_z}).")
+        scale = (scale[0], scale[1], scale[2] * (top_z - bottom_z) / native_h)
     mn, mx = _asset_world_extents(usd_path, rotate_z_deg, scale)
     center = 0.5 * (mn + mx)
     return FixtureConfig(
@@ -259,9 +273,13 @@ def work_table_fixture(
     top_z: float,
     center_xy: tuple[float, float],
     rotate_z_deg: float = 90.0,
+    bottom_z: float | None = 0.002,
 ) -> FixtureConfig:
     """Build the ``work_table`` fixture for a named vendored table, placed from
-    the physics footprint (see ``table_fixture_from_footprint``)."""
+    the physics footprint (see ``table_fixture_from_footprint``). The default
+    ``bottom_z`` (2 mm above the robot-base plane) lifts the table's underside
+    clear of the franka_stand so the two fixtures never interpenetrate — the
+    visible table becomes the tabletop slab itself, matching the physics slab."""
     if table not in TABLE_TEXTURES:
         raise ValueError(f"Unknown table {table!r}; available: {available_tables()}")
     usd_name, mat_rel, color = TABLE_TEXTURES[table]
@@ -271,6 +289,7 @@ def work_table_fixture(
         top_z=top_z,
         center_xy=center_xy,
         rotate_z_deg=rotate_z_deg,
+        bottom_z=bottom_z,
         preview_color=color,
     )
     if mat_rel is not None:

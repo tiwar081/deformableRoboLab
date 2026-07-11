@@ -24,7 +24,7 @@ from .params import (
 from .mathutils import quat_rotate_xyzw, find_body, smoothstep, wp_smoothstep, quat_to_vec4
 # Robot.
 from .robot import (
-    build_franka_robot, add_robot_table_box, make_robot_solver, solve_gripper_ik, finger_body_indices,
+    build_franka_robot, make_robot_solver, solve_gripper_ik, finger_body_indices,
     set_mujoco_grip_controller,
 )
 # Grip (proxies + coupling).
@@ -47,7 +47,7 @@ __all__ = [
     "RigidBoxConfig", "PlateConfig", "YcbMeshConfig", "FRANKA", "GRIP", "MUJOCO_GRIP", "TABLE",
     "CABLE", "SOFT_BLOCK", "RIGID_CUBE", "PLATE", "RUBIKS_CUBE", "BOWL_YCB", "BANANA_YCB",
     "quat_rotate_xyzw", "find_body", "smoothstep", "wp_smoothstep", "quat_to_vec4",
-    "build_franka_robot", "add_robot_table_box", "make_robot_solver", "solve_gripper_ik",
+    "build_franka_robot", "make_robot_solver", "solve_gripper_ik",
     "finger_body_indices", "set_mujoco_grip_controller",
     "build_gripper_proxies", "restore_proxy_materials", "TwoWayProxyCoupling", "GripController",
     "add_table", "add_soft_block", "add_cable", "add_rigid_box", "add_plate", "add_rubiks_cube",

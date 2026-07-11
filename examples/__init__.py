@@ -49,6 +49,7 @@ EXAMPLE_NAMES = (
     "pickplace_ycb_franka",
     "pickplace_ycb_vbd_franka",
     "cloth_franka",
+    "cloth_franka_full",
 )
 
 

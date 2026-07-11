@@ -51,10 +51,16 @@ def add_table(builder: newton.ModelBuilder, table: TableConfig = TABLE) -> int:
     """Visible object-side table collider (mirrors the hidden robot-side stopper). Returns the
     shape index (pass it to build_gripper_proxies so the proxies are filtered against it)."""
     cfg = newton.ModelBuilder.ShapeConfig(density=0.0, ke=table.object_ke, kd=table.object_kd, mu=table.object_mu)
-    return builder.add_shape_box(
+    shape = builder.add_shape_box(
         body=-1, xform=wp.transform(wp.vec3(*table.pos), wp.quat_identity()),
         hx=float(table.half[0]), hy=float(table.half[1]), hz=float(table.half[2]),
         cfg=cfg, color=wp.vec3(*table.color), label="table")
+    # Register the authored material like every other builder (2026-07-11 fix): without this the
+    # blanket proxy-fill silently replaced the table's material post-finalize — invisible while
+    # the fill's mu (0.8) happened to equal the table's old authored 0.8, live the moment the
+    # table was re-authored realistic (0.5).
+    _register_material(builder, shapes=[shape], ke=table.object_ke, kd=table.object_kd, mu=table.object_mu)
+    return shape
 
 
 def add_soft_block(builder: newton.ModelBuilder, cfg: SoftBlockConfig, center_pos) -> None:
@@ -84,10 +90,14 @@ class ClothConfig:
     (cm,g -> m,kg): stiffness-like [M/T^2] (ke, kf, tri_ke/ka) x1e-3; damping-like [M/T] (kd) x1e-3;
     bending [M*L/T^2] (edge_ke; force units, VBD's k = edge_ke*rest_len with dtheta/dx ~ 1/L) x1e-5;
     edge_kd [M*L/T] x1e-5; area density [M/L^2] x10 (0.02 g/cm^2 = 0.2 kg/m^2); lengths x0.01.
-    Matching dt (10 substeps) makes every contact dimensionless group equal Newton's: effective
-    pad<->cloth ke_eff = avg(soft 10, shape 50) = 30 N/m, eta = ke_eff*dt^2/m = 3.2, kd_eff = 0.03
-    = 0.5x critical. Exposes the same ``soft_contact_*`` fields the framework reads off ``soft_block``
-    so the proxy<->particle harvest works like the FEM-block demos."""
+    Matching dt (10 substeps) keeps every contact dimensionless group EQUAL to Newton's: the
+    framework derives the shape side of the cloth contact centrally (harmonic coupling, see
+    framework.py), and the cloth's own ke/kd are authored (15 / 0.015) so that derivation lands
+    exactly on the PROVEN effective values — ke_eff = harm(15, 5e4) = 30 N/m (eta = ke_eff*dt^2/m
+    = 3.2, Newton's avg(10, 50)) and kd_eff = 0.03 = 0.5x critical. The effective contact is the
+    tuned quantity: at authored 10/0.01 (eff 20 / eta 2.1) the marginal flat-sheet pinch sheds at
+    lift — MEASURED 2026-07-10. Exposes the same ``soft_contact_*`` fields the framework reads
+    off ``soft_block`` so the proxy<->particle harvest works like the FEM-block demos."""
     usd_file: str = "unisex_shirt.usd"
     usd_prim: str = "/root/shirt"
     scale: float = 0.01               # the USD shirt mesh is ~65 cm in native units -> metres
@@ -102,28 +112,35 @@ class ClothConfig:
     edge_ke: float = 5.0e-5           # bending (Newton 5, force units x1e-5)
     edge_kd: float = 5.0e-6           # Newton 0.5 x1e-5
     contact_margin: float = 0.008     # cloth<->body pipeline margin = Newton's 0.8 cm
-    # proxy<->particle + body<->cloth contact (read by the framework like SoftBlockConfig). VBD
-    # body-particle contact uses the ARITHMETIC MEAN of this particle-side material and the touching
-    # shape's material (mu: geometric mean) — so the pads/table shape material below is part of the
-    # same contact and both sides must stay SI-converted together. ke_eff = 30 N/m sounds soft in
-    # metre units but is exactly Newton's working value: penetration under the shirt's own weight is
-    # ~10 um/particle, and an 8 mm jaw on the ~2-layer stack gives ~0.2 N/contact — newton-scale grip
-    # forces, not the old 1e2-N spikes that expelled the shell ("watermelon-seed" ejection).
-    soft_contact_ke: float = 10.0     # Newton 1e4 x1e-3
-    soft_contact_kd: float = 1.0e-2   # Newton 1e1 x1e-3; kd_eff = 0.5x critical, like Newton — the old
-                                       # kd=1e1 (verbatim copy) was ~100x OVER-critical: viscous glue
-                                       # that ratcheted particles out of the pinch during motion.
+    # proxy<->particle + body<->cloth contact (read by the framework like SoftBlockConfig). These
+    # are the CLOTH'S OWN contact properties; the shape side of the contact comes from each
+    # touching shape's own authored material via the framework's central harmonic ke/kd coupling
+    # (framework._build_split_mujoco_vbd) — no cloth-authored shape profile. ke_eff = 30 N/m
+    # sounds soft in metre units but is exactly Newton's working value: penetration under the
+    # shirt's own weight is ~10 um/particle, and an 8 mm jaw on the ~2-layer stack gives
+    # sub-newton per-contact forces, not the old 1e2-N spikes that expelled the shell
+    # ("watermelon-seed" ejection).
+    soft_contact_ke: float = 15.0     # authored so the central HARMONIC coupling with rigid-scale
+                                       # shapes (pads/table ke=5e4) lands on the PROVEN effective
+                                       # 30 N/m: harm(15, 5e4) = 30 = Newton's avg(10, 50). The
+                                       # effective contact (eta = 3.2) is the tuned quantity, not
+                                       # the raw particle number — at authored 10 (eff 20, eta 2.1)
+                                       # the marginal pinch sheds at lift, MEASURED 2026-07-10.
+                                       # NOTE self-contact shares this scalar (x1.5 vs Newton's 10;
+                                       # fold A/B-verified).
+    soft_contact_kd: float = 1.5e-2   # same re-authorship for damping: harm(0.015, 1e2) = 0.03 =
+                                       # Newton's effective, 0.5x critical. (The original verbatim
+                                       # kd=1e1 was ~100x OVER-critical: viscous glue that ratcheted
+                                       # particles out of the pinch during motion.)
     soft_contact_kf: float = 1.0      # Newton 1e3 x1e-3
-    soft_contact_mu: float = 0.25     # dimensionless; effective vs pads = sqrt(0.25*1.5) ~ 0.61
-    # Shape-side contact material for EVERYTHING the cloth touches (pads, palm, table). Newton's
-    # example sets ke=5e4, kd=5e1, mu=1.5 (cm-g) on ALL shapes; SI-converted here. The framework
-    # applies this centrally to the proxy/finger shapes + object-side table on the cloth path
-    # (AFTER restore_proxy_materials, whose GRIP values are FEM/cable-scale and would dominate the
-    # averaged contact 1000:1). A future mixed cloth+rigid scene must give any cloth-touching shape
-    # this scale of material — see docs/cloths.md.
-    shape_contact_ke: float = 50.0
-    shape_contact_kd: float = 5.0e-2
-    shape_contact_mu: float = 1.5
+    soft_contact_mu: float = 0.25     # dimensionless; the cloth side of every cloth<->shape pair
+                                       # (geometric mix) AND the self-contact friction directly.
+                                       # Effective vs the REALISTIC authored shapes: pads 0.8 ->
+                                       # sqrt(0.25*0.8) ~ 0.45, table 0.5 -> ~ 0.35. (No shape mu
+                                       # stamp anymore: under Newton's cheat friction the recipe
+                                       # needed table eff ~0.6, and the fold recipe now compensates
+                                       # the physical value with pressing normal force instead —
+                                       # docs/cloths.md "grasp recipe".)
     # ---- VBD particle self-contact (thin-shell fidelity; cf. cloth_particle_kwargs) ----
     # A thin shell folded/draped on itself MUST self-collide or layers pass through each other (and
     # through the table) — the FEM block never needs this (its volume can't fold), which is why the
@@ -282,6 +299,10 @@ def add_ycb_mesh(builder: newton.ModelBuilder, cfg: YcbMeshConfig, pos, *, rest_
     body = builder.add_body(
         xform=wp.transform(wp.vec3(float(pos[0]), float(pos[1]), z), wp.quat_identity()),
         label=Path(cfg.usd_subpath).stem)
-    _mc.add_collision_pieces(builder, body, mesh, cfg)
+    hull_shapes = _mc.add_collision_pieces(builder, body, mesh, cfg)
+    # Register the authored material (2026-07-11 fix): the blanket proxy-fill on the VBD path used
+    # to silently replace it (the MuJoCo rigid-only path kept the build-time values — the two ycb
+    # twins ran DIFFERENT object friction without anyone authoring that).
+    _register_material(builder, shapes=hull_shapes, ke=cfg.ke, kd=cfg.kd, mu=cfg.mu)
     _mc.add_visual_mesh(builder, body, mesh, color=cfg.color)
     return body, mesh

@@ -13,8 +13,9 @@ law a ≤2 N target was literally dead — the 2 N absolute deadband exceeded th
 the workaround was an unreachable 8 N target creeping shut forever; see docs/gripper.md.) The controller must stop the close itself
 (a commanded zero-gap pinch expels a thin shell; docs/cloths.md).
 
-GRASP RECIPE (Newton's, docs/cloths.md): descend the fingertip to the TABLE TOP, straight-down
-pinch, lift, drag at ~TT+0.11. (Tilt 0 everywhere: Newton's right-side folds grasp untilted, and
+GRASP RECIPE (Newton's, docs/cloths.md): descend the fingertip COMMANDED 5 mm BELOW the table top
+(the stopper converts the excess into pressing normal force — the mu*N anchor that makes the pinch
+work at PHYSICAL per-object friction), straight-down pinch, lift, drag at ~TT+0.11. (Tilt 0 everywhere: Newton's right-side folds grasp untilted, and
 the tilted orientation is q6-limit-bound for the panda past x≈0 — a mid-drag tilt blend twisted the
 marginal pinch and helped shed it.) Grasping is pure frictional contact; the cloth is the central
 SI-converted Newton cloth (ClothConfig defaults) — the demo declares NO physics."""
@@ -36,7 +37,13 @@ GRAB = (0.35, -0.45)                           # middle of the shirt's +x edge r
                                                # x=0.37 untilted is q6-limit-bound: 20 mm IK miss)
 DROP = (-0.11, -0.45)                          # GRAB mirrored across the shirt centre (x=0.12): the
                                                # +x edge lands on the -x edge — a fold in half
-SURF = TT + 0.0                                # fingertip grasp point AT the table top
+SURF = TT - 0.005                              # fingertip COMMANDED 5 mm below the table top
+                                               # (Newton's recipe does the same): the robot-side
+                                               # stopper holds the fingers AT the surface and the
+                                               # excess becomes pressing normal force — anchoring
+                                               # is mu*N, so N compensates the physical (lower)
+                                               # cloth<->table friction of the realistic material
+                                               # set (no shape-mu stamp anymore)
 UP = TT + 0.11                                 # lift/drag height (Newton's)
 HI = TT + 0.15                                 # approach height
 
@@ -72,8 +79,8 @@ DEMO = DemoSpec(
                                force_target=2.0)],     # inside the shell's achievable squeeze -> the
                                                        # regulator converges to a stable ~8-9 mm pinch
     start_at_first_waypoint=True,                      # frame 0 = P0 (up), not home_q inside the shirt
-    coupling_soft_ke=CLOTH.soft_contact_ke,            # enable the harvest; framework averages in the
-                                                       # shape side centrally (ke_eff = 30 N/m)
+    coupling_soft_ke=CLOTH.soft_contact_ke,            # enable the harvest; framework derives the
+                                                       # effective ke centrally (harmonic, 30 N/m)
     object_solver_kwargs={"rigid_body_contact_buffer_size": 4096,
                           "rigid_body_particle_contact_buffer_size": 65536},
     object_pipeline_kwargs={"soft_contact_margin": CLOTH.contact_margin},

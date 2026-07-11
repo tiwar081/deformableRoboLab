@@ -87,17 +87,6 @@ def build_franka_robot(
     return builder
 
 
-def add_robot_table_box(builder: newton.ModelBuilder, center_xy, top_z: float,
-                        half=(0.35, 0.5, 0.025), robot: RobotConfig = FRANKA) -> int:
-    """Add a hidden robot-side table collider at an arbitrary placement (for examples that don't
-    use the shared :data:`TABLE`, e.g. the YCB demo's (0.45, 0) table)."""
-    cfg = newton.ModelBuilder.ShapeConfig(margin=1e-3, density=1000.0, is_visible=False,
-                                          ke=5e4, kd=5e2, mu=1.0)
-    return builder.add_shape_box(
-        body=-1, xform=wp.transform(wp.vec3(center_xy[0], center_xy[1], top_z - half[2]), wp.quat_identity()),
-        hx=half[0], hy=half[1], hz=half[2], cfg=cfg, label="robot_contact_table")
-
-
 def set_mujoco_grip_controller(builder: newton.ModelBuilder, cfg: MujocoGripConfig = MUJOCO_GRIP,
                                robot: RobotConfig = FRANKA) -> None:
     """Stiffen the finger position actuators for a TRUE two-way MuJoCo grasp (rigid-only path), so the

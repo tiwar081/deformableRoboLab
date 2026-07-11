@@ -21,7 +21,7 @@ from typing import Any, Callable
 import numpy as np
 import warp as wp
 
-from .params import (FRANKA, TABLE, RIGID_CUBE, CABLE, SOFT_BLOCK, PLATE, RUBIKS_CUBE, GraspWindow)
+from .params import (FRANKA, TABLE, RIGID_CUBE, CABLE, SOFT_BLOCK, PLATE, RUBIKS_CUBE)
 from .assets import (add_table, add_rigid_box, add_cable, add_soft_block, add_plate, add_ycb_mesh,
                      add_rubiks_cube, ClothConfig, add_cloth)
 from .robot import solve_gripper_ik_path
@@ -29,7 +29,7 @@ from .grip import build_gripper_proxies
 from .mathutils import wp_smoothstep
 
 # Particle-deformable kinds whose presence routes a scene to the VBD path + needs gripper proxies.
-_DEFORMABLE_KINDS = {"cable", "soft_block", "cloth", "plate_soft"}
+_DEFORMABLE_KINDS = {"cable", "soft_block", "cloth"}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -94,12 +94,12 @@ class DemoSpec:
     robot_contact_max: int = 8192
     camera: Any = None                           # None -> framework default
     scenic_check_table: bool = True
+    box_slice_proxy: bool = False
     # Optional per-demo render look for the mp4 styles (background/table/lights/cameras/object
     # styles): a robolabViz.RenderSpec. Typed Any so this physics package never imports robolabViz.
     render: Any = None
     # Optional proxy geometry override: for mesh fingers, use contained box slices instead of the
     # default one-for-one finger collider copy.
-    box_slice_proxy: bool = False
     # Start the arm AT its first waypoint (t=0) pose instead of home_q, so frame 0 already has the arm
     # parked out of the way (e.g. clear of a shirt dropping from the air). Default False -> home init.
     start_at_first_waypoint: bool = False
@@ -208,12 +208,12 @@ def make_data_driven_example(base_cls):
             if s.camera is not None:
                 self.camera = s.camera
             self.scenic_check_table = s.scenic_check_table
+            self.box_slice_proxy = s.box_slice_proxy
             self.render_spec = s.render
             self.grasp_windows = s.grasp_windows
             self.coupling_soft_ke = s.coupling_soft_ke
             self.object_solver_kwargs = dict(s.object_solver_kwargs)
             self.object_pipeline_kwargs = dict(s.object_pipeline_kwargs)
-            self.box_slice_proxy = s.box_slice_proxy
             # has_particles + soft_block are DERIVED from the scene (no demo override needed): the
             # grasped/contacting particle deformable's config sets model.soft_contact_*.
             self._deformable_cfg = self._scene_deformable_cfg()
@@ -221,7 +221,7 @@ def make_data_driven_example(base_cls):
             self.soft_block = self._deformable_cfg if self._scene_has_particles() else None
 
         def _scene_has_particles(self):
-            return any(o.kind in ("soft_block", "cloth", "plate_soft") for o in self.spec.scene)
+            return any(o.kind in ("soft_block", "cloth") for o in self.spec.scene)
 
         def _scene_deformable_cfg(self):
             for o in self.spec.scene:                 # the particle deformable whose soft_contact_* apply

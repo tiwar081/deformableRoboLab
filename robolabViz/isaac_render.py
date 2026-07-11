@@ -41,7 +41,7 @@ def main() -> None:
     import omni.replicator.core as rep
     import omni.timeline
     import omni.usd
-    from pxr import Usd, UsdGeom
+    from pxr import UsdGeom
 
     stage = omni.usd.get_context().get_stage()
     fps = args.fps or stage.GetTimeCodesPerSecond() or 60.0

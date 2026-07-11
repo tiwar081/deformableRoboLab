@@ -134,7 +134,7 @@ target instead sets the cage geometry. Tune the per-object target up if it slips
 ```python
 self.grasp_windows = [GraspWindow(close_start=2.8, close_end=4.6, force_target=30.0)]                  # cable: held to end
 self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6)]                       # rigid: GRIP default target
-self.grasp_windows = [GraspWindow(3.2, 4.4, release_start=8.0, release_end=8.6, force_target=3.0)]     # soft: gentle target
+self.grasp_windows = [GraspWindow(3.2, 7.8, release_start=12.4, release_end=13.0, force_target=3.5)]    # berry: slow squeeze, <5 N crush
 ```
 
 ### Why the cable target is what it is
@@ -176,7 +176,7 @@ loose (the rod slips on the lift); much higher targets crush the rod to a non-ph
   `clamp(engage_frac·target, floor, cap)`), **`engage_cap`** (2 N — bounds the approach-phase
   ram-in, which is target-independent), **`k_open_ratio`** (20, dimensionless — the close/open gain
   asymmetry; 10 lost the cable cage in cable_soft's long high-spike sweep; raise it if a spike-dominated grasp opens too readily, it is the only anti-drop knob).
-- **`proxy_ke`** (5e4 N/m), **`proxy_kd`** (1e2 N·s/m abs), **`proxy_mass`** (10 kg) — proxy contact
+- **`proxy_ke`** (5e4 N/m), **`proxy_kd`** (30 N·s/m abs, ~0.9× critical vs a cable node), **`proxy_mass`** (10 kg) — proxy contact
   stiffness/damping/inertia (see CLAUDE.md for the `kd` re-derivation landmine).
 
 **The grip signals.** `TwoWayProxyCoupling` recomputes two both-pads readings at the end of `harvest()`:
