@@ -71,6 +71,12 @@ def _load_visual(usd_path: Path, tile: int) -> VizVisual | None:
     mesh = newton_usd.get_mesh(prim, load_uvs=True)
     uvs = getattr(mesh, "uvs", None)
     verts = np.asarray(mesh.vertices, dtype=np.float32)
+    # Bake the prim's local-to-world xform, mirroring mesh_collision.load_usd_mesh: prim-local
+    # points can be posed/scaled by xformOps (objaverse apple: 0.01 scale). Identity for the
+    # legacy assets, so their visuals are unchanged.
+    m = np.array(UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()))
+    if not np.allclose(m, np.eye(4), atol=1e-9):
+        verts = ((verts.astype(np.float64) @ m[:3, :3]) + m[3, :3]).astype(np.float32)
     if uvs is None or len(uvs) != len(verts):
         return None
     tex_path = getattr(mesh, "texture", None) or _shader_asset_input(prim, usd_path)

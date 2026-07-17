@@ -4,7 +4,52 @@ Scratchpad for the **current** in-flight task: what's unresolved right now, what
 the working hypotheses. Keep it lean — when something is proven and durable, promote it to CLAUDE.md
 (or the relevant `docs/` file) and delete it here. Reset this file at the start of each new big task.
 
-## No task in flight
+## In flight: three-stage agentic pipeline (2026-07-17)
+
+`agent_pipeline.py` + `agentic_pipeline/` (+ `agentic_pipeline/SKILL.md`, registered at
+`.claude/skills/agentic-pipeline`) — see [agentic-pipeline.md](agentic-pipeline.md). Verified:
+userless end-to-end run (`outputs/agenticPipeline/workshop_bench_cable` — self-invented prompt,
+default back-long-edge robot placement, reported default bird's-eye camera, settle ok, feasible
+cable-coiling task); offline unit tests for placements/alignment/reach/schemas; --user interview
+parsing; --scene_init rearrange in flight. Key mechanics landed with it:
+- `robot_base_xform` placements WORK (yawed base: IK/FK/physics verified; the franka_stand render
+  fixture now follows base yaw via `droid_scene_config(robot_yaw_deg=...)`).
+- The legacy `task_generator._base_xy` bug is fixed: the framework-default mount is (-0.45,-0.45)
+  (right SHORT edge; scene_generator's "base at origin" docstring was wrong), and reach is now
+  nearest-point + base-aware (`check_reachable(base_xy=...)`).
+- Direction words are ROBOT-POV everywhere (`geometry.direction_vectors`); the relation solver
+  takes `facing_yaw_deg`; a `tall_keepout` disc under the parked gripper's home TCP repels tall
+  (>0.14 m) objects (a wood block under the parked fingers starts the sim in collision).
+- Prompts are DATA: `agentic_pipeline/prompts/*.md` ($-templates), not Python strings.
+- Post-render visual verification is OPT-IN everywhere now (scene_generator --verify flag too).
+
+## Prior: agentic scene generator (2026-07-13)
+
+`agentic_pipeline/scene_generator.py` + `assets/objects/scene_catalog.json` + [scene-generator.md](scene-generator.md)
+landed and verified end-to-end (rigid+squishy+cable scene, and a garment scene — settled stills in
+`outputs/sceneGen/`): prompt → Claude (fable-5, opus-4-8 fallback; raw HTTPS — the anthropic SDK
+conflicts with the venv's isaacsim `typing_extensions==4.12.2` pin) → grammar validation → circle
+push-apart spatial solver → settle-only DemoSpec → over-the-shoulder still. New centralized pieces:
+`SoftMeshConfig`/`add_soft_mesh_object` (imported `.tet` FEM squishies), ClothConfig `mesh_file`
+(OBJ garments), `Obj(kind="soft_mesh")`, yaw on `add_ycb_mesh`, xform-baking in `load_usd_mesh` +
+`viz_assets` (the objaverse apple carries a 0.01-scale xformOp; its raw points are 100x too big —
+the first time the apple was actually placed in a scene it threw the robot).
+
+Findings that must not be re-walked:
+- **tetgen tets NaN the VBD FEM** (slivers, min |vol| 3e-16..1e-10 m^3; WORSE with quality
+  switches). fTetWild (`wildmeshing`, DefGraspSim's own tool; `assets/objects/_utils/make_tet.py`)
+  gives well-conditioned coarse tets → all three squishies settle DEAD still (max |qd| = 0.000).
+- **Imported squishies author their contact skin at their own PER-PARTICLE-MASS scale**
+  (ke = 2.5e4·(m_p/9e-4), kd ~1.5x pair-critical, kf = 0.01·ke — see catalog `inferred` notes).
+  The raspberry-scale skin on 50x-lighter particles measured ~90x-critical pair damping and NaN'd.
+- SimWeaver (requested cloth source) is unreleased (empty repo); RGBench (its physics source) is
+  the stand-in: measured per-garment params, meshes vendored under `assets/objects/rgbench/`.
+  DefGraspSim meshes are Drive-gated (no public mirror) — geometry rebuilt from YCB via fTetWild,
+  their documented FEM params (rho=1000, nu=0.3, mu=0.7, E-sweep) applied.
+
+Open: lighting + robot placement stay at centralized defaults (RoboLab keeps them in
+environment-gen — add a variations layer later); RenderSpec already exposes the hooks. Garments
+are scaled 0.6-0.65 to fit the worktop; cloth scenes cap at ~4 objects.
 
 Last completed (2026-07-10/11): contact-material ownership + the central band-limited harmonic
 coupling, the realistic per-object re-authorship of EVERY object, retirement of the cloth friction

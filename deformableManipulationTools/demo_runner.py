@@ -23,13 +23,13 @@ import warp as wp
 
 from .params import (FRANKA, TABLE, RIGID_CUBE, CABLE, SOFT_BLOCK, PLATE, RUBIKS_CUBE)
 from .assets import (add_table, add_rigid_box, add_cable, add_soft_block, add_plate, add_ycb_mesh,
-                     add_rubiks_cube, ClothConfig, add_cloth)
+                     add_rubiks_cube, ClothConfig, add_cloth, add_soft_mesh_object)
 from .robot import solve_gripper_ik_path
 from .grip import build_gripper_proxies
 from .mathutils import wp_smoothstep
 
 # Particle-deformable kinds whose presence routes a scene to the VBD path + needs gripper proxies.
-_DEFORMABLE_KINDS = {"cable", "soft_block", "cloth"}
+_DEFORMABLE_KINDS = {"cable", "soft_block", "cloth", "soft_mesh"}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -44,7 +44,8 @@ class Obj:
     config: Any = None
     pos: Any = None
     half: float | None = None         # rigid_box half-extent
-    rest_on_z: bool = False           # ycb_mesh: drop so its lowest point rests on the table top
+    rest_on_z: bool | float = False   # ycb_mesh: rest the lowest vertex on the table top (True) or
+                                       # on an explicit z (float — e.g. the top of a stack target)
     yaw: float = 0.0                  # cloth yaw
     mass: float | None = None         # ycb post-finalize mass override
 
@@ -221,7 +222,7 @@ def make_data_driven_example(base_cls):
             self.soft_block = self._deformable_cfg if self._scene_has_particles() else None
 
         def _scene_has_particles(self):
-            return any(o.kind in ("soft_block", "cloth") for o in self.spec.scene)
+            return any(o.kind in ("soft_block", "cloth", "soft_mesh") for o in self.spec.scene)
 
         def _scene_deformable_cfg(self):
             for o in self.spec.scene:                 # the particle deformable whose soft_contact_* apply
@@ -229,6 +230,8 @@ def make_data_driven_example(base_cls):
                     return o.config or ClothConfig()
                 if o.kind == "soft_block":
                     return o.config or SOFT_BLOCK
+                if o.kind == "soft_mesh":
+                    return o.config                   # SoftMeshConfig (required; no canonical default)
             return None
 
         def _ctx(self, ik_model, ik_state):
@@ -320,12 +323,18 @@ def make_data_driven_example(base_cls):
                     self._cable_bodies = bodies
                 elif o.kind == "soft_block":
                     add_soft_block(builder, o.config or SOFT_BLOCK, np.array(pos, np.float32))
+                elif o.kind == "soft_mesh":
+                    add_soft_mesh_object(builder, o.config, np.array(pos, np.float32), yaw=o.yaw)
                 elif o.kind == "plate":
                     body, _ = add_plate(builder, np.array(pos, np.float32), o.config or PLATE)
                     self._obj_bodies.setdefault("plate", []).append(body)
                 elif o.kind == "ycb_mesh":
-                    rest = self.table_top_z if o.rest_on_z else None
-                    body, mesh = add_ycb_mesh(builder, o.config, np.array(pos, np.float32), rest_on_z=rest)
+                    if isinstance(o.rest_on_z, bool):
+                        rest = self.table_top_z if o.rest_on_z else None
+                    else:
+                        rest = float(o.rest_on_z)
+                    body, mesh = add_ycb_mesh(builder, o.config, np.array(pos, np.float32), rest_on_z=rest,
+                                              yaw=o.yaw)
                     self._obj_bodies.setdefault("ycb", []).append((body, mesh))
                     if o.mass is not None:
                         self.mass_overrides.append((body, o.mass))

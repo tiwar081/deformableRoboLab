@@ -16,7 +16,7 @@ from __future__ import annotations
 # Parameters (single source of truth).
 from .params import (
     RobotConfig, GripConfig, MujocoGripConfig, GraspWindow, TableConfig, CableConfig, SoftBlockConfig,
-    RigidBoxConfig, PlateConfig, YcbMeshConfig,
+    SoftMeshConfig, RigidBoxConfig, PlateConfig, YcbMeshConfig,
     FRANKA, GRIP, MUJOCO_GRIP, TABLE, CABLE,
     SOFT_BLOCK, RIGID_CUBE, PLATE, RUBIKS_CUBE, BOWL_YCB, BANANA_YCB,
 )
@@ -32,6 +32,7 @@ from .grip import build_gripper_proxies, restore_proxy_materials, TwoWayProxyCou
 # Asset builders.
 from .assets import (
     add_table, add_soft_block, add_cable, add_rigid_box, add_plate, add_rubiks_cube, add_ycb_mesh,
+    add_soft_mesh_object, load_tet_mesh, ClothConfig, GREEN_TSHIRT, add_cloth,
     PARTICLE_SOLVER_KWARGS, OBJECTS_DIR,
 )
 # Mesh collision (coacd).
@@ -43,7 +44,7 @@ from .framework import GraspExample, build_viz_model
 
 __all__ = [
     "RobotConfig", "GripConfig", "MujocoGripConfig", "GraspWindow", "TableConfig", "CableConfig",
-    "SoftBlockConfig",
+    "SoftBlockConfig", "SoftMeshConfig", "ClothConfig", "GREEN_TSHIRT",
     "RigidBoxConfig", "PlateConfig", "YcbMeshConfig", "FRANKA", "GRIP", "MUJOCO_GRIP", "TABLE",
     "CABLE", "SOFT_BLOCK", "RIGID_CUBE", "PLATE", "RUBIKS_CUBE", "BOWL_YCB", "BANANA_YCB",
     "quat_rotate_xyzw", "find_body", "smoothstep", "wp_smoothstep", "quat_to_vec4",
@@ -51,7 +52,7 @@ __all__ = [
     "finger_body_indices", "set_mujoco_grip_controller",
     "build_gripper_proxies", "restore_proxy_materials", "TwoWayProxyCoupling", "GripController",
     "add_table", "add_soft_block", "add_cable", "add_rigid_box", "add_plate", "add_rubiks_cube",
-    "add_ycb_mesh", "PARTICLE_SOLVER_KWARGS",
+    "add_ycb_mesh", "add_soft_mesh_object", "load_tet_mesh", "add_cloth", "PARTICLE_SOLVER_KWARGS",
     "OBJECTS_DIR", "load_usd_mesh", "decimate_mesh", "convex_decompose", "add_collision_pieces",
     "add_visual_mesh", "rescale_body_mass", "GraspExample", "build_viz_model",
 ]

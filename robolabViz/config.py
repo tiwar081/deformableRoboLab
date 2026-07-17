@@ -575,6 +575,7 @@ def droid_scene_config(
     table_center_xy: tuple[float, float] = (0.57, 0.0),
     table: str = "maple",
     background: str = "home_office",
+    robot_yaw_deg: float = 0.0,
 ) -> RoboLabSceneConfig:
     """RoboLab ``run_recorded.py`` scene: DROID cameras, dome background, work table.
 
@@ -596,13 +597,18 @@ def droid_scene_config(
     contact region). The top (0.7 x 1.0 m) is yawed 90 deg so its 1.0 m edge
     runs along +X, covering this repo's 0.9 x 0.7 m physics footprint.
     """
+    # The franka_stand is ROBOT-relative (the viz frame is the base frame, translation-only): when
+    # the physics base is yawed (agentic_pipeline robot placement), the stand's offset and rotation
+    # must follow the base yaw or the pedestal renders detached from the rotated robot.
+    yaw = math.radians(robot_yaw_deg)
+    stand_dx, stand_dy = (-0.087 * math.cos(yaw), -0.087 * math.sin(yaw))
     return RoboLabSceneConfig(
         fixtures=[
             FixtureConfig(
                 name="franka_stand",
                 usd_path=ASSETS_DIR / "fixtures" / "franka_table.usd",
-                translate=(-0.087, 0.0, 0.0),
-                rotate_z_deg=180.0,
+                translate=(stand_dx, stand_dy, 0.0),
+                rotate_z_deg=180.0 + robot_yaw_deg,
                 preview_color=(0.35, 0.35, 0.38),
             ),
             work_table_fixture(

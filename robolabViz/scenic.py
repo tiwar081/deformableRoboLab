@@ -33,6 +33,7 @@ This module is the one place robolabViz depends on the physics package
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import numpy as np
@@ -107,11 +108,16 @@ class ScenicGraspExample(GraspExample):
         table = args.table if args.table is not None else (getattr(spec, "table", None) or SETTINGS.render_table)
         background = (args.background if args.background is not None
                       else (getattr(spec, "background", None) or SETTINGS.render_background))
+        # Base yaw (agentic_pipeline robot placement): the stand fixture must follow the rotated
+        # base. The base quat is a pure z-rotation by construction (yaw-only placements).
+        _q = self.robot_base_xform.q
+        base_yaw_deg = math.degrees(2.0 * math.atan2(float(_q[2]), float(_q[3])))
         scene = droid_scene_config(
             table_top_z=table_top_viz,
             table_center_xy=table_center_viz,
             table=table,
             background=background,
+            robot_yaw_deg=base_yaw_deg,
         )
         if spec is not None:
             # Demo deltas first; the central assignments + CLI overrides below still win.

@@ -29,12 +29,22 @@ _WORKER = Path(__file__).resolve().parent / "coacd_worker.py"
 
 
 def load_usd_mesh(path: Path) -> Mesh:
-    """Load the first ``UsdGeom.Mesh`` prim from a USD file as a Newton ``Mesh``."""
+    """Load the first ``UsdGeom.Mesh`` prim from a USD file as a Newton ``Mesh``, with the prim's
+    local-to-world xform BAKED into the vertices. Assets store points in prim-local units and pose
+    them via xformOps (the objaverse apple: a 0.01 scale + rotate — its raw points are 100x too
+    big, which threw the robot the first time the apple was actually placed in a scene);
+    ``Mesh.create_from_usd`` reads raw points only. Every legacy YCB/HOT3D asset has an identity
+    xform (verified), so their meshes — and coacd cache keys — are bit-identical to before."""
     from pxr import Usd, UsdGeom
 
     stage = Usd.Stage.Open(str(path))
     prim = next(p for p in stage.Traverse() if p.IsA(UsdGeom.Mesh))
-    return Mesh.create_from_usd(prim)
+    mesh = Mesh.create_from_usd(prim)
+    m = np.array(UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()))
+    if not np.allclose(m, np.eye(4), atol=1e-9):
+        v = np.asarray(mesh.vertices, dtype=np.float64)
+        mesh = Mesh((v @ m[:3, :3]) + m[3, :3], np.asarray(mesh.indices))
+    return mesh
 
 
 def decimate_mesh(mesh: Mesh, target_faces: int) -> Mesh:

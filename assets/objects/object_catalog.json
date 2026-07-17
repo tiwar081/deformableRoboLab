@@ -1,162 +1,418 @@
 [
-  {
-    "name": "rubiks_cube",
-    "usd_path": "assets/objects/hot3d/rubiks_cube.usd",
-    "prim_path": "/rubiks_cube",
-    "position": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "quat_wxyz": [
-      1.0,
-      0.0,
-      0.0,
-      0.0
-    ],
-    "payload": [],
-    "rigid_body": true,
-    "static_body": false,
-    "class": "toy",
-    "description": "The object is a colorful 3D puzzle consisting of smaller cubes that can be rotated on each axis. Its faces feature a combination of colors, typically including red, green, blue, yellow, orange, and white.",
-    "dims": [
-      0.058285847306251526,
-      0.057770855724811554,
-      0.05796363018453121
-    ],
-    "mass": 0.20000000298023224,
-    "density": 0.0,
-    "dynamic_friction": 2.0,
-    "static_friction": 2.0,
-    "restitution": 0.10000000149011612,
-    "dataset": "hot3d"
-  },
-  {
-    "name": "apple_01",
-    "usd_path": "assets/objects/objaverse/apple_01.usd",
-    "prim_path": "/apple_01",
-    "position": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "quat_wxyz": [
-      1.0,
-      0.0,
-      0.0,
-      0.0
-    ],
-    "payload": [],
-    "rigid_body": true,
-    "static_body": false,
-    "class": "",
-    "description": "",
-    "dims": [
-      0.06805419769762011,
-      0.06592432828416686,
-      0.06768400040975212
-    ],
-    "mass": 0.0,
-    "density": 980.0,
-    "dynamic_friction": 0.800000011920929,
-    "static_friction": 0.800000011920929,
-    "restitution": 0.0,
-    "dataset": "objaverse"
-  },
-  {
-    "name": "banana",
-    "usd_path": "assets/objects/ycb/banana.usd",
-    "prim_path": "/banana",
-    "position": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "quat_wxyz": [
-      1.0,
-      0.0,
-      0.0,
-      0.0
-    ],
-    "payload": [],
-    "rigid_body": true,
-    "static_body": false,
-    "class": "fruit",
-    "description": "These bananas are long and curved, with a smooth yellow skin and slightly green tips. They are commonly known for their sweet taste and are often eaten raw or used in various dishes.",
-    "dims": [
-      0.10888800024986267,
-      0.17841200530529022,
-      0.03666999936103821
-    ],
-    "mass": 0.11999999731779099,
-    "density": 0.0,
-    "dynamic_friction": 2.0,
-    "static_friction": 2.0,
-    "restitution": 0.10000000149011612,
-    "dataset": "ycb"
-  },
-  {
-    "name": "bowl",
-    "usd_path": "assets/objects/ycb/bowl.usd",
-    "prim_path": "/bowl",
-    "position": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "quat_wxyz": [
-      1.0,
-      0.0,
-      0.0,
-      0.0
-    ],
-    "payload": [],
-    "rigid_body": true,
-    "static_body": false,
-    "class": "kitchenware",
-    "description": "The bowls are round with a smooth, glossy surface and a vibrant red color. They feature a speckled design and a slightly raised rim, adding a decorative touch.",
-    "dims": [
-      0.16144399344921112,
-      0.16111300885677338,
-      0.05496999993920326
-    ],
-    "mass": 0.5,
-    "density": 0.0,
-    "dynamic_friction": 2.0,
-    "static_friction": 2.0,
-    "restitution": 0.10000000149011612,
-    "dataset": "ycb"
-  },
-  {
-    "name": "mug",
-    "usd_path": "assets/objects/ycb/mug.usd",
-    "prim_path": "/mug",
-    "position": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "quat_wxyz": [
-      1.0,
-      0.0,
-      0.0,
-      0.0
-    ],
-    "payload": [],
-    "rigid_body": true,
-    "static_body": false,
-    "class": "kitchenware",
-    "description": "The object is a pair of red ceramic mugs with a glossy finish. They feature a curved handle and have subtle vertical stripes along the body.",
-    "dims": [
-      0.11696600168943405,
-      0.09307499974966049,
-      0.08138400316238403
-    ],
-    "mass": 0.30000001192092896,
-    "density": 0.0,
-    "dynamic_friction": 2.0,
-    "static_friction": 2.0,
-    "restitution": 0.10000000149011612,
-    "dataset": "ycb"
-  }
+ {
+  "name": "rubiks_cube",
+  "usd_path": "assets/objects/hot3d/rubiks_cube.usd",
+  "prim_path": "/rubiks_cube",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "toy",
+  "description": "The object is a colorful 3D puzzle consisting of smaller cubes that can be rotated on each axis. Its faces feature a combination of colors, typically including red, green, blue, yellow, orange, and white.",
+  "dims": [
+   0.058285847306251526,
+   0.057770855724811554,
+   0.05796363018453121
+  ],
+  "mass": 0.20000000298023224,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "hot3d"
+ },
+ {
+  "name": "apple_01",
+  "usd_path": "assets/objects/objaverse/apple_01.usd",
+  "prim_path": "/apple_01",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "",
+  "description": "",
+  "dims": [
+   0.06805419769762011,
+   0.06592432828416686,
+   0.06768400040975212
+  ],
+  "mass": 0.0,
+  "density": 980.0,
+  "dynamic_friction": 0.800000011920929,
+  "static_friction": 0.800000011920929,
+  "restitution": 0.0,
+  "dataset": "objaverse"
+ },
+ {
+  "name": "banana",
+  "usd_path": "assets/objects/ycb/banana.usd",
+  "prim_path": "/banana",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "fruit",
+  "description": "These bananas are long and curved, with a smooth yellow skin and slightly green tips. They are commonly known for their sweet taste and are often eaten raw or used in various dishes.",
+  "dims": [
+   0.10888800024986267,
+   0.17841200530529022,
+   0.03666999936103821
+  ],
+  "mass": 0.11999999731779099,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "bowl",
+  "usd_path": "assets/objects/ycb/bowl.usd",
+  "prim_path": "/bowl",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "kitchenware",
+  "description": "The bowls are round with a smooth, glossy surface and a vibrant red color. They feature a speckled design and a slightly raised rim, adding a decorative touch.",
+  "dims": [
+   0.16144399344921112,
+   0.16111300885677338,
+   0.05496999993920326
+  ],
+  "mass": 0.5,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "mug",
+  "usd_path": "assets/objects/ycb/mug.usd",
+  "prim_path": "/mug",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "kitchenware",
+  "description": "The object is a pair of red ceramic mugs with a glossy finish. They feature a curved handle and have subtle vertical stripes along the body.",
+  "dims": [
+   0.11696600168943405,
+   0.09307499974966049,
+   0.08138400316238403
+  ],
+  "mass": 0.30000001192092896,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "cheez_it",
+  "usd_path": "assets/objects/ycb/cheez_it.usd",
+  "prim_path": "/cheez_it",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "food",
+  "description": "The package is predominantly red with white and yellow accents, featuring bold text that reads 'Cheez-It' and 'Original.' It showcases images of the square crackers and includes nutritional information and serving suggestions on the sides.",
+  "dims": [
+   0.07173000276088715,
+   0.1639770120382309,
+   0.213485985994339
+  ],
+  "mass": 0.22499999403953552,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "mustard",
+  "usd_path": "assets/objects/ycb/mustard.usd",
+  "prim_path": "/mustard",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "condiment",
+  "description": "The object features a bright yellow plastic squeeze bottle with a conical cap. It is labeled with bold text and nutritional information, highlighting its flavor and usage.",
+  "dims": [
+   0.09714999794960022,
+   0.06661999970674515,
+   0.19140800833702087
+  ],
+  "mass": 0.5,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "pitcher",
+  "usd_path": "assets/objects/ycb/pitcher.usd",
+  "prim_path": "/pitcher",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "kitchenware",
+  "description": "This pitcher has a smooth, rounded body and a curved handle for easy pouring. It features a deep blue color with a tapered spout at the top.",
+  "dims": [
+   0.1489969938993454,
+   0.14476899802684784,
+   0.24264000356197357
+  ],
+  "mass": 0.5,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "spam_can",
+  "usd_path": "assets/objects/ycb/spam_can.usd",
+  "prim_path": "/spam_can",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "food",
+  "description": "The can is metallic and rectangular with a glossy finish, predominantly featuring a vibrant green and gold color scheme. It prominently displays the brand name 'SPAM' in bold, white letters, along with colorful images of food dishes on its label.",
+  "dims": [
+   0.10212299972772598,
+   0.06032199785113335,
+   0.08363699913024902
+  ],
+  "mass": 0.3499999940395355,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "sugar_box",
+  "usd_path": "assets/objects/ycb/sugar_box.usd",
+  "prim_path": "/sugar_box",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "food",
+  "description": "The box is primarily yellow and white, featuring the word 'Domino' prominently on the front. It has nutritional information and usage instructions printed on the sides in black text.",
+  "dims": [
+   0.04954399913549423,
+   0.09404799342155457,
+   0.1760150045156479
+  ],
+  "mass": 1.0,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "tomato_soup_can",
+  "usd_path": "assets/objects/ycb/tomato_soup_can.usd",
+  "prim_path": "/tomato_soup_can",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "food",
+  "description": "The can is made of metal and features a vibrant red and white label. It displays the text 'Campbell's Tomato Soup' prominently along with nutritional information on the back.",
+  "dims": [
+   0.06785399466753006,
+   0.0677499994635582,
+   0.10203700512647629
+  ],
+  "mass": 0.44999998807907104,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "tuna_can",
+  "usd_path": "assets/objects/ycb/tuna_can.usd",
+  "prim_path": "/tuna_can",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "food",
+  "description": "The can is cylindrical with a metallic surface featuring a vibrant blue label. It has text indicating the contents, nutritional information, and branding, along with a design that includes a cartoon fish.",
+  "dims": [
+   0.0855100005865097,
+   0.08561399579048157,
+   0.033511001616716385
+  ],
+  "mass": 0.20000000298023224,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ },
+ {
+  "name": "wood_block",
+  "usd_path": "assets/objects/ycb/wood_block.usd",
+  "prim_path": "/wood_block",
+  "position": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "quat_wxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "block",
+  "description": "The object is a rectangular block made of light-colored wood, with a smooth surface. It has straight edges and a natural wood grain texture, showcasing a warm, beige hue.",
+  "dims": [
+   0.10395099967718124,
+   0.10354799777269363,
+   0.2058899998664856
+  ],
+  "mass": 2.5,
+  "density": 0.0,
+  "dynamic_friction": 2.0,
+  "static_friction": 2.0,
+  "restitution": 0.10000000149011612,
+  "dataset": "ycb"
+ }
 ]

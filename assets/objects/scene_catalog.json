@@ -1,0 +1,623 @@
+{
+ "_comment": [
+  "Scene-generator object catalog (agentic_pipeline/scene_generator.py). Every entry is an IMPORTED pre-existing",
+  "object: 'kind' picks the centralized deformableManipulationTools builder, 'config' holds the",
+  "per-object physical parameters (constructor kwargs for that kind's config dataclass), 'dims'",
+  "is the tabletop footprint [m] used by the placement solver, 'source' is provenance, and",
+  "'inferred' lists any parameter NOT shipped by the source dataset, with how it was derived.",
+  "Masses for YCB objects are the official YCB paper values; RoboLab's mu=2.0 catalog frictions",
+  "are a documented grasp cheat and are replaced by realistic per-material values (params.py",
+  "convention: PhysX/Isaac household default 0.4-0.5).",
+  "Deformable material law: E = k_mu*(3*k_lambda+2*k_mu)/(k_lambda+k_mu), nu = k_lambda/(2*(k_lambda+k_mu));",
+  "k_damp = 0.02*k_mu (SOFT_BLOCK convention). DefGraspSim FEM anchors: rho=1000, nu=0.3, mu=0.7,",
+  "E swept 2e4..2e9 Pa."
+ ],
+ "objects": [
+  {
+   "name": "banana",
+   "kind": "ycb_mesh",
+   "class": "fruit",
+   "description": "Ripe yellow banana (rigid YCB scan).",
+   "dims": [
+    0.109,
+    0.178,
+    0.037
+   ],
+   "config": {
+    "usd_subpath": "ycb/banana.usd",
+    "target_mass": 0.066,
+    "mu": 0.4,
+    "density": 300.0,
+    "color": [
+     0.93,
+     0.82,
+     0.12
+    ],
+    "coacd_threshold": 0.08,
+    "coacd_max_convex_hull": 8
+   },
+   "source": "YCB 011_banana (RoboLab vendored USD); existing BANANA_YCB params",
+   "inferred": []
+  },
+  {
+   "name": "bowl",
+   "kind": "ycb_mesh",
+   "class": "kitchenware",
+   "description": "Red ceramic bowl, open-top container.",
+   "dims": [
+    0.161,
+    0.161,
+    0.055
+   ],
+   "config": {
+    "usd_subpath": "ycb/bowl.usd",
+    "target_mass": 0.147,
+    "mu": 0.4,
+    "density": 400.0,
+    "color": [
+     0.75,
+     0.22,
+     0.18
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 12
+   },
+   "source": "YCB 024_bowl (RoboLab vendored USD); existing BOWL_YCB params",
+   "inferred": []
+  },
+  {
+   "name": "mug",
+   "kind": "ycb_mesh",
+   "class": "kitchenware",
+   "description": "Red coffee mug with handle.",
+   "dims": [
+    0.117,
+    0.093,
+    0.081
+   ],
+   "config": {
+    "usd_subpath": "ycb/mug.usd",
+    "target_mass": 0.118,
+    "mu": 0.45,
+    "density": 400.0,
+    "color": [
+     0.72,
+     0.14,
+     0.12
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 12
+   },
+   "source": "YCB 025_mug (RoboLab vendored USD); mass = official YCB 118 g",
+   "inferred": [
+    "mu=0.45 glazed ceramic (RoboLab catalog 2.0 is a grasp cheat)"
+   ]
+  },
+  {
+   "name": "cheez_it",
+   "kind": "ycb_mesh",
+   "class": "food",
+   "description": "Cheez-It cracker box (cardboard, tall red box).",
+   "dims": [
+    0.072,
+    0.164,
+    0.213
+   ],
+   "config": {
+    "usd_subpath": "ycb/cheez_it.usd",
+    "target_mass": 0.411,
+    "mu": 0.45,
+    "density": 200.0,
+    "color": [
+     0.85,
+     0.3,
+     0.15
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 8
+   },
+   "source": "YCB 003_cracker_box (RoboLab vendored USD); mass = official YCB 411 g",
+   "inferred": [
+    "mu=0.45 cardboard"
+   ]
+  },
+  {
+   "name": "tomato_soup_can",
+   "kind": "ycb_mesh",
+   "class": "food",
+   "description": "Tomato soup can (metal cylinder, red label).",
+   "dims": [
+    0.068,
+    0.068,
+    0.102
+   ],
+   "config": {
+    "usd_subpath": "ycb/tomato_soup_can.usd",
+    "target_mass": 0.349,
+    "mu": 0.4,
+    "density": 500.0,
+    "color": [
+     0.78,
+     0.2,
+     0.18
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 6
+   },
+   "source": "YCB 005_tomato_soup_can (RoboLab vendored USD); mass = official YCB 349 g",
+   "inferred": [
+    "mu=0.4 printed metal can"
+   ]
+  },
+  {
+   "name": "mustard",
+   "kind": "ycb_mesh",
+   "class": "condiment",
+   "description": "Yellow mustard squeeze bottle.",
+   "dims": [
+    0.097,
+    0.067,
+    0.191
+   ],
+   "config": {
+    "usd_subpath": "ycb/mustard.usd",
+    "target_mass": 0.603,
+    "mu": 0.4,
+    "density": 500.0,
+    "color": [
+     0.85,
+     0.75,
+     0.15
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 8
+   },
+   "source": "YCB 006_mustard_bottle (RoboLab vendored USD); mass = official YCB 603 g",
+   "inferred": [
+    "mu=0.4 smooth plastic bottle"
+   ]
+  },
+  {
+   "name": "sugar_box",
+   "kind": "ycb_mesh",
+   "class": "food",
+   "description": "Domino sugar box (slim yellow cardboard box).",
+   "dims": [
+    0.05,
+    0.094,
+    0.176
+   ],
+   "config": {
+    "usd_subpath": "ycb/sugar_box.usd",
+    "target_mass": 0.514,
+    "mu": 0.45,
+    "density": 300.0,
+    "color": [
+     0.9,
+     0.8,
+     0.3
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 6
+   },
+   "source": "YCB 004_sugar_box (RoboLab vendored USD); mass = official YCB 514 g",
+   "inferred": [
+    "mu=0.45 cardboard"
+   ]
+  },
+  {
+   "name": "tuna_can",
+   "kind": "ycb_mesh",
+   "class": "food",
+   "description": "Flat tuna fish can.",
+   "dims": [
+    0.086,
+    0.086,
+    0.034
+   ],
+   "config": {
+    "usd_subpath": "ycb/tuna_can.usd",
+    "target_mass": 0.171,
+    "mu": 0.4,
+    "density": 600.0,
+    "color": [
+     0.55,
+     0.6,
+     0.65
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 6
+   },
+   "source": "YCB 007_tuna_fish_can (RoboLab vendored USD); mass = official YCB 171 g",
+   "inferred": [
+    "mu=0.4 metal can"
+   ]
+  },
+  {
+   "name": "spam_can",
+   "kind": "ycb_mesh",
+   "class": "food",
+   "description": "Potted meat (Spam) can.",
+   "dims": [
+    0.102,
+    0.06,
+    0.084
+   ],
+   "config": {
+    "usd_subpath": "ycb/spam_can.usd",
+    "target_mass": 0.37,
+    "mu": 0.4,
+    "density": 600.0,
+    "color": [
+     0.35,
+     0.45,
+     0.75
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 6
+   },
+   "source": "YCB 010_potted_meat_can (RoboLab vendored USD); mass = official YCB 370 g",
+   "inferred": [
+    "mu=0.4 metal can"
+   ]
+  },
+  {
+   "name": "pitcher",
+   "kind": "ycb_mesh",
+   "class": "kitchenware",
+   "description": "Blue plastic pitcher (tall, with handle).",
+   "dims": [
+    0.149,
+    0.145,
+    0.243
+   ],
+   "config": {
+    "usd_subpath": "ycb/pitcher.usd",
+    "target_mass": 0.244,
+    "mu": 0.4,
+    "density": 200.0,
+    "color": [
+     0.2,
+     0.35,
+     0.8
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 12
+   },
+   "source": "YCB 019_pitcher_base (RoboLab vendored USD); mass = official YCB 244 g",
+   "inferred": [
+    "mu=0.4 smooth plastic"
+   ]
+  },
+  {
+   "name": "wood_block",
+   "kind": "ycb_mesh",
+   "class": "block",
+   "description": "Large solid wood block (tall rectangular prism).",
+   "dims": [
+    0.104,
+    0.104,
+    0.206
+   ],
+   "config": {
+    "usd_subpath": "ycb/wood_block.usd",
+    "target_mass": 0.729,
+    "mu": 0.5,
+    "density": 700.0,
+    "color": [
+     0.72,
+     0.58,
+     0.4
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 4
+   },
+   "source": "YCB 036_wood_block (RoboLab vendored USD); mass = official YCB 729 g",
+   "inferred": [
+    "mu=0.5 wood-on-wood"
+   ]
+  },
+  {
+   "name": "apple",
+   "kind": "ycb_mesh",
+   "class": "fruit",
+   "description": "Red apple (rigid scan).",
+   "dims": [
+    0.068,
+    0.066,
+    0.068
+   ],
+   "config": {
+    "usd_subpath": "objaverse/apple_01.usd",
+    "target_mass": 0.18,
+    "mu": 0.4,
+    "density": 800.0,
+    "color": [
+     0.75,
+     0.15,
+     0.12
+    ],
+    "coacd_threshold": 0.1,
+    "coacd_max_convex_hull": 6
+   },
+   "source": "Objaverse apple_01 (RoboLab vendored USD)",
+   "inferred": [
+    "mass=0.18 kg typical medium apple (catalog ships mass 0)",
+    "mu=0.4 waxy skin"
+   ]
+  },
+  {
+   "name": "rubiks_cube",
+   "kind": "rubiks_cube",
+   "class": "toy",
+   "description": "Classic 3x3 Rubik's cube (5.8 cm, colored stickers).",
+   "dims": [
+    0.058,
+    0.058,
+    0.058
+   ],
+   "config": {},
+   "source": "HOT3D rubiks_cube (RoboLab vendored); existing RUBIKS_CUBE params (107 g ABS)",
+   "inferred": []
+  },
+  {
+   "name": "steel_cube",
+   "kind": "rigid_box",
+   "class": "block",
+   "description": "Machined steel test cube, 5 cm, 1 kg (deliberately heavy).",
+   "dims": [
+    0.05,
+    0.05,
+    0.05
+   ],
+   "config": {},
+   "source": "canonical RIGID_CUBE (this repo)",
+   "inferred": []
+  },
+  {
+   "name": "gray_tshirt",
+   "kind": "cloth",
+   "class": "clothing",
+   "description": "Gray unisex T-shirt laid flat (large, covers much of the table).",
+   "dims": [
+    0.62,
+    0.5,
+    0.03
+   ],
+   "config": {},
+   "source": "Newton example_cloth_franka shirt USD (vendored unisex_shirt.usd); proven ClothConfig",
+   "inferred": []
+  },
+  {
+   "name": "green_tshirt",
+   "kind": "cloth",
+   "class": "clothing",
+   "description": "Green knit T-shirt laid flat (RGBench measured fabric).",
+   "dims": [
+    0.5,
+    0.64,
+    0.02
+   ],
+   "config": {
+    "mesh_file": "rgbench/green_tshirt.obj",
+    "weld_shared_vertices": true,
+    "expected_boundary_loops": 4,
+    "scale": 0.65,
+    "flatten_z": 1.0,
+    "density": 0.22,
+    "soft_contact_mu": 0.27
+   },
+   "source": "RGBench (hwk0809/RGBench-Cloth-Sim2Real-v1, CC-BY 4.0) green_tshirt_5k.obj + measured params: area density 220 g/m^2, ground friction 0.266 (ASTM protocols)",
+   "inferred": [
+    "scale=0.65 so the flat garment fits the 0.9x0.7 m worktop (fabric params are per-area, so the smaller garment stays physical)",
+    "stretch/bending stiffness kept at the PROVEN Newton-converted ClothConfig values; RGBench solver-native stiffness (stretch 230000) is not unit-transplantable"
+   ]
+  },
+  {
+   "name": "blue_dress",
+   "kind": "cloth",
+   "class": "clothing",
+   "description": "Blue dress laid flat (RGBench measured fabric, stiffer weave than the tshirt).",
+   "dims": [
+    0.54,
+    0.43,
+    0.03
+   ],
+   "config": {
+    "mesh_file": "rgbench/blue_dress.obj",
+    "scale": 0.6,
+    "flatten_z": 1.0,
+    "density": 0.194,
+    "soft_contact_mu": 0.27,
+    "tri_ke": 39.0,
+    "tri_ka": 39.0,
+    "edge_ke": 4.25e-05
+   },
+   "source": "RGBench blue_dress 20k mesh (decimated to 6k faces) + measured params: area density 194 g/m^2, friction 0.266",
+   "inferred": [
+    "scale=0.6 to fit the worktop",
+    "tri_ke/tri_ka = 10 * (900000/230000) ~ 39: RGBench stretch RATIO dress/tshirt applied to the proven tshirt tri_ke (units not transplantable, ratios are)",
+    "edge_ke = 5e-5 * (850/1000): same relative scaling for bending"
+   ]
+  },
+  {
+   "name": "power_cable",
+   "kind": "cable",
+   "class": "cable",
+   "description": "Black jacketed power cable, ~0.5 m, 16 mm diameter.",
+   "dims": [
+    0.49,
+    0.05,
+    0.016
+   ],
+   "config": {},
+   "source": "canonical CABLE (this repo; NVIDIA-recipe capsule rod, the representation NVIDIA itself uses for ropes)",
+   "inferred": []
+  },
+  {
+   "name": "nylon_rope",
+   "kind": "cable",
+   "class": "cable",
+   "description": "Braided nylon rope segment, ~0.5 m, 9.5 mm diameter (softer and lighter than the power cable).",
+   "dims": [
+    0.49,
+    0.05,
+    0.0095
+   ],
+   "config": {
+    "radius": 0.00475,
+    "density": 380.0,
+    "bend_stiffness": 5.0,
+    "bend_damping": 0.1,
+    "friction": 0.5,
+    "contact_ke": 20000.0,
+    "contact_kd": 30.0
+   },
+   "source": "YCB object 67 rope PHYSICAL specs (81 g / 3 m, braided; no 3D scan exists) mapped onto the CableConfig rod schema",
+   "inferred": [
+    "radius=4.75 mm and volume density 380 kg/m^3 from the YCB 81 g / 3 m spec assuming ~9.5 mm braid diameter",
+    "bend_stiffness 5 (vs 15 jacketed cable): a braid bends much easier than a jacketed conductor",
+    "friction 0.5 nylon-on-wood; contact ke/kd kept at the proven cable values"
+   ]
+  },
+  {
+   "name": "sponge",
+   "kind": "soft_mesh",
+   "class": "squishy",
+   "description": "Yellow scrub sponge (very soft, light, 11x8x2 cm).",
+   "dims": [
+    0.079,
+    0.112,
+    0.019
+   ],
+   "config": {
+    "tet_subpath": "squishy/sponge.tet",
+    "density": 54.0,
+    "k_mu": 7700.0,
+    "k_lambda": 11500.0,
+    "k_damp": 154.0,
+    "soft_contact_mu": 0.8,
+    "soft_contact_ke": 700.0,
+    "soft_contact_kd": 0.3,
+    "soft_contact_kf": 7.0
+   },
+   "source": "YCB 026_sponge google_16k scan (CC-BY 4.0), tetrahedralized offline (assets/objects/_utils/make_tet.py, DefGraspSim .tet convention)",
+   "inferred": [
+    "density=54 kg/m^3 = official YCB mass 6.2 g / scan volume",
+    "E=2e4 Pa (DefGraspSim's softest sweep anchor; cellulose sponge literature 20-50 kPa), nu=0.3 (DefGraspSim uniform) -> k_mu=7.7e3, k_lambda=1.15e4",
+    "k_damp=0.02*k_mu (SOFT_BLOCK convention)",
+    "mu=0.8 porous/abrasive surface",
+    "soft_contact_ke/kd/kf re-derived from PER-PARTICLE MASS of the fTetWild mesh (ke = 2.5e4*(m_p/9e-4 kg) keeps the pair at the SOFT_BLOCK eta operating point; kd from pair critical damping ~1.5x crit; kf = 0.01*ke)"
+   ]
+  },
+  {
+   "name": "foam_brick",
+   "kind": "soft_mesh",
+   "class": "squishy",
+   "description": "Red rectangular foam brick (firm foam, 7.5x5x5 cm).",
+   "dims": [
+    0.053,
+    0.078,
+    0.051
+   ],
+   "config": {
+    "tet_subpath": "squishy/foam_brick.tet",
+    "density": 149.0,
+    "k_mu": 38500.0,
+    "k_lambda": 57700.0,
+    "k_damp": 770.0,
+    "soft_contact_mu": 0.7,
+    "soft_contact_ke": 3300.0,
+    "soft_contact_kd": 1.3,
+    "soft_contact_kf": 33.0
+   },
+   "source": "YCB 061_foam_brick google_16k scan (CC-BY 4.0), tetrahedralized offline",
+   "inferred": [
+    "density=149 kg/m^3 = official YCB mass 28 g / scan volume",
+    "E=1e5 Pa firm EVA foam (inside DefGraspSim's skin-to-plastic sweep), nu=0.3 -> k_mu=3.85e4, k_lambda=5.77e4",
+    "k_damp=0.02*k_mu",
+    "mu=0.7 rubbery foam",
+    "soft_contact_ke/kd/kf re-derived from PER-PARTICLE MASS of the fTetWild mesh (ke = 2.5e4*(m_p/9e-4 kg) keeps the pair at the SOFT_BLOCK eta operating point; kd from pair critical damping ~1.5x crit; kf = 0.01*ke)"
+   ]
+  },
+  {
+   "name": "banana_soft",
+   "kind": "soft_mesh",
+   "class": "squishy",
+   "description": "Deformable ripe banana (DefGraspSim-parameterized FEM version of the YCB banana).",
+   "dims": [
+    0.109,
+    0.178,
+    0.037
+   ],
+   "config": {
+    "tet_subpath": "squishy/banana_soft.tet",
+    "density": 1000.0,
+    "k_mu": 77000.0,
+    "k_lambda": 115000.0,
+    "k_damp": 1540.0,
+    "soft_contact_mu": 0.7,
+    "soft_contact_ke": 10500.0,
+    "soft_contact_kd": 4.0,
+    "soft_contact_kf": 105.0
+   },
+   "source": "YCB 011_banana google_16k scan tetrahedralized offline; FEM parameters are DefGraspSim's OFFICIAL settings (their banana IS the YCB banana; mesh distribution is Google-Drive-gated so the geometry was rebuilt from YCB with their own mesh->tet pipeline)",
+   "inferred": [
+    "E=2e5 Pa chosen from DefGraspSim's documented sweep {2e4,2e5,2e6,2e9} as the produce-like tier; rho=1000, nu=0.3, mu=0.7 are DefGraspSim's uniform official values",
+    "k_damp=0.02*k_mu",
+    "soft_contact_ke/kd/kf re-derived from PER-PARTICLE MASS of the fTetWild mesh (ke = 2.5e4*(m_p/9e-4 kg) keeps the pair at the SOFT_BLOCK eta operating point; kd from pair critical damping ~1.5x crit; kf = 0.01*ke)"
+   ]
+  },
+  {
+   "name": "raspberry_cube",
+   "kind": "soft_block",
+   "class": "squishy",
+   "description": "Very soft raspberry-like cube, 5 cm (delicate fruit flesh; the repo's canonical tuned FEM block).",
+   "dims": [
+    0.05,
+    0.05,
+    0.05
+   ],
+   "config": {},
+   "source": "canonical SOFT_BLOCK (this repo, tuned)",
+   "inferred": []
+  }
+ ],
+ "soft_body_colors": {
+  "sponge": [
+   0.95,
+   0.85,
+   0.3
+  ],
+  "foam_brick": [
+   0.85,
+   0.25,
+   0.2
+  ],
+  "banana_soft": [
+   0.93,
+   0.82,
+   0.12
+  ],
+  "raspberry_cube": [
+   0.83,
+   0.2,
+   0.35
+  ],
+  "gray_tshirt": [
+   0.55,
+   0.55,
+   0.58
+  ],
+  "green_tshirt": [
+   0.08,
+   0.44,
+   0.36
+  ],
+  "blue_dress": [
+   0.16,
+   0.3,
+   0.65
+  ]
+ }
+}

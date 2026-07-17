@@ -354,6 +354,32 @@ class SoftBlockConfig:
 
 
 @dataclass(frozen=True)
+class SoftMeshConfig:
+    """A squishy volumetric FEM object from an IMPORTED tetrahedral mesh (``.tet``, the IsaacGym
+    format shipped by NVlabs DefGraspSim: ``v x y z`` vertex lines + ``t i0 i1 i2 i3`` 0-indexed
+    tets). Mirrors :class:`SoftBlockConfig`'s material/contact schema exactly, so the framework's
+    centralized soft-contact coupling, proxy harvest, and FEM particle-solver config apply
+    identically — only the geometry source differs (imported tets instead of a procedural grid).
+
+    Material defaults are the canonical raspberry-like SOFT_BLOCK values; per-object catalog
+    entries (assets/objects/scene_catalog.json) override ``density``/``k_mu``/``k_lambda`` from the
+    object's real material class (e.g. cellulose sponge, foam). E = k_mu*(3*k_lambda+2*k_mu)/
+    (k_lambda+k_mu); pick k_lambda ~ 5*k_mu for nu ~ 0.42 (soft tissue/foam range)."""
+    tet_subpath: str                  # under assets/objects, e.g. "defgraspsim/sphere_flat_base.tet"
+    scale: float = 1.0                # native mesh units -> metres
+    density: float = 650.0
+    k_mu: float = 2.0e3
+    k_lambda: float = 1.0e4
+    k_damp: float = 4.0e1             # tissue viscosity, keep ~0.02*k_mu like SOFT_BLOCK
+    particle_radius: float = 0.0035
+    contact_margin: float = 0.01
+    soft_contact_ke: float = 2.5e4    # contact SKIN penalty (see SoftBlockConfig rationale)
+    soft_contact_kd: float = 13.0
+    soft_contact_kf: float = 2.5e2
+    soft_contact_mu: float = 0.5
+
+
+@dataclass(frozen=True)
 class RigidBoxConfig:
     """Rigid box object. ``mass`` (when not None) is the exact body mass [kg]; otherwise the mass
     is density-derived from the shape volume (used by the distinct YCB rubik's cube)."""
