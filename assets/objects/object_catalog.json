@@ -414,5 +414,101 @@
   "static_friction": 2.0,
   "restitution": 0.10000000149011612,
   "dataset": "ycb"
+ },
+ {
+  "name": "bin_a03",
+  "usd_path": "assets/objects/vomp/bin_a03/bin_a03.usd",
+  "prim_path": "/bin_a03",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "quat_wxyz": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "storage",
+  "description": "open-top container",
+  "dims": [
+   0.157,
+   0.101,
+   0.08
+  ],
+  "mass": 0.3,
+  "density": 0.0,
+  "dynamic_friction": 0.5,
+  "static_friction": 0.5,
+  "restitution": 0.1,
+  "dataset": "vomp"
+ },
+ {
+  "name": "bin_b03",
+  "usd_path": "assets/objects/vomp/bin_b03/bin_b03.usd",
+  "prim_path": "/bin_b03",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "quat_wxyz": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "storage",
+  "description": "open-top container",
+  "dims": [
+   0.231,
+   0.14,
+   0.12
+  ],
+  "mass": 0.3,
+  "density": 0.0,
+  "dynamic_friction": 0.5,
+  "static_friction": 0.5,
+  "restitution": 0.1,
+  "dataset": "vomp"
+ },
+ {
+  "name": "bin_a04",
+  "usd_path": "assets/objects/vomp/bin_a04/bin_a04.usd",
+  "prim_path": "/bin_a04",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "quat_wxyz": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "storage",
+  "description": "open-top container",
+  "dims": [
+   0.298,
+   0.141,
+   0.129
+  ],
+  "mass": 0.3,
+  "density": 0.0,
+  "dynamic_friction": 0.5,
+  "static_friction": 0.5,
+  "restitution": 0.1,
+  "dataset": "vomp"
  }
 ]

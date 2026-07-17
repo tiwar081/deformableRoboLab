@@ -26,10 +26,11 @@ import urllib.error
 from pathlib import Path
 
 from agentic_pipeline import (build, env_gen, geometry, load_prompt, scene_gen, scene_generator as sg,
-                               task_gen, task_generator as tg)
+                               scene_metrics, task_gen, task_generator as tg)
 
 REPO_ROOT = Path(__file__).resolve().parent
 OUTPUT_ROOT = REPO_ROOT / "outputs" / "agenticPipeline"
+SETTLE_RETRIES = 3          # RoboLab-parity: re-generate the scene up to 3x on a physics-settle failure
 
 
 # ---------------------------------------------------------------------------------------------
@@ -62,7 +63,8 @@ def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
                  scene_init: Path | str | None = None, count_hint: int | None = None,
                  out_root: Path | str = OUTPUT_ROOT, name: str | None = None,
                  model: str = sg.DEFAULT_MODEL, device: str = "cuda:0", seed: int = 0,
-                 render: bool = True, verify: bool = False, settle: bool = True,
+                 render: bool = True, verify: bool = True, settle: bool = True,
+                 settle_writeback: bool = True, success_predicate: bool = True,
                  verbose: bool = True) -> dict:
     """The full scene -> task -> env pipeline. Returns the manifest (also written as
     pipeline.json in the run folder)."""
@@ -99,20 +101,32 @@ def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
     run_dir, demo_py = build.write_run(scene, out_root, name=name)
     settle_report = None
     if settle:
+        # RoboLab-parity settle loop: re-generate the layout on physics failure, up to
+        # SETTLE_RETRIES times, feeding the settle diagnostics back to the scene agent each time.
         settle_report = scene_gen.settle_check(demo_py, device=device, verbose=verbose)
-        if not settle_report.get("ok"):
+        for attempt in range(1, SETTLE_RETRIES + 1):
+            if settle_report.get("ok"):
+                break
             feedback = scene_gen.settle_feedback(settle_report)
             if verbose:
-                print(f"[pipeline/scene] {feedback}")
+                print(f"[pipeline/scene] settle retry {attempt}/{SETTLE_RETRIES}: {feedback}")
             scene = scene_gen.call_scene_agent(
                 f"{prompt}\n\nYour previous layout failed physics: {feedback}",
-                placement=ref_placement, model=model, seed=seed + 1, count_hint=count_hint,
+                placement=ref_placement, model=model, seed=seed + attempt, count_hint=count_hint,
                 fixed_multiset=fixed_multiset, verbose=verbose)
             scene["name"] = run_dir.name                      # keep the folder identity
             (run_dir / "scene.json").write_text(json.dumps(scene, indent=1))
             settle_report = scene_gen.settle_check(demo_py, device=device, verbose=verbose)
-            if verbose and not settle_report.get("ok"):
-                print("[pipeline/scene] settle check still failing; continuing with a warning")
+        if verbose and not settle_report.get("ok"):
+            print(f"[pipeline/scene] settle check still failing after {SETTLE_RETRIES} retries; "
+                  f"continuing with a warning")
+        # Settled-pose write-back (RoboLab --replace): the stored scene now reflects where objects
+        # actually came to rest. Enabled by default; --no-settle-writeback keeps the spawn poses.
+        if settle_writeback:
+            n = scene_gen.write_back_settled_poses(scene, settle_report)
+            (run_dir / "scene.json").write_text(json.dumps(scene, indent=1))
+            if verbose and n:
+                print(f"[pipeline/scene] wrote back {n} settled object pose(s) into scene.json")
 
     # Stage 2 — task gen (+ robot placement; scene_init requires a DIFFERENT task than the source).
     task, placement = task_gen.call_task_agent(scene, mode=placement_mode,
@@ -133,12 +147,19 @@ def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
                                      camera_spec=camera_spec, model=model, verbose=verbose)
     (run_dir / "env.json").write_text(json.dumps(env, indent=1))
 
+    metrics = scene_metrics.scene_metrics(scene)
+    quality_notes = scene_metrics.quality_feedback(metrics)
+    if verbose and quality_notes:
+        print(f"[pipeline/scene] quality: {metrics} | {'; '.join(quality_notes)}")
+
     manifest = {
         "prompt": prompt, "mode": placement_mode, "scene_init": str(scene_init) if scene_init else None,
         "run_dir": str(run_dir),
         "robot_placement": placement,
         "settle": settle_report,
+        "scene_metrics": metrics, "quality_notes": quality_notes,
         "feasibility": task.feasibility,
+        "success_spec": task_gen.task_dict(task, placement)["success_spec"],
         "camera": env.get("camera"), "camera_report": env.get("camera_report"),
         "paths": {"scene": str(run_dir / "scene.json"), "task": str(run_dir / "task.json"),
                   "env": str(run_dir / "env.json"), "demo": str(demo_py)},
@@ -186,7 +207,7 @@ def interview() -> dict:
     place = _ask("3. Robot placement — 'default' (middle of the back long edge) or 'task' "
                  "(chosen per task)", "task")
     camera = _ask("4. Exterior camera — describe it, or blank for the default front bird's-eye view")
-    verify = _ask("5. Post-render visual verification? (y/N)", "n").lower().startswith("y")
+    verify = _ask("5. Post-render visual verification? (Y/n)", "y").lower().startswith("y")
     out = _ask("6. Output directory", str(OUTPUT_ROOT))
     return {"prompt": prompt, "count_hint": int(count) if count.isdigit() else None,
             "placement_mode": "task" if place.lower().startswith("t") else "default",
@@ -209,25 +230,36 @@ if __name__ == "__main__":
     ap.add_argument("--model", default=sg.DEFAULT_MODEL)
     ap.add_argument("--device", default="cuda:0")
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--no-render", action="store_true")
-    ap.add_argument("--verify", action="store_true",
-                    help="OPT-IN post-render visual verification (off by default)")
-    ap.add_argument("--skip-settle-check", action="store_true")
+    # --- toggles for the HEAVYWEIGHT (time-intensive) stages; all default ON, flags turn them off ---
+    # These are the slow parts (each adds seconds-to-minutes): they run by default (RoboLab parity)
+    # and can be skipped for a fast iteration. Non-heavyweight checks (grammar, spatial solver, OBB,
+    # feasibility, quality metrics, success-spec compile) are cheap and always run.
+    ap.add_argument("--no-render", action="store_true",
+                    help="[heavyweight] skip the final PBR render of the settled scene")
+    ap.add_argument("--no-verify", dest="verify", action="store_false",
+                    help="[heavyweight] skip the post-render visual verification (agent inspects "
+                         "the image; extra model call + possible re-render). On by default.")
+    ap.add_argument("--skip-settle-check", dest="settle", action="store_false",
+                    help="[heavyweight] skip the headless physics settle check + its retries")
+    ap.add_argument("--no-settle-writeback", dest="settle_writeback", action="store_false",
+                    help="keep spawn poses instead of writing settled poses back into scene.json")
+    ap.set_defaults(verify=True, settle=True, settle_writeback=True)
     args = ap.parse_args()
 
     kw = dict(placement_mode=args.placement or "default", camera_spec=args.camera,
-              count_hint=args.count, out_root=args.out_dir, verify=args.verify)
+              count_hint=args.count, out_root=args.out_dir, verify=args.verify,
+              settle_writeback=args.settle_writeback)
     if args.user:
         answers = interview()
         kw.update(placement_mode=(args.placement or answers["placement_mode"]),
                   camera_spec=args.camera or answers["camera_spec"],
                   count_hint=args.count or answers["count_hint"],
-                  out_root=answers["out_root"], verify=args.verify or answers["verify"])
+                  out_root=answers["out_root"], verify=args.verify and answers["verify"])
         args.prompt = answers["prompt"]
 
     manifest = run_pipeline(
         args.prompt, scene_init=args.scene_init, name=args.name, model=args.model,
         device=args.device, seed=args.seed, render=not args.no_render,
-        settle=not args.skip_settle_check, **kw)
+        settle=args.settle, **kw)
     print(json.dumps({k: manifest[k] for k in ("run_dir", "robot_placement", "camera_report",
                                                "paths") if manifest.get(k) is not None}, indent=1))

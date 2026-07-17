@@ -7,7 +7,30 @@ the working hypotheses. Keep it lean — when something is proven and durable, p
 ## In flight: three-stage agentic pipeline (2026-07-17)
 
 `agent_pipeline.py` + `agentic_pipeline/` (+ `agentic_pipeline/SKILL.md`, registered at
-`.claude/skills/agentic-pipeline`) — see [agentic-pipeline.md](agentic-pipeline.md). Verified:
+`.claude/skills/agentic-pipeline`) — see [agentic-pipeline.md](agentic-pipeline.md).
+
+**RoboLab-parity batch (2026-07-17, second pass):** OBB/SAT elongated-aware collision
+(`packing.py`; RoboLab's own solver is circle-only despite its "convex hull" docstring — ours is
+strictly better), support-ratio stacking check, multi-object ellipse container packing, partial
+containment (banana-in-bowl), settled-pose write-back (rigid-only, RoboLab `--replace`; spawn poses
+kept under `spawn_*`), scene quality metrics (`scene_metrics.py`), executable success predicates
+(`success.py`: open-top hull containment via scipy ConvexHull + open_top_planes, footprint support,
+robot-POV 45° cone, deformable proxies; `success_spec` embedded in task.json), catalog ops
+(`catalog_ops.py` ingest/regen). Camera lowered/flattened to ~30° look-down; raised parked start
+pose; settle retry 1→3; visual verify now DEFAULT-ON (`--no-verify` off-switch). Heavyweight stages
+all flag-gated (see agentic-pipeline.md flag table). NEW containers vendored from RoboLab VoMP
+(`assets/objects/vomp/`): `parts_bin`/`tool_bin`/`long_tray_bin` — non-articulated, coacd-decomposed
+open-top, settle clean; recognized via a catalog `container: true` flag (bowl/mug/pitcher flagged
+too), so `_is_container` and the `in`-relation validation read the flag, not a hardcoded list.
+(A thin-shell utility bucket was trialed but sinks ~5 cm on the rigid MuJoCo contact path — the
+settle check flags it — so it was dropped.) TWO bugs the container run surfaced + fixed: (1) the
+settle harness read `object_model.body_label` which is None on the rigid-only MuJoCo path (objects
+merged into robot_model after `object_body_start`) — now path-agnostic, so settled-pose write-back
+works for rigid-only scenes too; (2) `check_static` now names the exact required roles + strays
+when the agent puts a value under the wrong param role (it kept using `reference` for
+`object_in_container`'s `container`).
+
+Verified:
 userless end-to-end run (`outputs/agenticPipeline/workshop_bench_cable` — self-invented prompt,
 default back-long-edge robot placement, reported default bird's-eye camera, settle ok, feasible
 cable-coiling task); offline unit tests for placements/alignment/reach/schemas; --user interview

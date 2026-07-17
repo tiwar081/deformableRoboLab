@@ -75,7 +75,14 @@ OVER_SHOULDER_CAMERA = "over_shoulder_left_camera"
 # ABOVE the target so gravity settles the stack / drops it into the container.
 RELATIONS_2D = ("left-of", "right-of", "in-front-of", "behind")
 RELATIONS_STACK = ("on", "in")
-CONTAINER_NAMES = ("bowl", "mug", "pitcher")   # open-top containers usable as an "in" target
+
+
+def container_names(catalog: dict | None = None) -> list[str]:
+    """Open-top container object names usable as an 'in' target — read from the catalog's
+    ``container`` flag so any imported container (bowls, buckets, bins, non-articulated cabinets)
+    is recognized without editing this module."""
+    catalog = catalog or load_catalog()
+    return [o["name"] for o in catalog["objects"] if o.get("container") is True]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -138,7 +145,7 @@ RELATIONS (optional per object; use them whenever the prompt implies arrangement
   direction (optional "distance" = center-to-center metres; omit for touching-with-clearance).
 - "on": stack this object ON TOP of the target. The target must be a rigid object with a similar or
   larger footprint. Give x/y near the target's; they are pinned to the target automatically.
-- "in": drop this object INTO an open-top container. The target must be one of: {", ".join(CONTAINER_NAMES)}.
+- "in": drop this object INTO an open-top container. The target must be one of: {", ".join(container_names(catalog))}.
 - "target" is the INDEX of the target object in your objects array. Chains ("A on B on C") are
   allowed but keep stacks at most 3 high; never make relation cycles. Cables and garments cannot
   be stacked ON or dropped IN anything, and nothing can target a cable, garment, or squishy item
@@ -314,9 +321,10 @@ def _validate_relations(objs: list, by_name: dict) -> list[str]:
                 elif max(se["dims"][0], se["dims"][1]) > 1.6 * max(te["dims"][0], te["dims"][1]):
                     errs.append(f"{label}: footprint too large to stack on {objs[tgt]['name']}")
             if rtype == "in":
-                if objs[tgt]["name"] not in CONTAINER_NAMES:
+                containers = [n for n, e in by_name.items() if e.get("container") is True]
+                if not te.get("container"):
                     errs.append(f"{label}: 'in' target must be an open-top container "
-                                f"({', '.join(CONTAINER_NAMES)}), not {objs[tgt]['name']}")
+                                f"({', '.join(sorted(containers))}), not {objs[tgt]['name']}")
                 elif min(se["dims"][0], se["dims"][1]) > 0.75 * max(te["dims"][0], te["dims"][1]):
                     errs.append(f"{label}: too large to fit in {objs[tgt]['name']}")
     # cycle check over the relation graph (subject -> target)
@@ -391,6 +399,7 @@ def resolve_placements(scene: dict, catalog: dict | None = None, *, margin: floa
     ``tall_keepout`` = (x, y, radius, min_height): an obstacle disc applied ONLY to objects taller
     than ``min_height`` — the parked gripper's home-TCP hover zone (a tall object under the
     fingers starts the sim in collision). Cables/cloths lie flat and are unaffected."""
+    from . import packing
     by_name = catalog_by_name(catalog)
     rng = random.Random(seed)
     x0, x1, y0, y1 = workspace_bounds()
@@ -399,6 +408,18 @@ def resolve_placements(scene: dict, catalog: dict | None = None, *, margin: floa
     def _radius(o):
         e = by_name[o["name"]]
         return 0.5 * max(e["dims"][0], e["dims"][1]) + margin
+
+    def _obb(m):
+        """(cx, cy, yaw, w, d) OBB for a movable entry m=[idx,x,y,r]. Cables/keep-out (idx<0 or
+        no dims) fall back to a square of side 2r so the same SAT path handles them."""
+        idx = m[0]
+        if idx < 0:
+            return (m[1], m[2], 0.0, 2 * m[3], 2 * m[3])
+        e = by_name[objs[idx]["name"]]
+        if e["kind"] == "cable":
+            return (m[1], m[2], 0.0, 2 * m[3], 2 * m[3])
+        yaw = math.radians(objs[idx].get("yaw_deg", 0.0))
+        return (m[1], m[2], yaw, e["dims"][0], e["dims"][1])
 
     # Apply 2D relations first (targets before subjects — follow chains up to depth 5): the subject
     # is repositioned beside its target's CURRENT position; the push-apart below may still nudge it.
@@ -456,16 +477,18 @@ def resolve_placements(scene: dict, catalog: dict | None = None, *, margin: floa
                 a = movable[a_i]
                 if b[0] == a[0]:
                     continue
-                dx, dy = b[1] - a[1], b[2] - a[2]
-                d = math.hypot(dx, dy)
-                overlap = a[3] + b[3] - d
+                # Broad phase: skip pairs whose bounding circles are clearly apart (cheap), then
+                # OBB/SAT narrow phase so an elongated object at a yaw is judged by its true
+                # footprint, not its longest-side circle (RoboLab uses only the circle).
+                if math.hypot(b[1] - a[1], b[2] - a[2]) > a[3] + b[3]:
+                    continue
+                overlap, ux, uy = packing.obb_penetration(_obb(a), _obb(b), margin=0.5 * margin)
                 if overlap <= 1e-4:
                     continue
-                if d < 1e-6:
+                if abs(ux) < 1e-9 and abs(uy) < 1e-9:
                     ang = rng.uniform(0, 2 * math.pi)
-                    dx, dy, d = math.cos(ang), math.sin(ang), 1.0
-                ux, uy = dx / d, dy / d
-                if b in obstacles or b[0] < 0:
+                    ux, uy = math.cos(ang), math.sin(ang)
+                if b in obstacles or b[0] < 0:      # push only 'a' off a fixed obstacle
                     a[1] -= ux * overlap
                     a[2] -= uy * overlap
                 else:
@@ -483,11 +506,13 @@ def resolve_placements(scene: dict, catalog: dict | None = None, *, margin: floa
             a = movable[a_i]
             if b[0] == a[0]:
                 continue
-            gap = math.hypot(b[1] - a[1], b[2] - a[2]) - (a[3] + b[3])
-            if gap < -0.005:
+            if math.hypot(b[1] - a[1], b[2] - a[2]) > a[3] + b[3]:
+                continue
+            depth, _, _ = packing.obb_penetration(_obb(a), _obb(b))
+            if depth > 0.005:
                 na = objs[a[0]]["name"]
                 nb = objs[b[0]]["name"] if b[0] >= 0 else "the parked gripper's hover zone (tall object)"
-                problems.append(f"{na} overlaps {nb} by {-gap:.3f} m")
+                problems.append(f"{na} overlaps {nb} by {depth:.3f} m")
     for m in movable:
         objs[m[0]]["x"] = round(m[1], 4)
         objs[m[0]]["y"] = round(m[2], 4)

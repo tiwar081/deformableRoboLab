@@ -68,7 +68,7 @@ def scene_system(catalog: dict, placement: dict | None = None, *, count_hint: in
         x0=f"{x0:.2f}", x1=f"{x1:.2f}", y0=f"{y0:.2f}", y1=f"{y1:.2f}",
         directions=geometry.directions_text(placement),
         catalog=catalog_lines(catalog),
-        containers=", ".join(sg.CONTAINER_NAMES),
+        containers=", ".join(sg.container_names(catalog)),
         count_rule=count_rule,
         extra_rules=extra,
     )
@@ -147,6 +147,53 @@ def settle_check(demo_py: Path | str, *, device: str = "cuda:0", verbose: bool =
             return json.loads(line[len("SETTLE_JSON:"):])
     raise RuntimeError(f"settle check produced no report (exit {res.returncode}):\n"
                        f"{res.stdout[-1500:]}\n{res.stderr[-1500:]}")
+
+
+def write_back_settled_poses(scene: dict, report: dict) -> int:
+    """RoboLab's settled-pose write-back (their ``--replace``): overwrite each scene object's
+    x/y/yaw with its SETTLED pose from the physics run, so the stored scene reflects where objects
+    actually came to rest (relations/stacks resolved, small drift baked in). Rigid bodies only
+    (deformables have no single pose); matched by label, duplicates by order. Records the original
+    spawn pose under ``spawn_x/spawn_y/spawn_yaw_deg`` so it is not lost. Returns the count updated.
+    Skipped when the settle was not finite (poses would be garbage)."""
+    if not report.get("finite", True):
+        return 0
+    by_label: dict[str, list] = {}
+    for s in report.get("settled", []):
+        by_label.setdefault(s["label"], []).append(s)
+    cursors: dict[str, int] = {}
+    n = 0
+    rigid_kinds = {"ycb_mesh", "rigid_box", "rubiks_cube"}
+    for o in scene.get("objects", []):
+        # Rigid bodies only: a cable/cloth/squishy has no single settled pose (its shape is the
+        # particle cloud), and its 'x/y/yaw' is a spawn hint the builder re-derives, not a body pose.
+        if sg.catalog_by_name()[o["name"]]["kind"] not in rigid_kinds:
+            continue
+        # a body is labeled with the asset stem; ycb uses the usd stem, others the kind name.
+        label = _object_label(o)
+        pool = by_label.get(label)
+        if not pool:
+            continue
+        k = cursors.get(label, 0)
+        if k >= len(pool):
+            continue
+        cursors[label] = k + 1
+        s = pool[k]
+        o.setdefault("spawn_x", o.get("x"))
+        o.setdefault("spawn_y", o.get("y"))
+        o.setdefault("spawn_yaw_deg", o.get("yaw_deg"))
+        o["x"], o["y"], o["yaw_deg"] = s["x"], s["y"], s["yaw_deg"]
+        n += 1
+    return n
+
+
+def _object_label(o: dict) -> str:
+    """The physics body label the framework assigns to a scene object (matches settle.py labels)."""
+    e = sg.catalog_by_name()[o["name"]]
+    kind = e["kind"]
+    if kind == "ycb_mesh":
+        return Path(e["config"]["usd_subpath"]).stem
+    return {"rigid_box": "cube", "rubiks_cube": "rubiks_cube"}.get(kind, kind)
 
 
 def settle_feedback(report: dict) -> str:

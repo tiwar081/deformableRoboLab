@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -42,7 +43,15 @@ def main() -> None:
     demo = cls(viewer, run_args)
     frames = args.frames or demo.spec.num_frames
 
-    labels = list(demo.object_model.body_label) if demo.object_model is not None else []
+    # Object body labels, path-agnostic: on the VBD (deformable) path the objects live in
+    # object_model; on the MuJoCo rigid-only path they are appended to robot_model after
+    # object_body_start (object_body_q() already returns the right slice for both).
+    if demo.object_model is not None:
+        labels = list(demo.object_model.body_label)
+    elif demo.object_body_start is not None:
+        labels = list(demo.robot_model.body_label)[demo.object_body_start:]
+    else:
+        labels = []
     keep = [i for i, lb in enumerate(labels)
             if not any(t in str(lb).lower() for t in ("proxy", "palm", "finger"))]
     bq0 = demo.object_body_q()
@@ -55,6 +64,7 @@ def main() -> None:
     bq1 = demo.object_body_q()
     finite = bool(np.all(np.isfinite(bq1))) if bq1.size else True
     bodies, off_table, large_disp = [], [], []
+    settled = []                          # per rigid body: settled world (x, y, z, yaw_deg)
     x0 = TABLE.pos[0] - TABLE.half[0] - 0.10
     x1 = TABLE.pos[0] + TABLE.half[0] + 0.10
     y0 = TABLE.pos[1] - TABLE.half[1] - 0.10
@@ -67,6 +77,12 @@ def main() -> None:
             if not finite:
                 continue
             ex_, ey_, ez_ = bq1[i, :3]
+            # settled world pose (quaternion is stored [x, y, z, w] in body_q[3:7]); yaw about +z.
+            qx, qy, qz, qw = (float(bq1[i, 3 + k]) for k in range(4))
+            yaw_deg = math.degrees(math.atan2(2.0 * (qw * qz + qx * qy),
+                                              1.0 - 2.0 * (qy * qy + qz * qz)))
+            settled.append({"label": lb, "x": round(float(ex_), 4), "y": round(float(ey_), 4),
+                            "z": round(float(ez_), 4), "yaw_deg": round(yaw_deg, 2)})
             if not (x0 <= ex_ <= x1 and y0 <= ey_ <= y1) or ez_ < TABLE.top_z - 0.05:
                 off_table.append(lb)
             elif d > 0.05:
@@ -86,6 +102,7 @@ def main() -> None:
     report = {
         "finite": finite,
         "bodies": bodies,
+        "settled": settled,               # rigid-body settled world poses (for pose write-back)
         "off_table": sorted(set(off_table)),
         "large_displacement": sorted(set(large_disp)),
         "particle_drift": particle_drift,

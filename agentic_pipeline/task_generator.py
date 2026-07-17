@@ -63,10 +63,16 @@ KIND_CATEGORY = {
 }
 DEFORMABLE_CATEGORIES = {"cloth", "cable", "squishy"}
 
-# Semantic classes (catalog "class" field) that are OPEN-TOP containers a thing can be placed INTO.
-# A can / box / block is NOT a container even though it is rigid.
-CONTAINER_CLASSES = {"kitchenware"}                  # bowl, mug, pitcher
-CONTAINER_NAMES = {"bowl", "mug", "pitcher"}         # explicit allow-list (kitchenware that is open-top)
+# Max fraction of an object's footprint allowed to protrude from a container mouth and still count
+# as "contained" — the partial-containment model (a banana settling in a bowl). 0 = RoboLab-strict.
+PARTIAL_CONTAINMENT = 0.35
+
+# Open-top containers a thing can be placed INTO — resolved from the catalog's "container" flag
+# (``entry["container"] is True``) so any imported container (bowls, buckets, bins, non-articulated
+# cabinets/crates/totes) is recognized automatically. The legacy allow-list below is the fallback
+# for catalog entries that predate the flag.
+CONTAINER_CLASSES = {"kitchenware", "storage"}
+CONTAINER_NAMES = {"bowl", "mug", "pitcher"}         # legacy fallback (pre-"container"-flag entries)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -185,8 +191,12 @@ def _category(entry: dict) -> str:
 
 
 def _is_container(entry: dict) -> bool:
-    return entry["name"] in CONTAINER_NAMES or (
-        entry.get("class") in CONTAINER_CLASSES and entry["name"] in CONTAINER_NAMES)
+    """Open-top container? Prefer the catalog's explicit ``container`` flag (set on every imported
+    container — bowls, buckets, bins, non-articulated cabinets); fall back to the legacy name list
+    for entries that predate the flag."""
+    if entry.get("container") is True:
+        return True
+    return entry["name"] in CONTAINER_NAMES
 
 
 # ---------------------------------------------------------------------------------------------
@@ -201,18 +211,35 @@ def check_static(task: Task, scene: dict) -> tuple[bool, str]:
         return False, f"unknown goal predicate {pred!r} (allowed: {sorted(GOAL_PREDICATES)})"
     params = task.goal.get("params", {})
     present = _scene_by_name(scene)
+    # The schema exposes the UNION of all role names (a JSON-schema limitation), so the agent can
+    # key a value under an equivalent-but-wrong role (e.g. 'reference'/'target' instead of
+    # 'container' for object_in_container). Auto-repair by pulling any single stray value into the
+    # missing required role before checking — the roles are positionally unambiguous (each
+    # predicate has one 'object' + one partner role). Mutates task.goal.params in place so the
+    # written task.json and success_spec are correct.
+    strays = [v for k, v in params.items() if k not in spec["params"] and v]
+    for role in spec["params"]:
+        if not params.get(role) and len(strays) == 1:
+            params[role] = strays[0]
+            params = {k: v for k, v in params.items() if k in spec["params"]}
+            task.goal["params"] = params
     for role in spec["params"]:
         nm = params.get(role)
         if not nm:
-            return False, f"goal {pred} is missing required param {role!r}"
+            leftover = {k: v for k, v in task.goal.get("params", {}).items()
+                        if k not in spec["params"] and v}
+            hint = (f" (you put {leftover} under other roles — this predicate uses EXACTLY "
+                    f"{spec['params']})" if leftover else "")
+            return False, f"goal {pred} is missing required param {role!r}{hint}"
         if nm not in present:
             return False, f"goal {pred} names {nm!r} which is not in the scene"
     cp = spec["container_param"]
     if cp is not None:
         cname = params[cp]
+        containers = sorted(n for n, i in present.items() if _is_container(i["entry"]))
         if not _is_container(present[cname]["entry"]):
-            return False, (f"{cname!r} is not an open-top container (containers: "
-                           f"{sorted(CONTAINER_NAMES)}); {pred} needs one")
+            return False, (f"{cname!r} is not an open-top container (scene containers: "
+                           f"{containers}); {pred} needs one")
     return True, "structural checks pass"
 
 
@@ -314,6 +341,17 @@ def check_fits_in(obj_name: str, container_name: str, scene: dict, *,
     if _fits_flat(odims, opening):
         return True, f"{obj_name!r} fits {container_name!r} flat"
 
+    # PARTIAL CONTAINMENT (RoboLab ellipse-mouth model + our partial extension): an elongated rigid
+    # object (a banana) may still settle into a bowl if its SHORTER axis fits the mouth even though
+    # the long axis protrudes. Accept that before falling through to the fold model / rejection.
+    from . import packing
+    rx, ry, _ = packing.container_mouth(cent["dims"])
+    fx, fy = packing.rotated_extent(odims[0], odims[1], 0.0)
+    if packing.fits_container_ellipse(0.0, 0.0, fx, fy, rx, ry, partial=PARTIAL_CONTAINMENT):
+        return True, (f"{obj_name!r} fits {container_name!r} with partial containment "
+                      f"(long axis protrudes; short axis {min(odims[0], odims[1]):.2f} m fits the "
+                      f"{2*min(rx,ry):.2f} m mouth)")
+
     if not (allow_fold and cat in {"cloth", "cable"}):
         return False, (f"{obj_name!r} footprint {odims[0]:.2f}x{odims[1]:.2f} m does not fit the "
                        f"{container_name!r} opening {opening[0]:.2f}x{opening[1]:.2f} m")
@@ -343,6 +381,47 @@ def check_fits_in(obj_name: str, container_name: str, scene: dict, *,
                    f"{opening[0]:.2f}x{opening[1]:.2f} m even after {max_folds} {what}")
 
 
+def check_support(obj_name: str, support_name: str, scene: dict, *,
+                  min_ratio: float = 0.5) -> tuple[bool, str]:
+    """SUPPORT-RATIO stacking check (RoboLab flags stacks below ~0.5-0.8 support). The fraction of
+    the object's rotated footprint AABB over the support top must exceed ``min_ratio``, else the
+    stack topples on settle. Support must be rigid with a similar-or-larger footprint."""
+    from . import packing
+    present = _scene_by_name(scene)
+    if obj_name not in present or support_name not in present:
+        return False, f"support: {obj_name!r} or {support_name!r} not in scene"
+    oent, sent = present[obj_name]["entry"], present[support_name]["entry"]
+    if _category(sent) != "rigid":
+        return False, f"support: {support_name!r} is not a rigid object to stack on"
+    ratio = packing.support_ratio(oent["dims"][0], oent["dims"][1],
+                                  math.radians(present[obj_name]["placement"].get("yaw_deg", 0.0)),
+                                  sent["dims"][0], sent["dims"][1])
+    ok = ratio >= min_ratio
+    return ok, (f"{obj_name!r} on {support_name!r}: {ratio*100:.0f}% supported "
+                f"({'stable' if ok else f'< {min_ratio*100:.0f}% -> topples'})")
+
+
+def check_group_fits(obj_names: list[str], container_name: str, scene: dict) -> tuple[bool, str]:
+    """GROUP-PREDICATE feasibility: can ALL of ``obj_names`` fit into ``container_name`` together
+    (RoboLab's multi-object ellipse packing with upward layering)? Rigid objects only."""
+    from . import packing
+    present = _scene_by_name(scene)
+    cent = present.get(container_name, {}).get("entry")
+    if cent is None or not _is_container(cent):
+        return False, f"group-fit: {container_name!r} is not an open-top container"
+    dims_list, missing = [], []
+    for nm in obj_names:
+        info = present.get(nm)
+        if info is None:
+            missing.append(nm)
+        else:
+            dims_list.append(list(info["entry"]["dims"]))
+    if missing:
+        return False, f"group-fit: {missing} not in scene"
+    _, ok, reason = packing.pack_into_container(dims_list, cent["dims"], partial=PARTIAL_CONTAINMENT)
+    return ok, f"group into {container_name!r}: {reason}"
+
+
 def check_feasibility(task: Task, scene: dict, *, base_xy: tuple[float, float] | None = None) -> dict:
     """Orchestrator: run every relevant check for this task's predicate + objects and return an
     aggregate report ``{ok, checks:[{name,ok,reason}], summary}`` (stored on ``Task.feasibility``).
@@ -359,12 +438,23 @@ def check_feasibility(task: Task, scene: dict, *, base_xy: tuple[float, float] |
     if ok_static:
         _run("affordance", lambda: check_affordance(task, scene))
         _run("reachable", lambda: check_reachable(task, scene, base_xy=base_xy))
-        spec = GOAL_PREDICATES.get(task.goal.get("predicate"), {})
+        pred = task.goal.get("predicate")
+        spec = GOAL_PREDICATES.get(pred, {})
+        params = task.goal["params"]
         cp = spec.get("container_param")
         if cp is not None:
-            obj = task.goal["params"].get("object")
-            cont = task.goal["params"].get(cp)
-            _run("fits_in", lambda: check_fits_in(obj, cont, scene))
+            obj = params.get("object")
+            cont = params.get(cp)
+            if pred == "object_groups_in_containers":     # GROUP feasibility: all objects together
+                objs = obj if isinstance(obj, list) else [obj]
+                _run("group_fits", lambda: check_group_fits(objs, cont, scene))
+            else:
+                _run("fits_in", lambda: check_fits_in(obj, cont, scene))
+        # SUPPORT-RATIO stacking check for on-top / stacked goals.
+        if pred in ("object_on_top", "stacked"):
+            support = params.get("target") or params.get("base")
+            if support:
+                _run("support_ratio", lambda: check_support(params.get("object"), support, scene))
     all_ok = all(c["ok"] for c in checks)
     fails = [c for c in checks if not c["ok"]]
     summary = "all feasibility checks pass" if all_ok else "; ".join(c["reason"] for c in fails)

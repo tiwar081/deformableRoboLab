@@ -172,10 +172,13 @@ def edge_reach_text(scene: dict, catalog_by_name: dict) -> str:
 
 def default_exterior_camera(placement: dict) -> dict:
     """The default exterior camera: on the OPPOSITE side of the workspace table from the robot,
-    pulled back past the edge and a couple of metres above the tabletop, looking down at the table
-    center so the full workspace is visible (front-facing, slightly bird's-eye). Uses a NARROWED
-    lens (focal 5.0 vs the DROID cameras' 2.1 wide-angle) so the table fills the frame from that
-    distance instead of shrinking into a wide shot."""
+    pulled well back past the edge and raised above the tabletop, looking down at the table center
+    so the full workspace is visible with room for the scene background (front-facing, MODERATELY
+    bird's-eye — a flatter, less top-down angle than a pure overhead). Uses a narrowed lens
+    (focal 5.0 vs the DROID cameras' 2.1 wide-angle) so the table fills the frame from that
+    distance. Geometry (measured to frame the 0.9x0.7 m table with background visible): the eye
+    sits 1.1 m OUT from the opposite edge and 0.85 m up — a ~28 deg look-down (lowered + angled up
+    from the earlier 1.15 m / ~35 deg) so more horizon/background shows above the far table edge."""
     opposite = {"back": "front", "front": "back", "left": "right", "right": "left"}[placement["edge"]]
     e = EDGES[opposite]
     nx, ny = e["normal"]
@@ -185,17 +188,30 @@ def default_exterior_camera(placement: dict) -> dict:
         ex, ey = mid, e["coord"]
     else:
         ex, ey = e["coord"], mid
-    pos = (ex + nx * 0.5, ey + ny * 0.5, TABLE.top_z + 2.0)
+    pos = (ex + nx * 1.1, ey + ny * 1.1, TABLE.top_z + 0.85)
     target = (TABLE.pos[0], TABLE.pos[1], TABLE.top_z)
     return {"name": "overview_camera", "position": [round(v, 3) for v in pos],
             "target": list(target), "focal_length": 5.0, "source": "default"}
 
 
-def home_tcp_keepout(placement: dict) -> tuple[float, float, float, float]:
-    """(x, y, radius, min_height): the disc under the PARKED gripper's home pose where TALL
-    objects must not stand (the home TCP hovers ~0.5 m out from the base at ~0.17 m above the
-    tabletop — an object taller than that under the fingers starts the sim in collision).
-    Measured: home TCP sits 0.50 m along the facing direction from the base."""
+PARKED_TCP_HEIGHT = 0.45   # TCP height above the tabletop at the raised parked start pose [m]
+
+
+def parked_start_tcp(placement: dict) -> tuple[float, float, float]:
+    """The raised, out-of-the-way TCP pose the arm STARTS at (frame 0), so the parked end-effector
+    hovers well ABOVE the scene instead of at home_q's ~0.17 m (where tall objects can touch it —
+    the cloth demos use exactly this "start high and clear" trick, cf. examples/cloth_franka_green).
+    ~0.5 m out along the facing direction, PARKED_TCP_HEIGHT above the tabletop."""
     yaw = math.radians(placement["yaw_deg"])
     bx, by = placement["base"][0], placement["base"][1]
-    return (bx + 0.50 * math.cos(yaw), by + 0.50 * math.sin(yaw), 0.14, 0.14)
+    return (bx + 0.50 * math.cos(yaw), by + 0.50 * math.sin(yaw), TABLE.top_z + PARKED_TCP_HEIGHT)
+
+
+def home_tcp_keepout(placement: dict) -> tuple[float, float, float, float]:
+    """(x, y, radius, min_height): the disc under the parked gripper where TALL objects must not
+    stand. With the raised parked start pose (``parked_start_tcp``, TCP ~0.45 m up) the fingers
+    clear most objects, but a very tall object (pitcher ~0.24 m, wood block ~0.21 m) plus the
+    descending approach still wants clearance — keep the keep-out but only against the tallest
+    objects (min_height 0.20 m; below the raised parked pose short/mid objects are fine)."""
+    x, y, _ = parked_start_tcp(placement)
+    return (x, y, 0.12, 0.20)

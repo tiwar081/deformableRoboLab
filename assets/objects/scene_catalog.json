@@ -63,7 +63,8 @@
     "coacd_max_convex_hull": 12
    },
    "source": "YCB 024_bowl (RoboLab vendored USD); existing BOWL_YCB params",
-   "inferred": []
+   "inferred": [],
+   "container": true
   },
   {
    "name": "mug",
@@ -91,7 +92,8 @@
    "source": "YCB 025_mug (RoboLab vendored USD); mass = official YCB 118 g",
    "inferred": [
     "mu=0.45 glazed ceramic (RoboLab catalog 2.0 is a grasp cheat)"
-   ]
+   ],
+   "container": true
   },
   {
    "name": "cheez_it",
@@ -287,7 +289,8 @@
    "source": "YCB 019_pitcher_base (RoboLab vendored USD); mass = official YCB 244 g",
    "inferred": [
     "mu=0.4 smooth plastic"
-   ]
+   ],
+   "container": true
   },
   {
    "name": "wood_block",
@@ -581,6 +584,93 @@
    "config": {},
    "source": "canonical SOFT_BLOCK (this repo, tuned)",
    "inferred": []
+  },
+  {
+   "name": "parts_bin",
+   "kind": "ycb_mesh",
+   "class": "storage",
+   "container": true,
+   "description": "Small gray plastic parts bin, open top (for screws/small tools).",
+   "dims": [
+    0.157,
+    0.101,
+    0.08
+   ],
+   "config": {
+    "usd_subpath": "vomp/bin_a03/bin_a03.usd",
+    "target_mass": 0.15,
+    "mu": 0.5,
+    "density": 300.0,
+    "color": [
+     0.55,
+     0.56,
+     0.58
+    ],
+    "coacd_threshold": 0.08,
+    "coacd_max_convex_hull": 16
+   },
+   "source": "RoboLab VoMP bin_a03 (open-top plastic bin, vendored USD+textures)",
+   "inferred": [
+    "mass 0.15 kg (empty small plastic bin); mu 0.5 plastic"
+   ]
+  },
+  {
+   "name": "tool_bin",
+   "kind": "ycb_mesh",
+   "class": "storage",
+   "container": true,
+   "description": "Medium gray tool bin, open top (holds hand tools).",
+   "dims": [
+    0.231,
+    0.14,
+    0.12
+   ],
+   "config": {
+    "usd_subpath": "vomp/bin_b03/bin_b03.usd",
+    "target_mass": 0.3,
+    "mu": 0.5,
+    "density": 300.0,
+    "color": [
+     0.5,
+     0.51,
+     0.54
+    ],
+    "coacd_threshold": 0.08,
+    "coacd_max_convex_hull": 16
+   },
+   "source": "RoboLab VoMP bin_b03 (open-top plastic bin)",
+   "inferred": [
+    "mass 0.3 kg (empty medium bin); mu 0.5 plastic"
+   ]
+  },
+  {
+   "name": "long_tray_bin",
+   "kind": "ycb_mesh",
+   "class": "storage",
+   "container": true,
+   "description": "Long shallow open-top storage bin/tray.",
+   "dims": [
+    0.298,
+    0.141,
+    0.129
+   ],
+   "config": {
+    "usd_subpath": "vomp/bin_a04/bin_a04.usd",
+    "target_mass": 0.35,
+    "mu": 0.5,
+    "density": 300.0,
+    "color": [
+     0.55,
+     0.56,
+     0.58
+    ],
+    "coacd_threshold": 0.08,
+    "coacd_max_convex_hull": 16
+   },
+   "source": "RoboLab VoMP bin_a04 (open-top plastic bin)",
+   "inferred": [
+    "mass 0.35 kg; mu 0.5 plastic"
+   ]
   }
  ],
  "soft_body_colors": {

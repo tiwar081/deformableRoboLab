@@ -178,4 +178,8 @@ def call_task_agent(scene: dict, *, mode: str = "task", placement: dict | None =
 def task_dict(task: tg.Task, placement: dict) -> dict:
     d = tg.task_to_dict(task)
     d["robot_placement"] = placement
+    # The EXECUTABLE success spec (RoboLab termination check): predicate + params + which geometric
+    # driver evaluates it, so a downstream rollout can score success without re-deriving it.
+    from . import success
+    d["success_spec"] = success.compile_success_spec(task.goal)
     return d

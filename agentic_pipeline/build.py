@@ -36,6 +36,7 @@ def placement_from_dir(d: Path | str) -> dict:
 def demo_from_dir(d: Path | str):
     """scene.json (+ task.json robot placement, + env.json look) -> DemoSpec."""
     import warp as wp
+    from deformableManipulationTools.demo_runner import WP
 
     d = Path(d)
     scene = _read(d, "scene.json")
@@ -49,6 +50,11 @@ def demo_from_dir(d: Path | str):
     spec.robot_base_xform = wp.transform(
         wp.vec3(float(base[0]), float(base[1]), float(base[2])),
         wp.quat_from_axis_angle(wp.vec3(0.0, 0.0, 1.0), math.radians(placement["yaw_deg"])))
+    # Start the arm at a RAISED, out-of-the-way pose (frame 0) instead of home_q, so the parked
+    # end-effector hovers well above the scene and can't touch objects during the settle (the
+    # cloth demos' "start high and clear" trick). One waypoint held for the whole settle window.
+    spec.waypoints = [WP(0.0, geometry.parked_start_tcp(placement))]
+    spec.start_at_first_waypoint = True
     render = env_gen.env_to_render_spec(env, placement)
     render.soft_body_style = spec.render.soft_body_style   # keep the scene's deformable color
     spec.render = render

@@ -46,14 +46,64 @@ self_prompt) — tune behavior there, not in Python.
                                                          # NEW layout and a NEW task
 ```
 
-Post-render visual verification is OPT-IN (`--verify`, or the interview question) — the default,
-including userless, skips it to save time. Artifacts per run
-(`outputs/agenticPipeline/<name>/`, numbered — never overwrites): `scene.json`, `task.json`
-(embeds `robot_placement`), `env.json`, `pipeline.json` (manifest incl. settle + feasibility
-reports), `pipeline_<name>.py` (a standard demo data file: `build.demo_from_dir` assembles the
-DemoSpec, so the whole runner/renderer is reused), `scene_overview.png`, `scene_wrist.png`.
+Artifacts per run (`outputs/agenticPipeline/<name>/`, numbered — never overwrites): `scene.json`,
+`task.json` (embeds `robot_placement` + the executable `success_spec`), `env.json`, `pipeline.json`
+(manifest: settle report, `scene_metrics`, `feasibility`, `success_spec`, camera), `pipeline_<name>.py`
+(a standard demo data file: `build.demo_from_dir` assembles the DemoSpec, so the whole
+runner/renderer is reused), `scene_overview.png`, `scene_wrist.png`.
+
+## RoboLab-parity features (all on by default)
+
+- **Elongated-aware collision** (`packing.obb_penetration`): the spatial solver resolves overlaps
+  with an OBB/SAT narrow phase (circle broad-phase prefilter), so a yawed banana conflicts along
+  its true footprint, not a max(w,d) circle — strictly better than RoboLab (whose "convex hull"
+  solver is actually circle-only).
+- **Support-ratio stacking** (`task_generator.check_support`, `packing.support_ratio`): an
+  on-top/stacked goal is rejected if < 50 % of the object's rotated footprint is over the support.
+- **Multi-object container packing** (`packing.pack_into_container`, `check_group_fits`): RoboLab's
+  ellipse-mouth (0.43×dims) upward-layered packing; `object_groups_in_containers` checks the whole
+  group fits.
+- **Partial containment** (`PARTIAL_CONTAINMENT=0.35`): an elongated rigid object (banana) counts
+  as "fits the bowl" when its short axis fits even though the long axis protrudes.
+- **Settled-pose write-back** (RoboLab `--replace`): after the settle check, rigid objects'
+  `x/y/yaw` in `scene.json` are overwritten with their SETTLED poses (spawn poses preserved under
+  `spawn_*`). `--no-settle-writeback` keeps spawn poses.
+- **Scene quality metrics** (`scene_metrics.py`): RoboLab's compactness / diversity / has_container
+  / coverage formulas + qualitative notes, stored in the manifest.
+- **Executable success predicates** (`success.py`): the goal compiles to a runtime geometric test
+  (open-top convex-hull containment, footprint-support, robot-POV 45° cone, deformable proxies) —
+  `success.evaluate(predicate, params, SceneState)` scores task success during a rollout. The spec
+  is embedded in `task.json` as `success_spec`.
+- **Catalog ops** (`catalog_ops.py`): `--ingest <dir>` scans a directory of USD files into the
+  scene catalog (USD AABB dims, authored class/description, mass/friction with inference notes);
+  `--regen` re-extracts dims. `--container` marks ingested objects as open-top containers.
+- **Containers**: the catalog carries open-top containers via a `container: true` flag —
+  bowl/mug/pitcher plus vendored VoMP tool bins (`parts_bin` 16 cm, `tool_bin` 23 cm,
+  `long_tray_bin` 30 cm; all NON-articulated, coacd-decomposed so the cavity holds objects and they
+  settle cleanly on the rigid MuJoCo path). `_is_container` reads the flag, so new containers
+  register automatically. (A thin-walled utility bucket was trialed but sinks on the rigid contact
+  path — the settle check correctly flags it — so it was dropped; the bins cover tool-container
+  scenes.)
+
+### Flags (all heavyweight/optional features default ON)
+
+| flag | effect |
+|---|---|
+| `--user` | interactive RoboLab-style stdin interview |
+| `--scene_init RUN_DIR` | rearrange: reuse a run's exact object multiset + robot placement + env; new layout + different task |
+| `--placement default\|task` | robot placement mode (userless default: `default`) |
+| `--camera "..."` | exterior-camera specification (else the reported bird's-eye default) |
+| `--count N` | approximate object count |
+| `--name` / `--out-dir` / `--model` / `--device` / `--seed` | run identity + engine knobs |
+| `--no-render` | **[heavyweight]** skip the final PBR render |
+| `--no-verify` | **[heavyweight]** skip the post-render visual verification (agent inspects the image); ON by default |
+| `--skip-settle-check` | **[heavyweight]** skip the headless physics settle check + its ≤3 retries |
+| `--no-settle-writeback` | keep spawn poses instead of writing settled poses back |
+
+Non-heavyweight checks (grammar, spatial/OBB solver, feasibility incl. reach/affordance/fit/support,
+quality metrics, success-spec compile) are cheap and always run.
 
 Boundary notes: task gen only IDEATES (no grasp force/trajectory — downstream pipeline);
-`agentic_pipeline/scene_generator.py`/`agentic_pipeline/task_generator.py` remain the standalone one-shot tools (the pipeline
-imports their internals; the legacy `_base_xy` origin bug is fixed to the true framework-default
-mount).
+`agentic_pipeline/scene_generator.py` / `agentic_pipeline/task_generator.py` remain the standalone
+one-shot tools (the pipeline imports their internals; the legacy `_base_xy` origin bug is fixed to
+the true framework-default mount).
