@@ -1,0 +1,65 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'rim_pinch' for catalog object 'tomato_soup_can'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "rim_pinch",
+  "source": "rim_pinch",
+  "version": 4,
+  "requires": [],
+  "notes": "'tomato_soup_can' is annotated but carries no rim/lip/spout region (labels present: ['tab']). Not an open container as far as the store is concerned, so nothing is emitted."
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "tomato_soup_can",
+   "kind": "ycb_mesh",
+   "file": "ycb/tomato_soup_can.usd",
+   "scale": 1.0,
+   "mesh_sha1": "50e191fc37395f9ba2d93b03a57d962d6a1235bc",
+   "extents": [0.101893504, 0.067346678, 0.067521875],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.003597114, 0.002321149, 0.999990836],
+     [0.937425423, 0.34816103, -0.004180198],
+     [-0.348167542, 0.937431869, -0.000923529]
+    ],
+    "translation": [6.9599e-05, 0.000125648, -2.7812e-05],
+    "axis_order": [2, 0, 1],
+    "sign_rules": [
+     "skew",
+     "skew+handedness",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.04812218
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "rim_pinch@4",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {}
+}

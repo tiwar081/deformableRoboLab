@@ -1,0 +1,65 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'vlm_regions' for catalog object 'apple'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "vlm_regions",
+  "source": "vlm_regions",
+  "version": 2,
+  "requires": [],
+  "notes": "0 region(s) [This is an apple \u2014 a plain rounded fruit body that a gripper would grasp anywhere on its surface. The thin stem visible in some views is not a functional grasp region (too thin and weak to hold the fruit by), so there is no semantically distinguished grasp region.] -> apple.json"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "apple",
+   "kind": "ycb_mesh",
+   "file": "objaverse/apple_01.usd",
+   "scale": 1.0,
+   "mesh_sha1": "b4242905a8a5e601f37c3ae08065947ac584841d",
+   "extents": [0.067912292, 0.066687492, 0.063820313],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.845889189, -0.533353581, 0.002331997],
+     [0.499351421, -0.790410976, 0.354821995],
+     [-0.187402346, 0.301304575, 0.934930967]
+    ],
+    "translation": [0.000647803, -0.005334307, -0.009503943],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": false,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "vlm_regions@2",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {}
+}

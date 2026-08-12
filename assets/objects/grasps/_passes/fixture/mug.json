@@ -1,0 +1,151 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'fixture' for catalog object 'mug'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "fixture",
+  "source": "fixture",
+  "version": 8,
+  "requires": [],
+  "notes": "hand-placed placeholders; widths measured from the mesh, poses pad-seated"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "mug",
+   "kind": "ycb_mesh",
+   "file": "ycb/mug.usd",
+   "scale": 1.0,
+   "mesh_sha1": "6bdc727421e688f2d6bea98a1b92211e9cae7c09",
+   "extents": [0.105846917, 0.092883191, 0.081354902],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.841341593, 0.540497266, 0.002651221],
+     [0.540501671, -0.841341872, -0.001340852],
+     [0.001505856, 0.002561104, -0.999995587]
+    ],
+    "translation": [0.003263386, 0.006603831, -1.905e-06],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew+handedness",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.100727365
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "fixture@8",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "fixture/rim_wall_px",
+     "transform": [
+      [1.0, 0.0, 0.0, 0.04498494],
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 1.0, -0.037112647],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.012083503,
+     "face": "-z",
+     "source": "fixture",
+     "seat_mode": "span_flush",
+     "span": 0.001653929,
+     "seat_depth": -0.002353929,
+     "labels": [
+      "wall",
+      "rim"
+     ],
+     "notes": "pinch the wall near the rim, +x side [fixture: pinch 8.1 mm measured over a 20 mm column; seated -4.6 mm along the approach]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "fixture/rim_wall_px_ctr",
+     "transform": [
+      [1.0, 0.0, 0.0, 0.04498494],
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 1.0, -0.011039611],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.012083503,
+     "face": "-z",
+     "source": "fixture",
+     "seat_mode": "centred",
+     "span": 0.001653929,
+     "seat_depth": -0.028426964,
+     "labels": [
+      "wall",
+      "rim",
+      "centred_variant"
+     ],
+     "notes": "centred depth variant of rim_wall_px [centred]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "fixture/rim_wall_py",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.0],
+      [1.0, 0.0, 0.0, 0.039475356],
+      [0.0, 0.0, 1.0, 0.004753399],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.013615648,
+     "face": "-z",
+     "source": "fixture",
+     "seat_mode": "clamped_deep",
+     "span": 0.080794861,
+     "seat_depth": -0.045,
+     "labels": [
+      "wall",
+      "rim"
+     ],
+     "notes": " [fixture: pinch 9.6 mm measured over a 20 mm column; seated +37.3 mm along the approach, deeper than the pads]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

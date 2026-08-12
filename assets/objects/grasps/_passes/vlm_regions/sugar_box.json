@@ -1,0 +1,65 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'vlm_regions' for catalog object 'sugar_box'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "vlm_regions",
+  "source": "vlm_regions",
+  "version": 2,
+  "requires": [],
+  "notes": "0 region(s) [This is a plain rectangular sugar box with no handles, tabs, spouts, or other distinguished grasp features; a gripper would grasp it anywhere on the body.] -> sugar_box.json"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "sugar_box",
+   "kind": "ycb_mesh",
+   "file": "ycb/sugar_box.usd",
+   "scale": 1.0,
+   "mesh_sha1": "f732829d514aa0ee9eab46643ca884cefc8b61b2",
+   "extents": [0.176013206, 0.092030672, 0.045099725],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.025431818, 0.008954257, 0.999636456],
+     [0.046603752, 0.998883298, -0.007761862],
+     [-0.998589662, 0.046389412, -0.02582072]
+    ],
+    "translation": [0.000233405, 0.000175726, 0.000364302],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "asset_align",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "vlm_regions@2",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {}
+}

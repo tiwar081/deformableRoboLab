@@ -39,6 +39,15 @@ from .assets import (
 from .mesh_collision import (
     load_usd_mesh, decimate_mesh, convex_decompose, add_collision_pieces, add_visual_mesh, rescale_body_mass,
 )
+# Per-asset grasp candidates (canonical object frame + record schema + loader).
+from .grasp_library import (
+    ObjectFrame, GraspCandidate, GraspRecord, GraspSchemaError, PadSeat, canonical_frame,
+    grasp_transform, make_candidate, pad_seat, body_pose, mesh_digest, check_mesh_current,
+    load_grasps, has_grasps, available_grasps, write_record, record_to_dict, record_from_dict,
+    validate_record, MAX_JAW_WIDTH, FACE_BUCKETS, QUALITY_FIELDS, GRASPS_DIR,
+    POSE_CONVENTION, PAD_NEAR_Z, PAD_FAR_Z, PAD_MID_Z, PAD_LENGTH, PALM_NEAR_Z,
+    SEAT_DEEPEST_Z, SEAT_MODES, HandVolumes, hand_volumes, pregrasp_collision,
+)
 # Framework.
 from .framework import GraspExample, build_viz_model
 
@@ -55,4 +64,11 @@ __all__ = [
     "add_ycb_mesh", "add_soft_mesh_object", "load_tet_mesh", "add_cloth", "PARTICLE_SOLVER_KWARGS",
     "OBJECTS_DIR", "load_usd_mesh", "decimate_mesh", "convex_decompose", "add_collision_pieces",
     "add_visual_mesh", "rescale_body_mass", "GraspExample", "build_viz_model",
+    "ObjectFrame", "GraspCandidate", "GraspRecord", "GraspSchemaError", "PadSeat",
+    "canonical_frame", "grasp_transform", "make_candidate", "pad_seat", "body_pose", "mesh_digest",
+    "check_mesh_current", "load_grasps", "has_grasps", "available_grasps", "write_record",
+    "record_to_dict", "record_from_dict", "validate_record", "MAX_JAW_WIDTH", "FACE_BUCKETS",
+    "QUALITY_FIELDS", "GRASPS_DIR", "POSE_CONVENTION",
+    "PAD_NEAR_Z", "PAD_FAR_Z", "PAD_MID_Z", "PAD_LENGTH", "PALM_NEAR_Z", "SEAT_DEEPEST_Z",
+    "SEAT_MODES", "HandVolumes", "hand_volumes", "pregrasp_collision",
 ]

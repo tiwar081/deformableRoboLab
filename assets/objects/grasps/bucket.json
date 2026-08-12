@@ -1,0 +1,3449 @@
+{
+ "_comment": [
+  "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+  "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+  "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+  "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+  "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+  "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+ ],
+ "schema_version": 5,
+ "object": {
+  "name": "bucket",
+  "kind": "ycb_mesh",
+  "file": "vomp/utilitybucket_a01/utilitybucket_a01.usd",
+  "scale": 1.0,
+  "mesh_sha1": "c8152939f7d56dcc202973a6324cb38b594d8c33",
+  "extents": [0.270617619, 0.262444794, 0.207026391],
+  "frame": {
+   "convention": "obb_extent_desc_v1",
+   "rotation": [
+    [1.0, -0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [-0.0, -0.0, 1.0]
+   ],
+   "translation": [9.5941e-05, 0.010984868, -0.103513197],
+   "axis_order": [2, 1, 0],
+   "sign_rules": [
+    "skew+handedness",
+    "skew",
+    "skew"
+   ],
+   "ambiguous": false,
+   "drift": 6.767e-05
+  }
+ },
+ "gripper": {
+  "type": "franka_panda",
+  "max_width": 0.08,
+  "pose_convention": "tcp_z_approach_x_jaw_v2"
+ },
+ "grasps": {
+  "generator": "grasp_passes.merge: geometric@7, obb_bucket@1, obb_face@8, rim_pinch@4, shake_validate@3, vlm_regions@2",
+  "notes": "73 seat_blocked candidate(s) discarded (hand collides at every depth \u2014 no collision-free grasp; measurements remain in the generator sidecars). GENERATED from per-pass sidecars in _passes/ \u2014 do not hand-edit.",
+  "candidates": [
+   {
+    "id": "geometric/medial_000_r0",
+    "transform": [
+     [-0.232069979, 0.504228519, -0.831803538, 0.08922111],
+     [-0.908405031, -0.418091259, 0.0, 0.012383084],
+     [-0.347769788, 0.755614518, 0.555070153, -0.067410917],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003162829,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.289782949,
+    "seat_depth": -0.023,
+    "labels": [
+     "medial_axis",
+     "face:+x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.61, measured span 3.2 mm centred to 0.13 of it [voxel_skeletonize]; pad-seated -265.8 mm along the approach [raycast], object is 290 mm deep and the pads CANNOT enclose it, retreated 22 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.05 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16692,
+     "object_motion_during_closing_angular": 1.4024,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_001_r3",
+    "transform": [
+     [0.0, -0.397859032, 0.91744656, -0.123378048],
+     [-0.674549217, 0.677286463, 0.293711425, 0.027380872],
+     [-0.738229879, -0.618862858, -0.268375498, 0.0661571],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004159838,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.229310699,
+    "seat_depth": -0.017,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.70, measured span 4.2 mm centred to 0.22 of it [voxel_skeletonize]; pad-seated +9.4 mm along the approach [raycast], object is 229 mm deep and the pads CANNOT enclose it, retreated 28 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.50 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.1502,
+     "object_motion_during_closing_angular": 1.78607,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_006_r1",
+    "transform": [
+     [-0.0, -0.265754534, -0.964040729, 0.10022246],
+     [-0.731182445, -0.657651199, 0.18129295, 0.040833126],
+     [-0.682181965, 0.704889657, -0.19431505, 0.051277506],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004621997,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.283322197,
+    "seat_depth": -0.039,
+    "labels": [
+     "medial_axis",
+     "face:+x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.96, measured span 4.6 mm centred to 0.15 of it [voxel_skeletonize]; pad-seated -240.9 mm along the approach [raycast], object is 283 mm deep and the pads CANNOT enclose it, retreated 6 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.17 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15511000000000003,
+     "object_motion_during_closing_angular": 1.50893,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_010_r2",
+    "transform": [
+     [0.035956168, -0.25029922, 0.967500622, -0.11070083],
+     [0.989838941, 0.142193074, -0.0, 0.00705246],
+     [-0.137571888, 0.957669792, 0.252868633, 0.089074156],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.044003344,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.032968382,
+    "seat_depth": -0.026668382,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.60, measured span 44.0 mm centred to 0.11 of it [voxel_skeletonize]; pad-seated +1.5 mm along the approach [raycast], retreated 7 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.12 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15406,
+     "object_motion_during_closing_angular": 1.4989000000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_011_r3",
+    "transform": [
+     [0.574525918, 0.716742226, -0.395222154, -0.034051941],
+     [0.0, 0.482869549, 0.875692297, -0.072066473],
+     [0.818486389, -0.503107921, 0.277421071, -0.070097727],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003119122,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.225873011,
+    "seat_depth": -0.027,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.99, measured span 3.1 mm centred to 0.16 of it [voxel_skeletonize]; pad-seated -196.5 mm along the approach [raycast], object is 226 mm deep and the pads CANNOT enclose it, retreated 18 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15665,
+     "object_motion_during_closing_angular": 1.75323,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_012_r0",
+    "transform": [
+     [0.067995555, -0.38697479, -0.919579859, 0.066209252],
+     [-0.984911401, -0.173059329, 0.0, 0.009909468],
+     [-0.159141873, 0.905704687, -0.392903148, -0.018146592],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.034,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.230512462,
+    "seat_depth": -0.045,
+    "overhang": 0.186212462,
+    "labels": [
+     "medial_axis",
+     "face:+x",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.80, measured span 34.0 mm centred to 0.18 of it [voxel_skeletonize]; pad-seated -185.5 mm along the approach [raycast], object is 231 mm deep and the pads CANNOT enclose it [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 101.7 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.07454000000000001,
+     "object_motion_during_closing_angular": 0.76692,
+     "object_motion_during_shaking_linear": 0.00459,
+     "object_motion_during_shaking_angular": 0.06259
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_027_r0",
+    "transform": [
+     [0.191584298, 0.823369863, 0.534188662, -0.089694883],
+     [-0.973981156, 0.226629008, -0.0, 0.005078057],
+     [-0.121062647, -0.52028969, 0.84536529, -0.101624849],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.028,
+    "face": "-z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.015118371,
+    "seat_depth": -0.003818371,
+    "labels": [
+     "medial_axis",
+     "face:-z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.86, measured span 28.0 mm centred to 0.11 of it [voxel_skeletonize]; pad-seated +3.2 mm along the approach [raycast], retreated 12 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.77 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15038,
+     "object_motion_during_closing_angular": 1.47716,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00021
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_027_r0_ctr",
+    "transform": [
+     [0.191584298, 0.823369863, 0.534188662, -0.090047013],
+     [-0.973981156, 0.226629008, -0.0, 0.005078057],
+     [-0.121062647, -0.52028969, 0.84536529, -0.102182102],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.028,
+    "face": "-z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.015118371,
+    "seat_depth": -0.003159185,
+    "labels": [
+     "medial_axis",
+     "centred_variant",
+     "face:-z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.86, measured span 28.0 mm centred to 0.11 of it [voxel_skeletonize]; centred depth variant [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.87 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15151,
+     "object_motion_during_closing_angular": 1.9274200000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_032_r0",
+    "transform": [
+     [-0.998374495, -0.056994454, 0.0, -0.080352431],
+     [-0.012375267, 0.216778122, 0.976142458, -0.014122584],
+     [-0.055634706, 0.974555734, -0.217131069, -0.060863685],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.005027284,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.142317814,
+    "seat_depth": -0.045,
+    "overhang": 0.098017814,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.95, measured span 5.0 mm centred to 0.07 of it [voxel_skeletonize]; pad-seated -88.2 mm along the approach [raycast], object is 142 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, 0.75 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15508000000000002,
+     "object_motion_during_closing_angular": 0.6945600000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_033_r1",
+    "transform": [
+     [1.0, 0.0, -0.0, -0.080547874],
+     [-0.0, 0.0, -1.0, 0.054995337],
+     [-0.0, 1.0, 0.0, -0.064],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004668155,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.134021434,
+    "seat_depth": -0.023,
+    "labels": [
+     "medial_axis",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 1.00, measured span 4.7 mm centred to 0.12 of it [voxel_skeletonize]; pad-seated +17.0 mm along the approach [raycast], object is 134 mm deep and the pads CANNOT enclose it, retreated 22 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.05 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.1628,
+     "object_motion_during_closing_angular": 0.8724600000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_039_r2",
+    "transform": [
+     [0.133207867, 0.979653378, -0.150116366, -0.06962101],
+     [0.020225874, 0.148747563, 0.988668335, -0.033080339],
+     [0.990881718, -0.134734635, -0.0, -0.10297132],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.008076292,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.150199681,
+    "seat_depth": -0.042,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.97, measured span 8.1 mm centred to 0.13 of it [voxel_skeletonize]; pad-seated -41.6 mm along the approach [raycast], object is 150 mm deep and the pads CANNOT enclose it, retreated 3 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16979000000000002,
+     "object_motion_during_closing_angular": 1.12155,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_040_r0",
+    "transform": [
+     [-0.245375821, -0.565766112, 0.787209891, -0.073649729],
+     [0.313226725, 0.722210794, 0.616685161, 0.054080193],
+     [-0.917431046, 0.397894804, -0.0, -0.102861144],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.008482706,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.129038277,
+    "seat_depth": -0.033,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.91, measured span 8.5 mm centred to 0.15 of it [voxel_skeletonize]; pad-seated -2.5 mm along the approach [raycast], object is 129 mm deep and the pads CANNOT enclose it, retreated 12 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.12 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16686,
+     "object_motion_during_closing_angular": 1.95039,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_048_r0",
+    "transform": [
+     [-0.024670982, 0.996859691, -0.075246921, -0.058865258],
+     [0.001861693, -0.075223888, -0.997164932, 0.082687471],
+     [-0.999693892, -0.024741125, 0.0, -0.037999388],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.018,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.199908328,
+    "seat_depth": -0.045,
+    "overhang": 0.155608328,
+    "labels": [
+     "medial_axis",
+     "face:+y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.99, measured span 18.0 mm centred to 0.11 of it [voxel_skeletonize]; pad-seated +37.4 mm along the approach [raycast], object is 200 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, 0.05 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15255000000000002,
+     "object_motion_during_closing_angular": 0.6506000000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_057_r0",
+    "transform": [
+     [-0.940593137, -0.339535787, -0.0, -0.038669814],
+     [0.165844153, -0.459426895, 0.87259535, -0.083228683],
+     [-0.296277349, 0.820757197, 0.48844381, -0.097257008],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.019171602,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.230143468,
+    "seat_depth": -0.003,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.83, measured span 19.2 mm centred to 0.07 of it [voxel_skeletonize]; pad-seated -3.4 mm along the approach [raycast], object is 230 mm deep and the pads CANNOT enclose it, retreated 42 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.42 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15306,
+     "object_motion_during_closing_angular": 0.25444,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_057_r2",
+    "transform": [
+     [0.940593137, -0.339535787, -0.0, -0.038669814],
+     [-0.165844153, -0.459426895, -0.87259535, 0.095778553],
+     [0.296277349, 0.820757197, -0.48844381, 0.00294405],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.019171602,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.230143468,
+    "seat_depth": -0.022,
+    "labels": [
+     "medial_axis",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.83, measured span 19.2 mm centred to 0.07 of it [voxel_skeletonize]; pad-seated -201.7 mm along the approach [raycast], object is 230 mm deep and the pads CANNOT enclose it, retreated 23 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.48 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15698,
+     "object_motion_during_closing_angular": 0.8838100000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00031
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_059_r0",
+    "transform": [
+     [-0.200161055, 0.488397629, 0.849354642, -0.066208932],
+     [-0.322092543, 0.785913292, -0.527822595, -0.046197393],
+     [-0.925306406, -0.379220324, 0.0, -0.102872957],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.008436042,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.120521582,
+    "seat_depth": -0.034,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.88, measured span 8.4 mm centred to 0.14 of it [voxel_skeletonize]; pad-seated -40.6 mm along the approach [raycast], object is 121 mm deep and the pads CANNOT enclose it, retreated 11 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16173,
+     "object_motion_during_closing_angular": 1.0856700000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_059_r2",
+    "transform": [
+     [0.200161055, 0.488397629, -0.849354642, -0.020750128],
+     [0.322092543, 0.785913292, 0.527822595, -0.074447293],
+     [0.925306406, -0.379220324, -0.0, -0.102872957],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.008436042,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.120521582,
+    "seat_depth": -0.033,
+    "labels": [
+     "medial_axis",
+     "face:+x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.88, measured span 8.4 mm centred to 0.14 of it [voxel_skeletonize]; pad-seated -13.0 mm along the approach [raycast], object is 121 mm deep and the pads CANNOT enclose it, retreated 12 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.17179000000000003,
+     "object_motion_during_closing_angular": 0.9498900000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_080_r2",
+    "transform": [
+     [-0.014315383, 0.227170563, 0.973749765, -0.042276631],
+     [0.998020385, 0.062891264, -0.0, 0.114576183],
+     [-0.061240354, 0.971822116, -0.227621165, -0.057090355],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.008853282,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.121943975,
+    "seat_depth": -0.045,
+    "overhang": 0.077643975,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.57, measured span 8.9 mm centred to 0.16 of it [voxel_skeletonize]; pad-seated -47.5 mm along the approach [raycast], object is 122 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15122000000000002,
+     "object_motion_during_closing_angular": 0.5248400000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_084_r2",
+    "transform": [
+     [0.924677884, 0.380750326, -0.0, 0.012],
+     [-0.187996331, 0.456561789, -0.869602617, 0.104707529],
+     [-0.33110148, 0.804102308, 0.493752254, -0.091859403],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.038,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.245970105,
+    "seat_depth": -0.01,
+    "labels": [
+     "medial_axis",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.61, measured span 38.0 mm centred to 0.00 of it [voxel_skeletonize]; pad-seated +8.4 mm along the approach [raycast], object is 246 mm deep and the pads CANNOT enclose it, retreated 35 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.47 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15275000000000002,
+     "object_motion_during_closing_angular": 1.07789,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_089_r0",
+    "transform": [
+     [0.201888444, -0.666125607, 0.717995635, 0.02571371],
+     [-0.208254465, 0.687130126, 0.696047605, -0.065883005],
+     [-0.957011564, -0.290049764, -0.0, -0.102920515],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00825595,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.146135185,
+    "seat_depth": -0.038,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "face_borderline",
+     "face_alt:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.69, measured span 8.3 mm centred to 0.14 of it [voxel_skeletonize]; pad-seated +2.7 mm along the approach [raycast], object is 146 mm deep and the pads CANNOT enclose it, retreated 7 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15784,
+     "object_motion_during_closing_angular": 0.9425000000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_089_r2",
+    "transform": [
+     [-0.201888444, -0.666125607, -0.717995635, 0.078224454],
+     [0.208254465, 0.687130126, -0.696047605, -0.014977435],
+     [0.957011564, -0.290049764, -0.0, -0.102920515],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00825595,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.146135185,
+    "seat_depth": -0.035,
+    "labels": [
+     "medial_axis",
+     "face:+x",
+     "face_borderline",
+     "face_alt:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.69, measured span 8.3 mm centred to 0.14 of it [voxel_skeletonize]; pad-seated -75.8 mm along the approach [raycast], object is 146 mm deep and the pads CANNOT enclose it, retreated 10 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15227000000000002,
+     "object_motion_during_closing_angular": 1.13884,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00019
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_095_r2",
+    "transform": [
+     [-0.003052076, 0.121238844, 0.992618672, -0.00875543],
+     [0.999683284, 0.0251661, -0.0, -0.080154482],
+     [-0.024980341, 0.992304293, -0.121277254, -0.057550471],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004148701,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.106856031,
+    "seat_depth": -0.045,
+    "overhang": 0.062556031,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.99, measured span 4.1 mm centred to 0.04 of it [voxel_skeletonize]; pad-seated -53.1 mm along the approach [raycast], object is 107 mm deep and the pads CANNOT enclose it [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 620.2 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.044800000000000006,
+     "object_motion_during_closing_angular": 0.36002,
+     "object_motion_during_shaking_linear": 0.00022,
+     "object_motion_during_shaking_angular": 0.0029400000000000003
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_102_r0",
+    "transform": [
+     [-0.999977027, -0.006778324, -0.0, 0.044000092],
+     [0.002928851, -0.432080804, 0.90183014, -0.094373811],
+     [-0.006112897, 0.901809422, 0.43209073, 0.048916073],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.03,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.020677476,
+    "seat_depth": -0.002377476,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.95, measured span 30.0 mm centred to 0.13 of it [voxel_skeletonize]; pad-seated -7.1 mm along the approach [raycast], retreated 19 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.65 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15222000000000002,
+     "object_motion_during_closing_angular": 1.7124100000000002,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_102_r0_ctr",
+    "transform": [
+     [-0.999977027, -0.006778324, -0.0, 0.044000092],
+     [0.002928851, -0.432080804, 0.90183014, -0.093867648],
+     [-0.006112897, 0.901809422, 0.43209073, 0.049158589],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.03,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.020677476,
+    "seat_depth": -0.002938738,
+    "labels": [
+     "medial_axis",
+     "centred_variant",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.95, measured span 30.0 mm centred to 0.13 of it [voxel_skeletonize]; centred depth variant [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.58 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.1531,
+     "object_motion_during_closing_angular": 1.7257500000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_104_r1",
+    "transform": [
+     [-0.121090776, 0.992329177, 0.024896346, 0.049523924],
+     [0.992641438, 0.121052684, 0.003037066, 0.120667633],
+     [-0.0, 0.025080905, -0.999685425, 0.058743935],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.011589757,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.148483462,
+    "seat_depth": -0.045,
+    "overhang": 0.104183462,
+    "labels": [
+     "medial_axis",
+     "face:+z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.99, measured span 11.6 mm centred to 0.08 of it [voxel_skeletonize]; pad-seated -94.8 mm along the approach [raycast], object is 148 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15885000000000002,
+     "object_motion_during_closing_angular": 0.71587,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_105_r0",
+    "transform": [
+     [0.017279495, 0.999248508, -0.03469638, 0.070281753],
+     [-0.000599897, -0.034691194, -0.999397899, 0.07822983],
+     [-0.999850518, 0.017289905, 0.0, -0.102984774],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.008030757,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.165360015,
+    "seat_depth": -0.013,
+    "labels": [
+     "medial_axis",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.91, measured span 8.0 mm centred to 0.13 of it [voxel_skeletonize]; pad-seated -66.3 mm along the approach [raycast], object is 165 mm deep and the pads CANNOT enclose it, retreated 32 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.47 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15091000000000002,
+     "object_motion_during_closing_angular": 0.9409500000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00015000000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_109_r3",
+    "transform": [
+     [-0.388901232, 0.903982726, -0.177682479, 0.090942452],
+     [0.0, 0.19286491, 0.981225319, 0.005109343],
+     [0.921279454, 0.381599736, -0.075005401, -0.101422905],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.008459803,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.105462634,
+    "seat_depth": -0.044,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 8.0 mm, linearity 0.62, measured span 8.5 mm centred to 0.15 of it [voxel_skeletonize]; pad-seated -19.3 mm along the approach [raycast], object is 105 mm deep and the pads CANNOT enclose it, retreated 1 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15326,
+     "object_motion_during_closing_angular": 0.8545900000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_130_r1",
+    "transform": [
+     [0.574525918, 0.716742226, -0.395222154, 0.094865956],
+     [-0.0, -0.482869549, -0.875692297, 0.062678935],
+     [-0.818486389, 0.503107921, -0.277421071, -0.027410102],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003119122,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.225907921,
+    "seat_depth": -0.045,
+    "overhang": 0.181607921,
+    "labels": [
+     "medial_axis",
+     "face:+y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.99, measured span 3.1 mm centred to 0.16 of it [voxel_skeletonize]; pad-seated +42.6 mm along the approach [raycast], object is 226 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, 0.45 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15382,
+     "object_motion_during_closing_angular": 0.8718400000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_130_r3",
+    "transform": [
+     [-0.574525918, 0.716742226, 0.395222154, 0.034433358],
+     [0.0, -0.482869549, 0.875692297, -0.071221353],
+     [0.818486389, 0.503107921, 0.277421071, -0.069829981],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003119122,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.225907921,
+    "seat_depth": -0.028,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.99, measured span 3.1 mm centred to 0.16 of it [voxel_skeletonize]; pad-seated -195.5 mm along the approach [raycast], object is 226 mm deep and the pads CANNOT enclose it, retreated 17 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16870000000000002,
+     "object_motion_during_closing_angular": 0.6058,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_134_r3",
+    "transform": [
+     [0.0, 0.357736227, 0.933822677, -0.122426998],
+     [0.731300769, -0.636918537, 0.243995825, 0.018025452],
+     [0.682055119, 0.682905241, -0.261612778, 0.075748376],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00462178,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.289316098,
+    "seat_depth": -0.013,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 4.0 mm, linearity 0.97, measured span 4.6 mm centred to 0.15 of it [voxel_skeletonize]; pad-seated -272.5 mm along the approach [raycast], object is 289 mm deep and the pads CANNOT enclose it, retreated 32 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.25 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15495,
+     "object_motion_during_closing_angular": 0.9343400000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_135_r0",
+    "transform": [
+     [0.390326944, -0.572285702, -0.721203129, 0.133744511],
+     [-0.826138542, -0.563467043, 0.0, 0.016],
+     [-0.406374195, 0.595813701, -0.692723644, 0.073833577],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.01,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.271544879,
+    "seat_depth": -0.004,
+    "labels": [
+     "medial_axis",
+     "face:+x",
+     "face_borderline",
+     "face_alt:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.73, measured span 10.0 mm centred to 0.00 of it [voxel_skeletonize]; pad-seated +3.1 mm along the approach [raycast], object is 272 mm deep and the pads CANNOT enclose it, retreated 41 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 1.72 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15002000000000001,
+     "object_motion_during_closing_angular": 2.12819,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_135_r2",
+    "transform": [
+     [-0.390326944, -0.572285702, 0.721203129, -0.03540999],
+     [0.826138542, -0.563467043, -0.0, 0.016],
+     [0.406374195, 0.595813701, 0.692723644, -0.088641206],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.01,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.271544879,
+    "seat_depth": -0.033,
+    "labels": [
+     "medial_axis",
+     "face:-x",
+     "face_borderline",
+     "face_alt:-z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.73, measured span 10.0 mm centred to 0.00 of it [voxel_skeletonize]; pad-seated -237.7 mm along the approach [raycast], object is 272 mm deep and the pads CANNOT enclose it, retreated 12 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.15 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.1799,
+     "object_motion_during_closing_angular": 1.6471500000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_135_r3",
+    "transform": [
+     [-0.721203129, -0.572285702, -0.390326944, 0.130784704],
+     [0.0, -0.563467043, 0.826138542, 0.026390785],
+     [-0.692723644, 0.595813701, 0.406374195, 0.080817321],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006848431,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.067749977,
+    "seat_depth": -0.014,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.73, measured span 6.8 mm centred to 0.06 of it [voxel_skeletonize]; pad-seated +12.6 mm along the approach [raycast], object is 68 mm deep and the pads CANNOT enclose it, retreated 31 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.17 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.21376,
+     "object_motion_during_closing_angular": 2.17796,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00071
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_136_r1",
+    "transform": [
+     [-0.0, -0.035655715, -0.999364133, 0.09845453],
+     [-0.752107292, -0.65862162, 0.023498567, 0.048882826],
+     [-0.659040682, 0.751629052, -0.026816924, 0.038992505],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.271229708,
+    "seat_depth": -0.037,
+    "labels": [
+     "medial_axis",
+     "face:+x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 5.7 mm, linearity 0.99, measured span 6.0 mm centred to 0.00 of it [voxel_skeletonize]; pad-seated +37.6 mm along the approach [raycast], object is 271 mm deep and the pads CANNOT enclose it, retreated 8 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.57 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15147000000000002,
+     "object_motion_during_closing_angular": 0.5871500000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x00_000",
+    "transform": [
+     [0.0, -1.0, 0.0, -0.129896457],
+     [-0.466412489, 0.0, 0.884567346, 0.001063631],
+     [-0.884567346, -0.0, -0.466412489, 0.086038185],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00333835,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.041719132,
+    "seat_depth": -0.009419132,
+    "labels": [
+     "cross_section",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at -129.9 mm; normals antiparallel to within 0.0 deg, gap 3.3 mm; pad-seated -11.8 mm along the approach [raycast], retreated 33 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15131,
+     "object_motion_during_closing_angular": 0.6949700000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x00_003",
+    "transform": [
+     [0.0, 1.0, -0.0, -0.129896457],
+     [0.931632946, -0.0, -0.363400681, 0.015525698],
+     [-0.363400681, 0.0, -0.931632946, 0.090341591],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003661996,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.014573085,
+    "seat_depth": -0.002273085,
+    "labels": [
+     "cross_section",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at -129.9 mm; normals antiparallel to within 2.3 deg, gap 3.7 mm; pad-seated -10.2 mm along the approach [raycast], retreated 13 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.55 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15330000000000002,
+     "object_motion_during_closing_angular": 1.61322,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x00_003_ctr",
+    "transform": [
+     [0.0, 1.0, -0.0, -0.129896457],
+     [0.931632946, -0.0, -0.363400681, 0.015666167],
+     [-0.363400681, 0.0, -0.931632946, 0.090701707],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003661996,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.014573085,
+    "seat_depth": -0.001886542,
+    "labels": [
+     "cross_section",
+     "centred_variant",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at -129.9 mm; normals antiparallel to within 2.3 deg, gap 3.7 mm; centred depth variant [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 1.33 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15147000000000002,
+     "object_motion_during_closing_angular": 0.7176800000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00017
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x00_004",
+    "transform": [
+     [0.0, -1.0, 0.0, -0.129896457],
+     [-0.32918689, -0.0, -0.944264789, 0.023026328],
+     [0.944264789, 0.0, -0.32918689, 0.084409641],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003671786,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.039112848,
+    "seat_depth": -0.006812848,
+    "labels": [
+     "cross_section",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at -129.9 mm; normals antiparallel to within 2.4 deg, gap 3.7 mm; pad-seated -12.3 mm along the approach [raycast], retreated 33 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.03 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15365,
+     "object_motion_during_closing_angular": 0.53088,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x01_205",
+    "transform": [
+     [0.0, 1.0, -0.0, -0.10627892],
+     [-0.311778123, 0.0, 0.950154936, -0.034076077],
+     [0.950154936, 0.0, 0.311778123, 0.10077097],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.009643101,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.050379706,
+    "seat_depth": -0.027,
+    "labels": [
+     "cross_section",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at -106.3 mm; normals antiparallel to within 8.1 deg, gap 9.6 mm; pad-seated +7.1 mm along the approach [raycast], retreated 18 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.15 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15071,
+     "object_motion_during_closing_angular": 1.7572500000000002,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x03_337",
+    "transform": [
+     [0.0, 1.0, -0.0, -0.059043844],
+     [0.0, 0.0, 1.0, -0.032284014],
+     [1.0, -0.0, -0.0, -0.101241289],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004542588,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.176537208,
+    "seat_depth": -0.045,
+    "overhang": 0.132237208,
+    "labels": [
+     "cross_section",
+     "face:-y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to x at -59.0 mm; normals antiparallel to within 0.1 deg, gap 4.5 mm; pad-seated +27.2 mm along the approach [raycast], object is 177 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.17281000000000002,
+     "object_motion_during_closing_angular": 0.7183700000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 8e-05
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x06_047",
+    "transform": [
+     [0.0, 1.0, -0.0, 0.011808769],
+     [-0.000491408, 0.0, -0.999999879, 0.066952787],
+     [-0.999999879, 0.0, 0.000491408, -0.101313313],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004541917,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.202024621,
+    "seat_depth": -0.045,
+    "overhang": 0.157724621,
+    "labels": [
+     "cross_section",
+     "face:+y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to x at +11.8 mm; normals antiparallel to within 0.0 deg, gap 4.5 mm; pad-seated -147.2 mm along the approach [raycast], object is 202 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15531,
+     "object_motion_during_closing_angular": 0.27911,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x07_371",
+    "transform": [
+     [0.0, 1.0, -0.0, 0.035426307],
+     [0.952196505, 0.0, 0.305486197, -0.117790315],
+     [0.305486197, -0.0, -0.952196505, 0.090668222],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003972896,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.212564049,
+    "seat_depth": -0.008,
+    "labels": [
+     "cross_section",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at +35.4 mm; normals antiparallel to within 7.0 deg, gap 4.0 mm; pad-seated +3.2 mm along the approach [raycast], object is 213 mm deep and the pads CANNOT enclose it, retreated 37 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.22 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15496000000000001,
+     "object_motion_during_closing_angular": 0.7999,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x07_387",
+    "transform": [
+     [0.0, 1.0, -0.0, 0.035426307],
+     [0.545968176, -0.0, -0.837805915, 0.126030558],
+     [-0.837805915, 0.0, -0.545968176, -0.040529643],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003624683,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.120140921,
+    "seat_depth": -0.002,
+    "labels": [
+     "cross_section",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at +35.4 mm; normals antiparallel to within 0.0 deg, gap 3.6 mm; pad-seated -3.3 mm along the approach [raycast], object is 120 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.32 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15080000000000002,
+     "object_motion_during_closing_angular": 0.86455,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x08_137",
+    "transform": [
+     [0.0, 1.0, -0.0, 0.059043844],
+     [0.995144425, -0.0, -0.098425471, 0.107772755],
+     [-0.098425471, 0.0, -0.995144425, 0.058887794],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00479443,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.20843001,
+    "seat_depth": -0.045,
+    "overhang": 0.16413001,
+    "labels": [
+     "cross_section",
+     "face:+z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to x at +59.0 mm; normals antiparallel to within 4.4 deg, gap 4.8 mm; pad-seated -154.6 mm along the approach [raycast], object is 208 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, 0.30 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15851,
+     "object_motion_during_closing_angular": 0.50844,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x09_509",
+    "transform": [
+     [0.0, 1.0, -0.0, 0.082661382],
+     [-0.903294158, 0.0, -0.429021752, 0.115980129],
+     [-0.429021752, 0.0, 0.903294158, -0.028268405],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003366583,
+    "face": "-z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.122882905,
+    "seat_depth": -0.012,
+    "labels": [
+     "cross_section",
+     "face:-z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at +82.7 mm; normals antiparallel to within 1.0 deg, gap 3.4 mm; pad-seated +9.1 mm along the approach [raycast], object is 123 mm deep and the pads CANNOT enclose it, retreated 33 mm to clear the hand [shake_validate@3: dropped: object left the jaws 1.62 s after gravity came on; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 12.6 N, shake applied at 96%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.041060000000000006,
+     "object_motion_during_closing_angular": 0.32293000000000005,
+     "object_motion_during_shaking_linear": 0.11488000000000001,
+     "object_motion_during_shaking_angular": 0.7303700000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x10_000",
+    "transform": [
+     [0.0, -1.0, 0.0, 0.10627892],
+     [0.0, 0.0, 1.0, -0.028717041],
+     [-1.0, 0.0, 0.0, 0.098439208],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.009146405,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.143392628,
+    "seat_depth": -0.032,
+    "labels": [
+     "cross_section",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at +106.3 mm; normals antiparallel to within 18.2 deg, gap 9.1 mm; pad-seated +14.4 mm along the approach [raycast], object is 143 mm deep and the pads CANNOT enclose it, retreated 13 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15984,
+     "object_motion_during_closing_angular": 0.9675900000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x11_003",
+    "transform": [
+     [0.0, 1.0, -0.0, 0.129896457],
+     [0.93163779, -0.0, -0.363388262, 0.015525585],
+     [-0.363388262, 0.0, -0.93163779, 0.09034163],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003661999,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.01826155,
+    "seat_depth": -0.00596155,
+    "labels": [
+     "cross_section",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at +129.9 mm; normals antiparallel to within 2.3 deg, gap 3.7 mm; pad-seated -10.2 mm along the approach [raycast], retreated 13 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 1.42 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15002000000000001,
+     "object_motion_during_closing_angular": 1.3579400000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00036
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_x11_003_ctr",
+    "transform": [
+     [0.0, 1.0, -0.0, 0.129896457],
+     [0.93163779, -0.0, -0.363388262, 0.015609446],
+     [-0.363388262, 0.0, -0.93163779, 0.090556629],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003661999,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.01826155,
+    "seat_depth": -0.005730775,
+    "labels": [
+     "cross_section",
+     "centred_variant",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to x at +129.9 mm; normals antiparallel to within 2.3 deg, gap 3.7 mm; centred depth variant [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 1.63 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15130000000000002,
+     "object_motion_during_closing_angular": 0.7349300000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y00_005",
+    "transform": [
+     [0.067462399, 0.0, 0.997721817, 0.002097513],
+     [0.0, 1.0, -0.0, -0.125973501],
+     [-0.997721817, 0.0, 0.067462399, 0.095376615],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003084906,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.084307797,
+    "seat_depth": -0.044,
+    "labels": [
+     "cross_section",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to y at -126.0 mm; normals antiparallel to within 2.9 deg, gap 3.1 mm; pad-seated -4.0 mm along the approach [raycast], object is 84 mm deep and the pads CANNOT enclose it, retreated 1 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.05 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15731,
+     "object_motion_during_closing_angular": 1.2039900000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y01_096",
+    "transform": [
+     [0.999937318, 0.0, 0.011196411, 0.044433246],
+     [0.0, -1.0, 0.0, -0.103069228],
+     [0.011196411, 0.0, -0.999937318, 0.081443867],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.007900323,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.052243213,
+    "seat_depth": -0.022,
+    "labels": [
+     "cross_section",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to y at -103.1 mm; normals antiparallel to within 17.7 deg, gap 7.9 mm; pad-seated +18.8 mm along the approach [raycast], retreated 23 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15332,
+     "object_motion_during_closing_angular": 1.20236,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00021
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y02_200",
+    "transform": [
+     [-0.567381044, -0.0, -0.823455373, 0.054779548],
+     [0.0, -1.0, 0.0, -0.080164955],
+     [-0.823455373, 0.0, 0.567381044, -0.025359299],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003305272,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.1737442,
+    "seat_depth": -0.012,
+    "labels": [
+     "cross_section",
+     "face:+x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to y at -80.2 mm; normals antiparallel to within 7.4 deg, gap 3.3 mm; pad-seated -127.9 mm along the approach [raycast], object is 174 mm deep and the pads CANNOT enclose it, retreated 33 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.12 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15055000000000002,
+     "object_motion_during_closing_angular": 0.91588,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00016
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y04_051",
+    "transform": [
+     [0.945953802, 0.0, 0.32430141, 0.098964742],
+     [0.0, 1.0, -0.0, -0.034356409],
+     [-0.32430141, 0.0, 0.945953802, -0.06890158],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004054656,
+    "face": "-z",
+    "source": "geometric",
+    "seat_mode": "span_flush",
+    "span": 0.03658006,
+    "seat_depth": -0.03728006,
+    "labels": [
+     "cross_section",
+     "face:-z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to y at -34.4 mm; normals antiparallel to within 17.8 deg, gap 4.1 mm; pad-seated +28.5 mm along the approach [raycast] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15167,
+     "object_motion_during_closing_angular": 0.36246,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y04_053",
+    "transform": [
+     [-2.1421e-05, 0.0, 1.0, -0.049465405],
+     [0.0, 1.0, -0.0, -0.034356409],
+     [-1.0, 0.0, -2.1421e-05, -0.101238175],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004541859,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.189118181,
+    "seat_depth": -0.045,
+    "overhang": 0.144818181,
+    "labels": [
+     "cross_section",
+     "face:-x",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to y at -34.4 mm; normals antiparallel to within 0.0 deg, gap 4.5 mm; pad-seated -128.4 mm along the approach [raycast], object is 189 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16846000000000003,
+     "object_motion_during_closing_angular": 1.38483,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00014000000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y05_138",
+    "transform": [
+     [-0.952647852, -0.0, -0.304075764, -0.104034589],
+     [0.0, -1.0, 0.0, -0.011452136],
+     [-0.304075764, 0.0, 0.952647852, -0.076722078],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003536003,
+    "face": "-z",
+    "source": "geometric",
+    "seat_mode": "span_flush",
+    "span": 0.025524017,
+    "seat_depth": -0.026224017,
+    "labels": [
+     "cross_section",
+     "face:-z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to y at -11.5 mm; normals antiparallel to within 16.7 deg, gap 3.5 mm; pad-seated +20.9 mm along the approach [raycast] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.07 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15114000000000002,
+     "object_motion_during_closing_angular": 0.55422,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y05_138_ctr",
+    "transform": [
+     [-0.952647852, -0.0, -0.304075764, -0.108333609],
+     [0.0, -1.0, 0.0, -0.011452136],
+     [-0.304075764, 0.0, 0.952647852, -0.063253551],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003536003,
+    "face": "-z",
+    "source": "geometric",
+    "seat_mode": "centred",
+    "span": 0.025524017,
+    "seat_depth": -0.040362008,
+    "labels": [
+     "cross_section",
+     "centred_variant",
+     "face:-z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to y at -11.5 mm; normals antiparallel to within 16.7 deg, gap 3.5 mm; centred depth variant [centred] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15143,
+     "object_motion_during_closing_angular": 0.6489100000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00014000000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y09_098",
+    "transform": [
+     [0.000125447, 0.0, -0.999999992, 0.071884162],
+     [0.0, -1.0, 0.0, 0.080164955],
+     [-0.999999992, -0.0, -0.000125447, -0.101238307],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004542669,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.163554439,
+    "seat_depth": -0.01,
+    "labels": [
+     "cross_section",
+     "face:+x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to y at +80.2 mm; normals antiparallel to within 0.0 deg, gap 4.5 mm; pad-seated -24.1 mm along the approach [raycast], object is 164 mm deep and the pads CANNOT enclose it, retreated 35 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.87 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15089000000000002,
+     "object_motion_during_closing_angular": 1.0433700000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 6.000000000000001e-05
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y09_247",
+    "transform": [
+     [-0.999911446, 0.0, -0.013307879, -0.092191754],
+     [0.0, 1.0, -0.0, 0.080164955],
+     [0.013307879, -0.0, -0.999911446, 0.058575103],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.012512697,
+    "face": "+z",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.057990042,
+    "seat_depth": -0.045,
+    "overhang": 0.013690042,
+    "labels": [
+     "cross_section",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "opposing faces in a section normal to y at +80.2 mm; normals antiparallel to within 5.4 deg, gap 12.5 mm; pad-seated +42.3 mm along the approach [raycast], object is 58 mm deep and the pads CANNOT enclose it [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 31.6 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.054700000000000006,
+     "object_motion_during_closing_angular": 0.84047,
+     "object_motion_during_shaking_linear": 0.027370000000000002,
+     "object_motion_during_shaking_angular": 0.26030000000000003
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y09_249",
+    "transform": [
+     [-0.030959984, 0.0, -0.999520625, 0.082287272],
+     [0.0, 1.0, -0.0, 0.080164955],
+     [0.999520625, -0.0, -0.030959984, 0.104145822],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.009316732,
+    "face": "+x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.208730657,
+    "seat_depth": -0.022,
+    "labels": [
+     "cross_section",
+     "face:+x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to y at +80.2 mm; normals antiparallel to within 16.6 deg, gap 9.3 mm; pad-seated -177.7 mm along the approach [raycast], object is 209 mm deep and the pads CANNOT enclose it, retreated 23 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.27 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15055000000000002,
+     "object_motion_during_closing_angular": 0.38892000000000004,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y10_434",
+    "transform": [
+     [-0.76966077, 0.0, 0.638453052, -0.056530572],
+     [0.0, -1.0, 0.0, 0.103069228],
+     [0.638453052, 0.0, 0.76966077, -0.088072396],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003460223,
+    "face": "-z",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.219458061,
+    "seat_depth": -0.009,
+    "labels": [
+     "cross_section",
+     "face:-z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to y at +103.1 mm; normals antiparallel to within 15.7 deg, gap 3.5 mm; pad-seated -182.5 mm along the approach [raycast], object is 219 mm deep and the pads CANNOT enclose it, retreated 36 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.40 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15311000000000002,
+     "object_motion_during_closing_angular": 0.64215,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_y11_125",
+    "transform": [
+     [0.100143765, 0.0, 0.994972978, -0.016414075],
+     [0.0, 1.0, -0.0, 0.125973501],
+     [-0.994972978, 0.0, 0.100143765, 0.099674406],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.009436962,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.116156324,
+    "seat_depth": -0.042,
+    "labels": [
+     "cross_section",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "opposing faces in a section normal to y at +126.0 mm; normals antiparallel to within 5.2 deg, gap 9.4 mm; pad-seated +10.7 mm along the approach [raycast], object is 116 mm deep and the pads CANNOT enclose it, retreated 3 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16040000000000001,
+     "object_motion_during_closing_angular": 0.29366000000000003,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_z02_068",
+    "transform": [
+     [0.970109732, 0.0, 0.242666659, 0.102381745],
+     [-0.242666659, 0.0, 0.970109732, 0.003215254],
+     [0.0, -1.0, 0.0, -0.063237152],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003738752,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.055398949,
+    "seat_depth": -0.045,
+    "overhang": 0.011098949,
+    "labels": [
+     "cross_section",
+     "face:-y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to z at -63.2 mm; normals antiparallel to within 0.0 deg, gap 3.7 mm; pad-seated +16.0 mm along the approach [raycast], object is 55 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, -0.05 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15480000000000002,
+     "object_motion_during_closing_angular": 0.9137500000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0002
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_z02_171",
+    "transform": [
+     [-0.14760768, 0.0, 0.989045991, 0.002368093],
+     [0.989045991, 0.0, 0.14760768, 0.113641818],
+     [0.0, 1.0, -0.0, -0.063237152],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003738457,
+    "face": "-x",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.055305974,
+    "seat_depth": -0.045,
+    "overhang": 0.011005974,
+    "labels": [
+     "cross_section",
+     "face:-x",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to z at -63.2 mm; normals antiparallel to within 0.0 deg, gap 3.7 mm; pad-seated +20.1 mm along the approach [raycast], object is 55 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, -0.05 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15245,
+     "object_motion_during_closing_angular": 1.07844,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/xsec_z04_442",
+    "transform": [
+     [0.74119862, 0.0, 0.671285786, -0.062243565],
+     [-0.671285786, 0.0, 0.74119862, 0.093352951],
+     [0.0, -1.0, 0.0, -0.027101637],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.003179422,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.090878543,
+    "seat_depth": -0.045,
+    "overhang": 0.046578543,
+    "labels": [
+     "cross_section",
+     "face:-y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "opposing faces in a section normal to z at -27.1 mm; normals antiparallel to within 0.0 deg, gap 3.2 mm; pad-seated +17.2 mm along the approach [raycast], object is 91 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, 0.18 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15272000000000002,
+     "object_motion_during_closing_angular": 1.0235,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/px_jawz_c",
+    "transform": [
+     [0.0, 0.0, -1.0, 0.057800053],
+     [0.0, 1.0, -0.0, 0.0],
+     [1.0, 0.0, -0.0, -0.100179196],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0126648,
+    "face": "+x",
+    "source": "obb_face",
+    "seat_mode": "clamped_deep",
+    "span": 0.205408918,
+    "seat_depth": -0.045,
+    "overhang": 0.161108918,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:+x",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "face-aligned box grasp: enters the +x face, jaws along z; span 6.7 mm measured over a 131 mm column; pad-seated -57.8 mm along the approach (object 205 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.18332,
+     "object_motion_during_closing_angular": 1.0304200000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00035000000000000005
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/nx_jawz_c",
+    "transform": [
+     [0.0, 0.0, 1.0, -0.057608865],
+     [0.0, -1.0, 0.0, 0.0],
+     [1.0, 0.0, 0.0, -0.100179196],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0126648,
+    "face": "-x",
+    "source": "obb_face",
+    "seat_mode": "clamped_deep",
+    "span": 0.205408918,
+    "seat_depth": -0.045,
+    "overhang": 0.161108918,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:-x",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "face-aligned box grasp: enters the -x face, jaws along z; span 6.7 mm measured over a 131 mm column; pad-seated -57.6 mm along the approach (object 205 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15885000000000002,
+     "object_motion_during_closing_angular": 0.11897,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 4e-05
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/py_jawz_m50",
+    "transform": [
+     [0.0, -1.0, -0.0, -0.067654405],
+     [0.0, 0.0, -1.0, 0.078649575],
+     [1.0, 0.0, -0.0, -0.101126796],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0107728,
+    "face": "+y",
+    "source": "obb_face",
+    "seat_mode": "retreated",
+    "span": 0.169330336,
+    "seat_depth": -0.017,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 4.8 mm measured over a 51 mm column; pad-seated -78.6 mm along the approach (object 169 mm deep, longer than the pads \u2014 not fully enclosed); retreated 28 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.38 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15362,
+     "object_motion_during_closing_angular": 1.01932,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/py_jawz_c",
+    "transform": [
+     [0.0, -1.0, -0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.068813705],
+     [1.0, 0.0, -0.0, -0.100179196],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0126648,
+    "face": "+y",
+    "source": "obb_face",
+    "seat_mode": "clamped_deep",
+    "span": 0.20565859,
+    "seat_depth": -0.045,
+    "overhang": 0.16135859,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:+y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 6.7 mm measured over a 131 mm column; pad-seated -68.8 mm along the approach (object 206 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: pushed out of the jaws during the close, -0.03 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.17313,
+     "object_motion_during_closing_angular": 2.0189500000000002,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/py_jawz_p50",
+    "transform": [
+     [0.0, -1.0, -0.0, 0.067654405],
+     [0.0, 0.0, -1.0, 0.078791343],
+     [1.0, 0.0, -0.0, -0.101126796],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0107728,
+    "face": "+y",
+    "source": "obb_face",
+    "seat_mode": "retreated",
+    "span": 0.169613932,
+    "seat_depth": -0.017,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 4.8 mm measured over a 51 mm column; pad-seated -78.8 mm along the approach (object 170 mm deep, longer than the pads \u2014 not fully enclosed); retreated 28 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.38 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15196,
+     "object_motion_during_closing_angular": 0.9969300000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/ny_jawz_m50",
+    "transform": [
+     [0.0, 1.0, 0.0, -0.067654405],
+     [0.0, 0.0, 1.0, -0.028680761],
+     [1.0, 0.0, 0.0, -0.101126796],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0107728,
+    "face": "-y",
+    "source": "obb_face",
+    "seat_mode": "clamped_deep",
+    "span": 0.169330336,
+    "seat_depth": -0.045,
+    "overhang": 0.125030336,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:-y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 4.8 mm measured over a 51 mm column; pad-seated -28.7 mm along the approach (object 169 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16878,
+     "object_motion_during_closing_angular": 0.8909100000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00025
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/ny_jawz_c",
+    "transform": [
+     [0.0, 1.0, 0.0, 0.0],
+     [0.0, 0.0, 1.0, -0.046844885],
+     [1.0, 0.0, 0.0, -0.100179196],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0126648,
+    "face": "-y",
+    "source": "obb_face",
+    "seat_mode": "clamped_deep",
+    "span": 0.20565859,
+    "seat_depth": -0.045,
+    "overhang": 0.16135859,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:-y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 6.7 mm measured over a 131 mm column; pad-seated -46.8 mm along the approach (object 206 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16646000000000002,
+     "object_motion_during_closing_angular": 0.5981700000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "obb_face/ny_jawz_p50",
+    "transform": [
+     [0.0, 1.0, 0.0, 0.067654405],
+     [0.0, 0.0, 1.0, -0.028822589],
+     [1.0, 0.0, 0.0, -0.101126796],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.0107728,
+    "face": "-y",
+    "source": "obb_face",
+    "seat_mode": "clamped_deep",
+    "span": 0.169613932,
+    "seat_depth": -0.045,
+    "overhang": 0.125313932,
+    "labels": [
+     "obb_face",
+     "jaw_z",
+     "face:-y",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 4.8 mm measured over a 51 mm column; pad-seated -28.8 mm along the approach (object 170 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15873,
+     "object_motion_during_closing_angular": 1.32064,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0005300000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_m108",
+    "transform": [
+     [0.554637307, 0.832054641, -0.007907736, 0.061533778],
+     [0.825257242, -0.551272146, -0.122676429, 0.099533923],
+     [-0.106432807, 0.061515008, -0.992415216, 0.05967347],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006431275,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.210395875,
+    "seat_depth": -0.045,
+    "overhang": 0.166095875,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc -108 mm; wall 2.4 mm, jaw 6.4 mm; seated +31.2 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 97.0 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.014130000000000002,
+     "object_motion_during_closing_angular": 0.23761000000000002,
+     "object_motion_during_shaking_linear": 0.004710000000000001,
+     "object_motion_during_shaking_angular": 0.03769
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_m090",
+    "transform": [
+     [-0.834928435, 0.326770878, -0.442849073, 0.066517969],
+     [0.550358342, 0.496391214, -0.671343025, 0.110698123],
+     [0.000451039, -0.804249063, -0.594292218, 0.095350699],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004825315,
+    "face": "+y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.288542834,
+    "seat_depth": -0.004,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc -90 mm; wall 0.8 mm, jaw 4.8 mm; seated +0.4 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.47 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15075000000000002,
+     "object_motion_during_closing_angular": 1.7544000000000002,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_m072",
+    "transform": [
+     [0.416909525, 0.899389068, 0.131475294, 0.051270613],
+     [0.889789498, -0.433371418, 0.143051961, 0.118657503],
+     [0.185637004, 0.05734561, -0.980943619, 0.092605888],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006371256,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "span_flush",
+    "span": 0.011534422,
+    "seat_depth": -0.012234422,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc -72 mm; wall 2.4 mm, jaw 6.4 mm; seated +1.8 mm [span_flush] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.40 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15062,
+     "object_motion_during_closing_angular": 1.0180500000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00021
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_m072_ctr",
+    "transform": [
+     [0.416909525, 0.899389068, 0.131475294, 0.053917578],
+     [0.889789498, -0.433371418, 0.143051961, 0.121537538],
+     [0.185637004, 0.05734561, -0.980943619, 0.072856758],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006371256,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.011534422,
+    "seat_depth": -0.032367211,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "centred_variant",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "centred depth variant of rim_rim_0_m072 [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.00 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.16193000000000002,
+     "object_motion_during_closing_angular": 0.99355,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_m054",
+    "transform": [
+     [0.290537111, 0.956863724, -1.8243e-05, 0.032327404],
+     [0.950873065, -0.288720269, -0.111718491, 0.113803944],
+     [-0.106904638, 0.032441021, -0.993739895, 0.05932565],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006431712,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.20953545,
+    "seat_depth": -0.045,
+    "overhang": 0.16523545,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc -54 mm; wall 2.4 mm, jaw 6.4 mm; seated +31.5 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 63.3 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.01548,
+     "object_motion_during_closing_angular": 0.17502,
+     "object_motion_during_shaking_linear": 0.005030000000000001,
+     "object_motion_during_shaking_angular": 0.036770000000000004
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_m036",
+    "transform": [
+     [-0.957975703, 0.175259838, -0.227082675, 0.034446079],
+     [0.286849248, 0.585984487, -0.757852023, 0.124464392],
+     [0.000245902, -0.79114232, -0.611632054, 0.09981923],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004575444,
+    "face": "+y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.28992089,
+    "seat_depth": -0.002,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc -36 mm; wall 0.6 mm, jaw 4.6 mm; seated +2.0 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.63 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15136000000000002,
+     "object_motion_during_closing_angular": 1.6778100000000002,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00029
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_m018",
+    "transform": [
+     [0.147581398, 0.988879045, 0.018383812, 0.018400932],
+     [0.988875377, -0.147879041, 0.01603987, 0.129314256],
+     [0.018580072, 0.015812112, -0.999702335, 0.058598888],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006137071,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.144730151,
+    "seat_depth": -0.045,
+    "overhang": 0.100430151,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc -18 mm; wall 2.1 mm, jaw 6.1 mm; seated +42.2 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 63.1 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.030250000000000003,
+     "object_motion_during_closing_angular": 0.18214000000000002,
+     "object_motion_during_shaking_linear": 0.013970000000000002,
+     "object_motion_during_shaking_angular": 0.15588000000000002
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p000",
+    "transform": [
+     [-1.4926e-05, 0.999999665, -0.000818513, 6.8318e-05],
+     [0.972630023, -0.000175672, -0.232359223, 0.114269431],
+     [-0.232359289, -0.000799578, -0.972629694, 0.060337049],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006488757,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.214241663,
+    "seat_depth": -0.045,
+    "overhang": 0.169941663,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc +0 mm; wall 2.5 mm, jaw 6.5 mm; seated +33.8 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 35.7 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.021730000000000003,
+     "object_motion_during_closing_angular": 0.09248,
+     "object_motion_during_shaking_linear": 0.012820000000000002,
+     "object_motion_during_shaking_angular": 0.14067000000000002
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p018",
+    "transform": [
+     [-0.15713346, 0.98684681, -0.0379796, -0.017909375],
+     [0.986238848, 0.158805994, 0.045973799, 0.128973017],
+     [0.051400485, -0.030232935, -0.998220396, 0.092874835],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006140732,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "span_flush",
+    "span": 0.010275336,
+    "seat_depth": -0.010975336,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc +18 mm; wall 2.1 mm, jaw 6.1 mm; seated +7.9 mm [span_flush] [shake_validate@3: dropped: pushed out of the jaws during the close, 2.57 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15033000000000002,
+     "object_motion_during_closing_angular": 1.14791,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p018_ctr",
+    "transform": [
+     [-0.15713346, 0.98684681, -0.0379796, -0.018735899],
+     [0.986238848, 0.158805994, 0.045973799, 0.129973514],
+     [0.051400485, -0.030232935, -0.998220396, 0.071151232],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006140732,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "centred",
+    "span": 0.010275336,
+    "seat_depth": -0.032737668,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "centred_variant",
+     "face:+z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "centred depth variant of rim_rim_0_p018 [centred] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.12 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15981,
+     "object_motion_during_closing_angular": 0.33575000000000005,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p036",
+    "transform": [
+     [0.957971132, 0.175649191, 0.226800952, -0.034235726],
+     [0.286864522, -0.587224549, -0.756885774, 0.124467955],
+     [0.000236713, 0.790135869, -0.612931687, 0.100114574],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.005046312,
+    "face": "+y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.290297179,
+    "seat_depth": -0.002,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc +36 mm; wall 1.0 mm, jaw 5.0 mm; seated +2.0 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.75 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15012,
+     "object_motion_during_closing_angular": 1.6165800000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00023
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p054",
+    "transform": [
+     [-0.290533738, 0.95686328, -0.001676183, -0.032189582],
+     [0.95087457, 0.288518788, -0.112225044, 0.11379015],
+     [-0.106900413, -0.034199001, -0.993681403, 0.0593458],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006431708,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.209582028,
+    "seat_depth": -0.045,
+    "overhang": 0.165282028,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc +54 mm; wall 2.4 mm, jaw 6.4 mm; seated +31.5 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 99.6 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.00907,
+     "object_motion_during_closing_angular": 0.07625000000000001,
+     "object_motion_during_shaking_linear": 0.0048000000000000004,
+     "object_motion_during_shaking_angular": 0.04259
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p072",
+    "transform": [
+     [-0.416909575, 0.899058923, -0.133714098, -0.051086843],
+     [0.889789511, 0.433726269, 0.141972353, 0.118658543],
+     [0.185636828, -0.059787769, -0.980797834, 0.092581569],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006383334,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "span_flush",
+    "span": 0.011587239,
+    "seat_depth": -0.012287239,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc +72 mm; wall 2.4 mm, jaw 6.4 mm; seated +1.8 mm [span_flush] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.53 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15000000000000002,
+     "object_motion_during_closing_angular": 1.9207100000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p072_ctr",
+    "transform": [
+     [-0.416909575, 0.899058923, -0.133714098, -0.053775349],
+     [0.889789511, 0.433726269, 0.141972353, 0.121513093],
+     [0.185636828, -0.059787769, -0.980797834, 0.072861274],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006383334,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.011587239,
+    "seat_depth": -0.032393619,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "centred_variant",
+     "face:+z",
+     "shake_validated",
+     "retained",
+     "weak_grasp_option"
+    ],
+    "notes": "centred depth variant of rim_rim_0_p072 [retreated] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 61.7 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.061900000000000004,
+     "object_motion_during_closing_angular": 0.38281000000000004,
+     "object_motion_during_shaking_linear": 0.008360000000000001,
+     "object_motion_during_shaking_angular": 0.05380000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p090",
+    "transform": [
+     [0.834921304, 0.327125829, 0.442600394, -0.066319571],
+     [0.55036917, -0.49689867, -0.670958634, 0.110686255],
+     [0.000439648, 0.803791269, -0.594911256, 0.095416186],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.004819338,
+    "face": "+y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.288694872,
+    "seat_depth": -0.004,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc +90 mm; wall 0.8 mm, jaw 4.8 mm; seated +0.4 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.52 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15286000000000002,
+     "object_motion_during_closing_angular": 1.76523,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_0_p108",
+    "transform": [
+     [-0.554638434, 0.832064748, 0.006668086, -0.061386187],
+     [0.825256965, 0.551090158, -0.123493237, 0.099507085],
+     [-0.106429086, -0.062991211, -0.99232301, 0.059692345],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006431271,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.210444288,
+    "seat_depth": -0.045,
+    "overhang": 0.166144288,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_0 (rim) at arc +108 mm; wall 2.4 mm, jaw 6.4 mm; seated +31.2 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; target 25.4 N on 600 g (mu_eff 0.63), gripped in 2.5 s, final squeeze 65.1 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.00924,
+     "object_motion_during_closing_angular": 0.07212,
+     "object_motion_during_shaking_linear": 0.007010000000000001,
+     "object_motion_during_shaking_angular": 0.07879000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_1_p000",
+    "transform": [
+     [-1.0, -1.8e-08, 3.9e-08, 9.5976e-05],
+     [-4.3e-08, 0.421595575, -0.906783972, 0.119365101],
+     [0.0, -0.906783972, -0.421595575, 0.055497009],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00470964,
+    "face": "+y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.246995514,
+    "seat_depth": -0.009,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on rim_1 (rim) at arc +0 mm; wall 0.7 mm, jaw 4.7 mm; seated +1.5 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.58 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15036000000000002,
+     "object_motion_during_closing_angular": 2.16183,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_1_p018",
+    "transform": [
+     [-0.020724297, 0.99936625, -0.028941367, -0.000877555],
+     [0.999737008, 0.020998918, 0.009217369, 0.12223011],
+     [0.009819265, -0.028742733, -0.999538612, 0.058787074],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006415586,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.148803933,
+    "seat_depth": -0.045,
+    "overhang": 0.104503933,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_1 (rim) at arc +18 mm; wall 2.4 mm, jaw 6.4 mm; seated +16.6 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; target 25.4 N on 600 g (mu_eff 0.63), gripped in 1.1 s, final squeeze 50.4 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.022500000000000003,
+     "object_motion_during_closing_angular": 0.23397,
+     "object_motion_during_shaking_linear": 0.00303,
+     "object_motion_during_shaking_angular": 0.028720000000000002
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_1_p036",
+    "transform": [
+     [-0.10318947, 0.991735449, 0.076241273, -0.017153057],
+     [0.987528386, 0.111311464, -0.111343811, 0.118604049],
+     [-0.118910132, 0.063800912, -0.990853079, 0.05970611],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006433649,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.210753486,
+    "seat_depth": -0.045,
+    "overhang": 0.166453486,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_1 (rim) at arc +36 mm; wall 2.4 mm, jaw 6.4 mm; seated +16.4 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 15.9 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.010990000000000002,
+     "object_motion_during_closing_angular": 0.1809,
+     "object_motion_during_shaking_linear": 0.00744,
+     "object_motion_during_shaking_angular": 0.04972000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_1_p054",
+    "transform": [
+     [-0.328574797, 0.941725077, -0.072058877, -0.036286824],
+     [0.944236859, 0.32925724, -0.002534517, 0.116185324],
+     [0.021339089, -0.068873426, -0.99739716, 0.059277537],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006415023,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.149156851,
+    "seat_depth": -0.045,
+    "overhang": 0.104856851,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_1 (rim) at arc +54 mm; wall 2.4 mm, jaw 6.4 mm; seated +15.4 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 103.3 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.021630000000000003,
+     "object_motion_during_closing_angular": 0.21071,
+     "object_motion_during_shaking_linear": 0.00284,
+     "object_motion_during_shaking_angular": 0.04068
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_1_p072",
+    "transform": [
+     [-0.442737344, 0.895854941, 0.03778318, -0.050856844],
+     [0.884617424, 0.443287913, -0.144733683, 0.106897672],
+     [-0.146409212, -0.030655347, -0.988749004, 0.059568444],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006440867,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.210723814,
+    "seat_depth": -0.045,
+    "overhang": 0.166423814,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_1 (rim) at arc +72 mm; wall 2.4 mm, jaw 6.4 mm; seated +16.7 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 21.5 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.011200000000000002,
+     "object_motion_during_closing_angular": 0.02467,
+     "object_motion_during_shaking_linear": 0.006980000000000001,
+     "object_motion_during_shaking_angular": 0.054630000000000005
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_rim_1_p090",
+    "transform": [
+     [-0.591729612, 0.803366657, 0.066768857, -0.065135583],
+     [0.777735032, 0.590712013, -0.21491286, 0.096279762],
+     [-0.212094992, -0.075241824, -0.974348183, 0.060416617],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006470405,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.214720923,
+    "seat_depth": -0.045,
+    "overhang": 0.170420923,
+    "labels": [
+     "rim_pinch",
+     "rim",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on rim_1 (rim) at arc +90 mm; wall 2.5 mm, jaw 6.5 mm; seated +16.8 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; target 25.4 N on 600 g (mu_eff 0.63), gripped in 3.4 s, final squeeze 67.4 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.019110000000000002,
+     "object_motion_during_closing_angular": 0.09833000000000001,
+     "object_motion_during_shaking_linear": 0.009810000000000001,
+     "object_motion_during_shaking_angular": 0.08584000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_m126",
+    "transform": [
+     [0.779021708, 0.080386261, 0.621822505, -0.04171965],
+     [-0.389395666, -0.715275124, 0.580303811, -0.102177295],
+     [0.491422623, -0.694204254, -0.525912787, 0.100447656],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006937434,
+    "face": "-x",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.240849837,
+    "seat_depth": -0.007,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:-x",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc -126 mm; wall 2.9 mm, jaw 6.9 mm; seated +0.6 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.13 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15424000000000002,
+     "object_motion_during_closing_angular": 0.29194000000000003,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_m108",
+    "transform": [
+     [0.01332107, 0.876981009, 0.480340357, -0.050322365],
+     [0.07205629, -0.479975971, 0.874317424, -0.087081786],
+     [0.997311606, 0.0229647, -0.069585791, 0.101660086],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006230759,
+    "face": "-y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.23624274,
+    "seat_depth": -0.013,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc -108 mm; wall 2.2 mm, jaw 6.2 mm; seated +8.2 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.00 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.1547,
+     "object_motion_during_closing_angular": 2.18638,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_m090",
+    "transform": [
+     [-0.841719552, -0.451835702, -0.295554892, -0.054933737],
+     [-0.539775851, 0.69179685, 0.479644816, -0.09032888],
+     [-0.012256709, 0.563259813, -0.826188935, 0.066875374],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00618183,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.224607896,
+    "seat_depth": -0.045,
+    "overhang": 0.180307896,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc -90 mm; wall 2.2 mm, jaw 6.2 mm; seated +32.8 mm [clamped_deep] [shake_validate@3: dropped: object left the jaws 0.27 s after gravity came on; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.09512000000000001,
+     "object_motion_during_closing_angular": 0.85087,
+     "object_motion_during_shaking_linear": 0.1736,
+     "object_motion_during_shaking_angular": 0.9393600000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_m072",
+    "transform": [
+     [-0.420043296, -0.904674639, 0.07160606, -0.033883515],
+     [-0.77301241, 0.39801291, 0.494001556, -0.100029606],
+     [-0.475410815, 0.152149669, -0.866507377, 0.060200705],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006726711,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.237535258,
+    "seat_depth": -0.045,
+    "overhang": 0.193235258,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc -72 mm; wall 2.7 mm, jaw 6.7 mm; seated +32.1 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 23.0 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.029330000000000002,
+     "object_motion_during_closing_angular": 0.41224000000000005,
+     "object_motion_during_shaking_linear": 0.017150000000000002,
+     "object_motion_during_shaking_angular": 0.11234000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_m054",
+    "transform": [
+     [-0.040496073, -0.990736694, 0.129618175, -0.016156588],
+     [-0.782824869, 0.112074366, 0.612065814, -0.099746451],
+     [-0.620922936, -0.076682069, -0.780111894, 0.062960016],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006452037,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.261943789,
+    "seat_depth": -0.045,
+    "overhang": 0.217643789,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc -54 mm; wall 2.5 mm, jaw 6.5 mm; seated +33.0 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 22.9 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.031160000000000004,
+     "object_motion_during_closing_angular": 0.17678000000000002,
+     "object_motion_during_shaking_linear": 0.015870000000000002,
+     "object_motion_during_shaking_angular": 0.10479000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_m036",
+    "transform": [
+     [-0.007934861, -0.999836691, 0.016236673, -0.002097238],
+     [-0.740358746, 0.016788467, 0.672002288, -0.09938081],
+     [-0.672165133, -0.006688718, -0.740371053, 0.064054737],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006475136,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.274356394,
+    "seat_depth": -0.045,
+    "overhang": 0.230056394,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc -36 mm; wall 2.5 mm, jaw 6.5 mm; seated +32.7 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; target 25.4 N on 600 g (mu_eff 0.63), gripped in 2.9 s, final squeeze 24.7 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.03998,
+     "object_motion_during_closing_angular": 0.25756,
+     "object_motion_during_shaking_linear": 0.03345,
+     "object_motion_during_shaking_angular": 0.24923
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_m018",
+    "transform": [
+     [0.103617275, -0.992404525, -0.066307754, 0.012936269],
+     [-0.845029663, -0.122999183, 0.520380697, -0.103341367],
+     [-0.524583958, 0.00211159, -0.851356102, 0.060195415],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006422845,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.239293823,
+    "seat_depth": -0.045,
+    "overhang": 0.194993823,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc -18 mm; wall 2.4 mm, jaw 6.4 mm; seated +32.1 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; target 25.4 N on 600 g (mu_eff 0.63), gripped in 2.3 s, final squeeze 31.0 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.011340000000000001,
+     "object_motion_during_closing_angular": 0.08307,
+     "object_motion_during_shaking_linear": 0.0034900000000000005,
+     "object_motion_during_shaking_angular": 0.029140000000000003
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p000",
+    "transform": [
+     [0.322700602, -0.942980809, -0.081556821, 0.030032658],
+     [-0.827652481, -0.322934102, 0.459026074, -0.102414815],
+     [-0.459190257, -0.080627285, -0.884671435, 0.058950471],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006456363,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.231227414,
+    "seat_depth": -0.045,
+    "overhang": 0.186927414,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +0 mm; wall 2.5 mm, jaw 6.5 mm; seated +32.0 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; target 25.4 N on 600 g (mu_eff 0.63), gripped in 2.5 s, final squeeze 28.8 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.034420000000000006,
+     "object_motion_during_closing_angular": 0.31260000000000004,
+     "object_motion_during_shaking_linear": 0.01633,
+     "object_motion_during_shaking_angular": 0.11151000000000001
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p018",
+    "transform": [
+     [0.849186044, -0.448068403, 0.27949556, 0.053800772],
+     [-0.526993506, -0.684855409, 0.503240413, -0.091367026],
+     [-0.034072082, -0.574637081, -0.817698794, 0.066940991],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006199907,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.240208744,
+    "seat_depth": -0.045,
+    "overhang": 0.195908744,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +18 mm; wall 2.2 mm, jaw 6.2 mm; seated +33.1 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 279.8 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.020890000000000002,
+     "object_motion_during_closing_angular": 0.56245,
+     "object_motion_during_shaking_linear": 0.006580000000000001,
+     "object_motion_during_shaking_angular": 0.07954
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p036",
+    "transform": [
+     [-0.011020955, 0.869748572, -0.49337203, 0.049404847],
+     [0.000760184, 0.493409141, 0.869797012, -0.08892692],
+     [0.999938978, 0.00921094, -0.006099009, 0.098530707],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.013432895,
+    "face": "-y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.244317018,
+    "seat_depth": -0.013,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +36 mm; wall 9.4 mm, jaw 13.4 mm; seated +8.4 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.27 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15281,
+     "object_motion_during_closing_angular": 0.6780900000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0002
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p054",
+    "transform": [
+     [-0.820575685, -0.128246037, -0.556963643, 0.043079283],
+     [-0.489925909, 0.659676091, 0.569912325, -0.105747913],
+     [0.294326602, 0.740527115, -0.604145217, 0.101662877],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.007695754,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.265967662,
+    "seat_depth": -0.003,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +54 mm; wall 3.7 mm, jaw 7.7 mm; seated -2.2 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.52 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15102000000000002,
+     "object_motion_during_closing_angular": 1.1187600000000002,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p072",
+    "transform": [
+     [0.534716589, -0.844995489, 0.007796964, 0.037809096],
+     [-0.754306515, -0.473128366, 0.455160665, -0.099419736],
+     [-0.380919744, -0.249263259, -0.890375189, 0.06053753],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.007096589,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.233562907,
+    "seat_depth": -0.045,
+    "overhang": 0.189262907,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +72 mm; wall 3.1 mm, jaw 7.1 mm; seated +31.6 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 38.5 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.0267,
+     "object_motion_during_closing_angular": 0.46227,
+     "object_motion_during_shaking_linear": 0.005430000000000001,
+     "object_motion_during_shaking_angular": 0.0671
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p090",
+    "transform": [
+     [0.774481066, -0.589046499, 0.230658408, 0.054875317],
+     [-0.628695792, -0.676282897, 0.383904994, -0.089710083],
+     [-0.070147556, -0.442341119, -0.894099354, 0.064080142],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.006454628,
+    "face": "+z",
+    "source": "rim_pinch",
+    "seat_mode": "clamped_deep",
+    "span": 0.230155866,
+    "seat_depth": -0.045,
+    "overhang": 0.185855866,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:+z",
+     "shake_validated",
+     "retained"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +90 mm; wall 2.5 mm, jaw 6.5 mm; seated +33.9 mm [clamped_deep] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 25.4 N target in 6.0 s of closing; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 108.0 N, shake applied at 96%/96% of command]",
+    "quality": {
+     "object_in_gripper": 1.0,
+     "object_motion_during_closing_linear": 0.020810000000000002,
+     "object_motion_during_closing_angular": 0.49672000000000005,
+     "object_motion_during_shaking_linear": 0.00239,
+     "object_motion_during_shaking_angular": 0.02501
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p108",
+    "transform": [
+     [-0.037808836, 0.849842971, -0.525678054, 0.053004569],
+     [0.091957229, 0.526781036, 0.845012194, -0.082362844],
+     [0.995044903, -0.016390969, -0.098066183, 0.101176215],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00623537,
+    "face": "-y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.234739438,
+    "seat_depth": -0.014,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +108 mm; wall 2.2 mm, jaw 6.2 mm; seated +10.8 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.18 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15361000000000002,
+     "object_motion_during_closing_angular": 0.7028500000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 7.000000000000001e-05
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "rim_pinch/rim_spout_0_p126",
+    "transform": [
+     [-0.34555791, 0.713381776, -0.609652502, 0.043619278],
+     [-0.07331053, 0.62716576, 0.77542806, -0.100211782],
+     [0.935529421, 0.312649248, -0.164423693, 0.101494569],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.00635957,
+    "face": "-y",
+    "source": "rim_pinch",
+    "seat_mode": "retreated",
+    "span": 0.237029141,
+    "seat_depth": -0.01,
+    "labels": [
+     "rim_pinch",
+     "spout",
+     "face:-y",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "lip pinch on spout_0 (spout) at arc +126 mm; wall 2.4 mm, jaw 6.4 mm; seated +0.5 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.72 s in; target 25.4 N on 600 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15027000000000001,
+     "object_motion_during_closing_angular": 1.0254,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@3"
+   }
+  ]
+ }
+}

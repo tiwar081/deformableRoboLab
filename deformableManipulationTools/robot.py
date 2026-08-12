@@ -13,7 +13,7 @@ import newton.utils
 from newton import JointTargetMode
 
 from .params import FRANKA, RobotConfig, TableConfig, TABLE, MUJOCO_GRIP, MujocoGripConfig
-from .mathutils import find_body, quat_rotate_xyzw, quat_to_vec4
+from .mathutils import find_body, quat_rotate_xyzw, quat_to_matrix_xyzw, quat_to_vec4
 
 
 def build_franka_robot(
@@ -420,3 +420,62 @@ def solve_gripper_ik(model, state, ee_body: int, ee_offset: np.ndarray, target_p
     model.joint_q.assign(jq)
     q[robot.n_arm_dof : robot.n_dof] = gripper_open
     return q
+
+
+# =================================================================================================
+# The hand's own geometry, measured off the real robot once per process.
+# =================================================================================================
+class HandGeometry:
+    """Where the grasp frame sits in the end-effector body frame, MEASURED from the real robot.
+
+    ``ee_from_grasp`` is the 4x4 placing the ``grasp_library.POSE_CONVENTION`` grasp frame inside
+    the EE body frame: origin at ``FRANKA.ee_offset`` (the TCP the whole codebase commands), ``+z``
+    the EE's own ``+z`` (which IS the approach — that is what makes ``ee_offset`` a pure ``+z``
+    offset), and ``+x`` the jaw closing axis taken from where the two finger bodies actually sit at
+    the home pose. Measuring the jaw axis rather than asserting it is the point: on the panda USD
+    the fingers slide along the EE frame's 45-degree diagonal, not along a body axis, and a
+    hard-coded guess would put every stored grasp a quarter turn out.
+
+    Shared by the free-floating shake rig (``grasp_passes.shake_validate.hand``) and by
+    ``grasp_library``'s hand-clearance measurement — one definition, so the two can never disagree
+    about where the hand is."""
+
+    def __init__(self):
+        builder = build_franka_robot(xform=wp.transform(wp.vec3(0.0, 0.0, 0.0), wp.quat_identity()),
+                                     table=None)
+        model = builder.finalize()
+        state = model.state()
+        newton.eval_fk(model, model.joint_q, model.joint_qd, state)
+        labels = list(model.body_label)
+        self.ee_body_src = find_body(labels, FRANKA.ee_link_suffix)
+        self.finger_bodies_src = finger_body_indices(model)
+        body_q = state.body_q.numpy()
+
+        r_ee = quat_to_matrix_xyzw(body_q[self.ee_body_src][3:7])
+        jaw_world = body_q[self.finger_bodies_src[0]][:3] - body_q[self.finger_bodies_src[1]][:3]
+        jaw_ee = r_ee.T @ (jaw_world / np.linalg.norm(jaw_world))
+        approach_ee = np.array([0.0, 0.0, 1.0])           # the axis FRANKA.ee_offset is measured along
+        jaw_ee = jaw_ee - float(jaw_ee @ approach_ee) * approach_ee
+        jaw_ee /= np.linalg.norm(jaw_ee)
+
+        m = np.eye(4)
+        m[:3, 0] = jaw_ee
+        m[:3, 1] = np.cross(approach_ee, jaw_ee)
+        m[:3, 2] = approach_ee
+        m[:3, 3] = np.asarray(FRANKA.ee_offset, dtype=float)
+        self.ee_from_grasp = m
+        inv = np.eye(4)
+        inv[:3, :3] = m[:3, :3].T
+        inv[:3, 3] = -m[:3, :3].T @ m[:3, 3]
+        self.grasp_from_ee = inv
+
+
+_HAND_GEOMETRY: HandGeometry | None = None
+
+
+def hand_geometry() -> HandGeometry:
+    """Cached :class:`HandGeometry` — the measurement costs a full robot load, so pay it once."""
+    global _HAND_GEOMETRY
+    if _HAND_GEOMETRY is None:
+        _HAND_GEOMETRY = HandGeometry()
+    return _HAND_GEOMETRY

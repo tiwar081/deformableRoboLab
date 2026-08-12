@@ -63,7 +63,23 @@ def _load_visual(usd_path: Path, tile: int) -> VizVisual | None:
     from pxr import Usd, UsdGeom
 
     stage = Usd.Stage.Open(str(usd_path), Usd.Stage.LoadAll)
-    prim = next((p for p in stage.Traverse() if p.IsA(UsdGeom.Mesh)), None)
+    # Pick the LARGEST mesh prim under the asset root (the body), not the first in traversal order.
+    # A multi-mesh asset (the VoMP bucket = decal + body + handle) would otherwise texture only the
+    # flat decal sticker (its first prim) — the flat-panel look. The viz mesh carries ONE texture,
+    # so the body (most faces, main texture) is the right single prim to show; the collision path
+    # (mesh_collision.load_usd_mesh) merges all prims for physics. Scope to the default prim so a
+    # stray sibling (the apple's GroundPlane) is not considered.
+    from pxr import Usd as _Usd
+    root = stage.GetDefaultPrim()
+    walk = _Usd.PrimRange(root) if root and root.IsValid() else stage.Traverse()
+
+    def _n_faces(pr):
+        fvc = UsdGeom.Mesh(pr).GetFaceVertexCountsAttr().Get()
+        return len(fvc) if fvc else 0
+
+    meshes = [p for p in walk if p.IsA(UsdGeom.Mesh)
+              and UsdGeom.Imageable(p).ComputePurpose() not in (UsdGeom.Tokens.proxy, UsdGeom.Tokens.guide)]
+    prim = max(meshes, key=_n_faces, default=None)
     if prim is None:
         return None
     # load_uvs handles both vertex- and faceVarying-interpolated primvars:st

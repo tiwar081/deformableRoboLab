@@ -34,7 +34,13 @@ def placement_from_dir(d: Path | str) -> dict:
 
 
 def demo_from_dir(d: Path | str):
-    """scene.json (+ task.json robot placement, + env.json look) -> DemoSpec."""
+    """scene.json (+ task.json robot placement, + env.json look, + traj.json policy) -> DemoSpec.
+
+    Without ``traj.json`` the demo is the settle-only parked-arm scene (the pre-trajectory-stage
+    behavior, used by the settle check and the still renders). WITH ``traj.json`` — written by
+    ``deformableManipulationTools.traj_gen`` — the demo plays the generated pick-and-place policy:
+    the plan's timed ``(pos, yaw, tilt)`` waypoints and its ONE force ``GraspWindow`` (incl. the
+    pre-shaped approach aperture, the grasp library's contract)."""
     import warp as wp
     from deformableManipulationTools.demo_runner import WP
 
@@ -50,10 +56,26 @@ def demo_from_dir(d: Path | str):
     spec.robot_base_xform = wp.transform(
         wp.vec3(float(base[0]), float(base[1]), float(base[2])),
         wp.quat_from_axis_angle(wp.vec3(0.0, 0.0, 1.0), math.radians(placement["yaw_deg"])))
-    # Start the arm at a RAISED, out-of-the-way pose (frame 0) instead of home_q, so the parked
-    # end-effector hovers well above the scene and can't touch objects during the settle (the
-    # cloth demos' "start high and clear" trick). One waypoint held for the whole settle window.
-    spec.waypoints = [WP(0.0, geometry.parked_start_tcp(placement))]
+    traj = _read(d, "traj.json")
+    if traj is not None:
+        from deformableManipulationTools.params import GraspWindow
+        spec.waypoints = [WP(t=w["t"], pos=tuple(w["pos"]), yaw=w.get("yaw", 0.0),
+                             tilt=w.get("tilt", 0.0),
+                             tilt_axis=tuple(w.get("tilt_axis", (1.0, 0.0, 0.0))),
+                             via=bool(w.get("via", False)))
+                          for w in traj["waypoints"]]
+        gw = traj["grasp_window"]
+        spec.grasp_windows = [GraspWindow(
+            close_start=float(gw["close_start"]), close_end=float(gw["close_end"]),
+            release_start=float(gw["release_start"]), release_end=float(gw["release_end"]),
+            force_target=float(gw["force_target"]),
+            preshape_width=float(gw["preshape_width"]))]
+        spec.num_frames = int(traj["num_frames"])
+    else:
+        # Start the arm at a RAISED, out-of-the-way pose (frame 0) instead of home_q, so the parked
+        # end-effector hovers well above the scene and can't touch objects during the settle (the
+        # cloth demos' "start high and clear" trick). One waypoint held for the whole settle window.
+        spec.waypoints = [WP(0.0, geometry.parked_start_tcp(placement))]
     spec.start_at_first_waypoint = True
     render = env_gen.env_to_render_spec(env, placement)
     render.soft_body_style = spec.render.soft_body_style   # keep the scene's deformable color

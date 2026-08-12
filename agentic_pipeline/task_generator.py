@@ -10,7 +10,7 @@ deformables, so the feasibility checks are DEFORMABLE-AWARE:
 
 - affordance gating by object type (``check_affordance``): "fold" is meaningful for a cloth but not a
   cable; "coil" for a cable but not a cube; "stack" only for rigids. The predicate must match the
-  object's category (rigid / cloth / cable / squishy).
+  object's category (rigid / cloth / cable / squishy / bag).
 - folded-volume container fit (``check_fits_in``): a shirt that does NOT fit a container laid flat
   MAY fit folded (folding trades footprint for thickness — volume is conserved), so "put the shirt
   in the bowl" can be feasible where the flat garment isn't. A cable is modelled coiled.
@@ -46,22 +46,23 @@ import urllib.error
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from agentic_pipeline import load_goal_predicates
 from agentic_pipeline import scene_generator as sg
-from deformableManipulationTools.params import FRANKA, TABLE
+from deformableManipulationTools.params import TABLE
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# The two supported robots are kinematically identical; max PARALLEL-JAW opening is 2x the per-finger
-# prismatic limit (params.FRANKA.gripper_open). Used only as a coarse "is this even graspable" width
-# ceiling — the task generator does NOT tune grip force/width (that is the trajectory pipeline's job).
-MAX_JAW_WIDTH = 2.0 * FRANKA.gripper_open           # ~0.08 m
+# Max PARALLEL-JAW opening [m] (~0.08). Imported from the package rather than re-derived here, so
+# the grasp library and the feasibility check cannot disagree about what fits the gripper. Used here
+# only as a coarse "is this even graspable" width ceiling — the task generator does NOT tune grip
+# force/width (that is the trajectory pipeline's job).
+from deformableManipulationTools.grasp_library import MAX_JAW_WIDTH  # noqa: E402
 
-# kind -> coarse category (reuses scene_generator's own mapping; deformable types split out).
-KIND_CATEGORY = {
-    "ycb_mesh": "rigid", "rigid_box": "rigid", "rubiks_cube": "rigid",
-    "cloth": "cloth", "cable": "cable", "soft_mesh": "squishy", "soft_block": "squishy",
-}
-DEFORMABLE_CATEGORIES = {"cloth", "cable", "squishy"}
+# The predicate library + the kind -> coarse category map are DATA, loaded from
+# ``agentic_pipeline/goal_predicates.json`` (see that file's ``_comment`` for the schema). Adding or
+# retuning a goal is a data edit, not a code edit.
+GOAL_PREDICATES, KIND_CATEGORY = load_goal_predicates()
+DEFORMABLE_CATEGORIES = {"cloth", "cable", "squishy", "bag"}
 
 # Max fraction of an object's footprint allowed to protrude from a container mouth and still count
 # as "contained" — the partial-containment model (a banana settling in a bowl). 0 = RoboLab-strict.
@@ -75,73 +76,6 @@ CONTAINER_CLASSES = {"kitchenware", "storage"}
 CONTAINER_NAMES = {"bowl", "mug", "pitcher"}         # legacy fallback (pre-"container"-flag entries)
 
 
-# ---------------------------------------------------------------------------------------------
-# The predicate library (our analogue of RoboLab's conditionals.py)
-# ---------------------------------------------------------------------------------------------
-# Each predicate declares: required object params, the categories each param object may belong to,
-# whether it needs a container, and a human verb. ``obj_categories`` gates AFFORDANCE — a predicate
-# that names a category set excluding an object's category is infeasible for that object.
-GOAL_PREDICATES: dict[str, dict] = {
-    # --- shared: rigid AND deformable ---
-    "object_in_container": {
-        "params": ["object", "container"], "container_param": "container",
-        "obj_categories": {"rigid", "cloth", "cable", "squishy"},
-        "verb": "put ... in", "attributes": ["spatial"]},
-    "object_on_top": {
-        "params": ["object", "target"], "container_param": None,
-        "obj_categories": {"rigid", "cloth", "cable", "squishy"},
-        "verb": "put ... on", "attributes": ["spatial"]},
-    "object_left_of": {
-        "params": ["object", "reference"], "container_param": None,
-        "obj_categories": {"rigid", "cloth", "cable", "squishy"},
-        "verb": "move ... left of", "attributes": ["spatial"]},
-    "object_right_of": {
-        "params": ["object", "reference"], "container_param": None,
-        "obj_categories": {"rigid", "cloth", "cable", "squishy"},
-        "verb": "move ... right of", "attributes": ["spatial"]},
-    "object_in_front_of": {
-        "params": ["object", "reference"], "container_param": None,
-        "obj_categories": {"rigid", "cloth", "cable", "squishy"},
-        "verb": "move ... in front of", "attributes": ["spatial"]},
-    "object_behind": {
-        "params": ["object", "reference"], "container_param": None,
-        "obj_categories": {"rigid", "cloth", "cable", "squishy"},
-        "verb": "move ... behind", "attributes": ["spatial"]},
-    "object_outside_of": {
-        "params": ["object", "container"], "container_param": "container",
-        "obj_categories": {"rigid", "cloth", "cable", "squishy"},
-        "verb": "take ... out of", "attributes": ["spatial"]},
-    # --- rigid-only ---
-    "stacked": {
-        "params": ["object", "base"], "container_param": None,
-        "obj_categories": {"rigid"},
-        "verb": "stack ... on", "attributes": ["procedural"]},
-    "object_groups_in_containers": {
-        "params": ["object", "container"], "container_param": "container",
-        "obj_categories": {"rigid"},
-        "verb": "sort ... into", "attributes": ["relational", "procedural"]},
-    # --- deformable-only (the affordances that make deformables special) ---
-    "cloth_folded": {
-        "params": ["object"], "container_param": None,
-        "obj_categories": {"cloth"},
-        "verb": "fold", "attributes": ["deformable", "procedural"]},
-    "cloth_draped_over": {
-        "params": ["object", "target"], "container_param": None,
-        "obj_categories": {"cloth"},
-        "verb": "drape ... over", "attributes": ["deformable", "spatial"]},
-    "cable_coiled": {
-        "params": ["object"], "container_param": None,
-        "obj_categories": {"cable"},
-        "verb": "coil", "attributes": ["deformable", "procedural"]},
-    "cable_routed_through": {
-        "params": ["object", "target"], "container_param": None,
-        "obj_categories": {"cable"},
-        "verb": "route ... through", "attributes": ["deformable", "procedural"]},
-    "object_compressed": {
-        "params": ["object"], "container_param": None,
-        "obj_categories": {"squishy"},
-        "verb": "squeeze", "attributes": ["deformable"]},
-}
 
 # Every role name used across GOAL_PREDICATES (the fixed key set for the goal.params schema object;
 # the API requires an explicit-property object with additionalProperties=false, not a free-form map).
@@ -187,7 +121,10 @@ def _scene_by_name(scene: dict, catalog: dict | None = None) -> dict:
 
 
 def _category(entry: dict) -> str:
-    return KIND_CATEGORY[entry["kind"]]
+    # A bag uses the existing cloth physics/build path but needs a distinct task affordance. Catalog
+    # entries may therefore override their physics kind's coarse semantic category (e.g.
+    # {"kind": "cloth", "category": "bag"}).
+    return entry.get("category", KIND_CATEGORY[entry["kind"]])
 
 
 def _is_container(entry: dict) -> bool:
@@ -240,6 +177,12 @@ def check_static(task: Task, scene: dict) -> tuple[bool, str]:
         if not _is_container(present[cname]["entry"]):
             return False, (f"{cname!r} is not an open-top container (scene containers: "
                            f"{containers}); {pred} needs one")
+    for role, allowed in spec.get("role_categories", {}).items():
+        name = params[role]
+        actual = _category(present[name]["entry"])
+        if actual not in allowed:
+            return False, (f"goal {pred} requires role {role!r} to be one of {sorted(allowed)}, "
+                           f"but {name!r} is {actual}")
     return True, "structural checks pass"
 
 
@@ -487,7 +430,10 @@ def _predicate_table_text() -> str:
     lines = []
     for name, spec in GOAL_PREDICATES.items():
         cats = "/".join(sorted(spec["obj_categories"]))
-        lines.append(f'- {name}(params={spec["params"]}) — "{spec["verb"]}"; object must be [{cats}]')
+        role_gates = "".join(f"; {role} must be [{'/'.join(sorted(allowed))}]"
+                             for role, allowed in spec.get("role_categories", {}).items())
+        lines.append(f'- {name}(params={spec["params"]}) — "{spec["verb"]}"; '
+                     f'object must be [{cats}]{role_gates}')
     return "\n".join(lines)
 
 
@@ -503,8 +449,8 @@ def _agent_system(scene: dict) -> str:
             tag += ", CONTAINER (open-top)"
         obj_lines.append(f'- {nm} [{tag}, footprint {d[0]:.2f}x{d[1]:.2f} m] — {e["description"]}')
     return f"""You propose ONE meaningful, physically feasible manipulation task for a Franka-arm robot,
-given a tabletop scene that may contain RIGID and DEFORMABLE objects (cloth, cables/ropes, squishy
-FEM objects). You choose the goal and describe it; you do NOT decide grasp force or trajectory.
+given a tabletop scene that may contain RIGID and DEFORMABLE objects (cloth, cables/ropes, bags,
+squishy FEM objects). You choose the goal and describe it; you do NOT decide grasp force or trajectory.
 
 SCENE OBJECTS (reference objects ONLY by these exact names):
 {chr(10).join(obj_lines)}
@@ -513,9 +459,9 @@ GOAL PREDICATES (choose exactly one; its "object" param is the thing being manip
 {_predicate_table_text()}
 
 HARD RULES (the feasibility checker enforces them — violating one gets the task rejected):
-- AFFORDANCE: the predicate must match the object's category. Only fold/drape a CLOTH; only
-  coil/route a CABLE; only squeeze a SQUISHY object; only stack RIGID objects. Do not fold a banana
-  or stack a rope.
+- AFFORDANCE: the predicate must match the object's category. Cloth can fold/spread/drape/uncover;
+  cable can coil/route/thread/straighten/avoid snags; squishy clutter and general objects can be
+  pushed/pulled/retrieved/cleared; bag goals require a BAG. Do not fold a banana or stack a rope.
 - CONTAINER: object_in_container / object_outside_of / sort need an OPEN-TOP container object
   (bowl, mug, pitcher) — a can, box, or block is not a container.
 - FIT: to place an object into a container it must fit — a large cloth may need to be FOLDED first

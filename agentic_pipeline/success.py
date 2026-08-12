@@ -16,10 +16,28 @@ running object state:
   the resting-height test, which is what a settled scene exposes without contact sensors).
 - ``object_left_of`` / ``right_of`` / ``in_front_of`` / ``behind`` — the ROBOT-POV 45-degree cone
   test (RoboLab ``spatial_condition_check_vector_based``), evaluated in the robot's frame.
-- deformable predicates (``cloth_folded``, ``cable_coiled``, ``object_compressed``,
-  ``cloth_draped_over``, ``cable_routed_through``) — geometric proxies over the particle cloud
-  (bounding-box shrink for fold/coil/compress; overlap for drape/route), since there is no
-  RoboLab analog (RoboLab has no deformables). Marked ``deformable_proxy`` in the result.
+- generic pose tests (no RoboLab analog, but each verified to separate true success from true
+  failure): ``proximity`` (xy AABB gap <= tol) for push/pull-to, ``separation`` (xy AABB gap >=
+  clearance) for clear-of/uncovered, ``robot_reach`` (distance from base) for retrieved, and
+  ``height`` (bottom above support + clearance) for lifted.
+
+SCORING IS DECOUPLED FROM GENERATION. Task gen may propose EVERY predicate in the library; this
+module only says whether completion can be MEASURED yet. Predicates whose evaluator is not built
+carry ``driver: null`` in ``goal_predicates.json``, and ``evaluate`` returns ``evaluable=False``
+for them — never a pass, and never a silent failure either (a rollout must read it as *no score*,
+not a failed attempt). ``pending_evaluators()`` lists them; what each one needs built is written up
+in ``docs/agenticPipeline/success-evaluators.md``, kept out of the predicate table because task gen never reads it.
+
+The deformable SHAPE evaluators (fold / coil / spread / compress / drape / thread / bag-mouth /
+in-bag) were WITHDRAWN 2026-07-27 after probing each against a true-success and a true-failure
+state: every one either false-positived or could never fire — a crumpled cloth read as "folded"; a
+cloth folded in half read as "spread"; a flat coil never registered (the test demanded thickness a
+tabletop coil has not got); a cable lying ABOVE a ring read as "threaded through", as did a box
+merely sitting ON a cloth for "draped over"; ``object_compressed`` was hardcoded ``True``; the
+bag-mouth tests needed ``mouth_open`` metadata no simulator emits; an object resting on a COLLAPSED
+bag read as inside it. Common cause: an AABB cannot express SHAPE or TOPOLOGY. Deformable POSITION
+goals (uncovered-from, clear-of, lifted) were kept: they reuse the generic geometry above and were
+verified alongside it.
 
 The evaluator runs against a lightweight ``SceneState`` snapshot (body poses + AABBs + particle
 positions), so it works both in the headless settle harness and, later, in a policy rollout. Task
@@ -33,13 +51,28 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from . import geometry
+from . import geometry, load_goal_predicates
+
+
+def _predicates() -> dict:
+    """The predicate library (DATA — agentic_pipeline/goal_predicates.json), read here only for
+    each predicate's ``driver``. Loaded LAZILY: the loader validates drivers against ``DRIVERS``
+    below, so calling it at module scope would cycle."""
+    global _PREDICATE_CACHE
+    if _PREDICATE_CACHE is None:
+        _PREDICATE_CACHE, _ = load_goal_predicates()
+    return _PREDICATE_CACHE
+
+
+_PREDICATE_CACHE = None
 
 
 @dataclass
 class SceneState:
     """A snapshot the success predicates read. ``bodies[name]`` = dict(pos=(3,), aabb=(min3,max3),
-    yaw_deg). ``particles[name]`` = (N, 3) array (deformables). ``base_xy`` = robot base for cones."""
+    yaw_deg), optionally with bag ``mouth_points``/``mouth_open`` metadata. ``particles[name]`` =
+    (N, 3) deformable points (cloth/FEM particles or cable nodes). ``base_xy`` = robot base for
+    cones/retrieval."""
     bodies: dict = field(default_factory=dict)
     particles: dict = field(default_factory=dict)
     base_xy: tuple = (0.0, 0.0)
@@ -126,45 +159,52 @@ def _cone(state, obj, ref, direction):
     return ok, f"{obj} {'is' if ok else 'is not'} {direction.replace('-of','').replace('-',' ')} {ref}"
 
 
-def _bbox_diag(state, name):
-    ab = state.aabb(name)
-    if ab is None:
+def _aabb_gap_xy(state, first, second):
+    aa, ab = state.aabb(first), state.aabb(second)
+    if aa is None or ab is None:
         return None
-    lo, hi = ab
-    return float(np.linalg.norm(hi - lo))
+    (alo, ahi), (blo, bhi) = aa, ab
+    dx = max(float(blo[0] - ahi[0]), float(alo[0] - bhi[0]), 0.0)
+    dy = max(float(blo[1] - ahi[1]), float(alo[1] - bhi[1]), 0.0)
+    return math.hypot(dx, dy)
 
 
-def _folded_or_coiled(state, obj, ref_shrink=0.7):
-    """Deformable proxy: the object's footprint diagonal shrank to <= ref_shrink of its flat span.
-    We don't store the flat reference here, so the check reports the current footprint and defers
-    the ratio to the caller when a spawn reference is available; standalone it flags 'plausible'
-    when the xy footprint is compact relative to the object's own height-normalized extent."""
-    ab = state.aabb(obj)
-    if ab is None:
-        return False, f"missing particles for {obj!r}"
-    lo, hi = ab
-    fx, fy, fz = hi - lo
-    # folded/coiled => the in-plane footprint is no longer dominated by ONE long axis
-    aspect = max(fx, fy) / max(min(fx, fy), 1e-6)
-    ok = aspect < 2.5 and fz > 0.01           # became blockier and gained thickness
-    return ok, f"{obj} footprint {fx:.2f}x{fy:.2f}x{fz:.2f} m (aspect {aspect:.1f}) {'folded/coiled' if ok else 'still flat/extended'}"
-
-
-def _compressed(state, obj):
-    ab = state.aabb(obj)
-    if ab is None:
-        return False, f"missing particles for {obj!r}"
-    lo, hi = ab
-    return True, f"{obj} height {hi[2]-lo[2]:.3f} m (compression is force-dependent; reported only)"
-
-
-def _draped_or_routed(state, obj, target):
-    ao, at = state.aabb(obj), state.aabb(target)
-    if ao is None or at is None:
+def _separated(state, obj, target, clearance=0.02):
+    gap = _aabb_gap_xy(state, obj, target)
+    if gap is None:
         return False, f"missing state for {obj!r} or {target!r}"
-    (olo, ohi), (tlo, thi) = ao, at
-    overlap = (olo[0] <= thi[0] and ohi[0] >= tlo[0] and olo[1] <= thi[1] and ohi[1] >= tlo[1])
-    return overlap, f"{obj} {'overlaps' if overlap else 'does not overlap'} {target}"
+    ok = gap >= clearance
+    return ok, f"{obj} is {gap:.3f} m clear of {target} (required {clearance:.3f} m)"
+
+
+def _near(state, obj, target, tolerance=0.05):
+    gap = _aabb_gap_xy(state, obj, target)
+    if gap is None:
+        return False, f"missing state for {obj!r} or {target!r}"
+    ok = gap <= tolerance
+    return ok, f"{obj} is {gap:.3f} m from {target} (required <= {tolerance:.3f} m)"
+
+
+def _retrieved(state, obj, reach=0.45):
+    c = state.centroid(obj)
+    if c is None:
+        return False, f"missing state for {obj!r}"
+    dist = math.hypot(float(c[0]) - state.base_xy[0], float(c[1]) - state.base_xy[1])
+    ok = dist <= reach
+    return ok, f"{obj} is {dist:.3f} m from robot base (retrieved <= {reach:.3f} m)"
+
+
+def _lifted(state, obj):
+    ab = state.aabb(obj)
+    if ab is None:
+        return False, f"missing state for {obj!r}"
+    lo, _ = ab
+    meta = state.bodies.get(obj, {})
+    support_z = float(meta.get("support_z", 0.07))
+    clearance = float(meta.get("lift_clearance", 0.05))
+    ok = float(lo[2]) >= support_z + clearance
+    return ok, (f"{obj} bottom z={lo[2]:.3f} m "
+                f"({'lifted' if ok else 'not lifted'}; threshold {support_z + clearance:.3f} m)")
 
 
 _DIR = {"object_left_of": "left", "object_right_of": "right",
@@ -173,9 +213,17 @@ _DIR = {"object_left_of": "left", "object_right_of": "right",
 
 def evaluate(predicate: str, params: dict, state: SceneState) -> dict:
     """Evaluate a compiled goal predicate against a SceneState. Returns
-    ``{ok, detail, deformable_proxy}``."""
+    ``{ok, evaluable, detail}``.
+
+    ``evaluable=False`` means the goal is legitimate and task gen may propose it, but no VERIFIED
+    evaluator exists yet (``driver: null`` in the predicate library) — ``ok`` is then False because
+    nothing was measured, NOT because the robot failed. Callers scoring a rollout must treat an
+    unevaluable goal as "no score", never as a failed attempt."""
+    if predicate in pending_evaluators():
+        return {"ok": False, "evaluable": False,
+                "detail": f"no verified success evaluator for {predicate!r} yet "
+                          f"(see docs/agenticPipeline/success-evaluators.md) — NOT scored, and not a failed attempt"}
     obj = params.get("object")
-    proxy = False
     if predicate in ("object_in_container", "object_inside"):
         ok, detail = _in_container(state, obj, params.get("container"))
     elif predicate == "object_outside_of":
@@ -193,26 +241,48 @@ def evaluate(predicate: str, params: dict, state: SceneState) -> dict:
             ok = ok and o_ok
             details.append(d)
         detail = "; ".join(details)
-    elif predicate in ("cloth_folded", "cable_coiled"):
-        ok, detail = _folded_or_coiled(state, obj); proxy = True
-    elif predicate == "object_compressed":
-        ok, detail = _compressed(state, obj); proxy = True
-    elif predicate in ("cloth_draped_over", "cable_routed_through"):
-        ok, detail = _draped_or_routed(state, obj, params.get("target")); proxy = True
+    elif predicate in ("cloth_uncovered_from", "cable_clear_of", "object_cleared_from"):
+        ok, detail = _separated(state, obj, params.get("target"))
+    elif predicate in ("object_pushed_to", "object_pulled_to"):
+        ok, detail = _near(state, obj, params.get("target"))
+    elif predicate == "object_retrieved":
+        ok, detail = _retrieved(state, obj)
+    elif predicate == "bag_lifted":
+        ok, detail = _lifted(state, obj)
     else:
-        return {"ok": False, "detail": f"no runtime evaluator for predicate {predicate!r}",
-                "deformable_proxy": False}
-    return {"ok": bool(ok), "detail": detail, "deformable_proxy": proxy}
+        return {"ok": False, "evaluable": False,
+                "detail": f"unknown predicate {predicate!r} (not in the predicate library)"}
+    return {"ok": bool(ok), "evaluable": True, "detail": detail}
+
+
+# The drivers ``evaluate`` above actually implements. The loader cross-checks the predicate table
+# against this, so a data-only edit cannot claim an evaluator that does not exist — a predicate
+# without one must instead declare ``driver: null`` (build queue: docs/agenticPipeline/success-evaluators.md).
+DRIVERS = {"open_top_hull", "footprint_support", "robot_pov_cone",
+           "proximity", "separation", "robot_reach", "height"}
+
+
+def pending_evaluators() -> set:
+    """Predicates task gen can propose but cannot yet score (``driver: null``). What each one needs
+    built is written up in docs/agenticPipeline/success-evaluators.md, deliberately not in the predicate table."""
+    return {name for name, spec in _predicates().items() if spec.get("driver") is None}
 
 
 def compile_success_spec(task_goal: dict) -> dict:
     """The serializable success spec stored in task.json: the predicate + params + which geometric
-    test drives it, so a rollout can re-evaluate without importing task-gen internals."""
+    test drives it, so a rollout can re-evaluate without importing task-gen internals.
+
+    The driver is read from the predicate library (``goal_predicates.json``) — the SAME table task
+    gen validates against — so the two can never disagree about a predicate."""
     pred = task_goal.get("predicate")
-    driver = ("open_top_hull" if pred in ("object_in_container", "object_inside", "object_outside_of",
-                                          "object_groups_in_containers")
-              else "footprint_support" if pred in ("object_on_top", "stacked")
-              else "robot_pov_cone" if pred in _DIR
-              else "deformable_proxy")
+    spec = _predicates().get(pred)
+    if spec is None:
+        if pred != "object_inside":        # the one alias not in the table
+            raise KeyError(f"no goal predicate {pred!r} in the predicate library")
+        driver = "open_top_hull"
+    else:
+        driver = spec["driver"]
+    # ``evaluable`` travels into task.json so a rollout knows a null driver means "cannot score
+    # this goal yet", rather than reading the missing driver as a failed attempt.
     return {"predicate": pred, "params": task_goal.get("params", {}), "driver": driver,
-            "cone_deg": 45.0, "open_top_threshold": 0.7}
+            "evaluable": driver is not None, "cone_deg": 45.0, "open_top_threshold": 0.7}

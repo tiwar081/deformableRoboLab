@@ -2,7 +2,7 @@
 
 An agent (Claude) reads a natural-language prompt and composes a realistic tabletop scene from the
 IMPORTED object catalog (``assets/objects/scene_catalog.json`` — rigid YCB/HOT3D/Objaverse meshes
-plus deformables: RGBench garments, YCB-derived squishy FEM tets, cable/rope variants), a
+plus deformables: RGBench garments, Objaverse bags, YCB-derived squishy FEM tets, cable/rope variants), a
 background HDRI set, and a table-material set. Mirroring RoboLab's scene_gen: the LLM proposes
 objects + coordinates, a spatial solver (circle-collision push-apart + table-bounds clamp) makes
 the layout feasible, and validation errors are fed back to the agent for a retry (RoboLab's
@@ -24,7 +24,7 @@ Helper API (for the full pipeline):
                                                   (numbered folder if the name already exists)
     render_scene(demo_path, ...)                — run the demo headless, return the last
                                                   over-the-shoulder PNG
-    verify_scene_render(scene, png)             — agent looks at the settled render and returns
+    verify_scene_render(scene, png, wrist_png)  — agent looks at BOTH settled renders and returns
                                                   {ok, issues, revised} (RoboLab's screenshot check)
     generate_scene(prompt, ...)                 — the full loop incl. one verified refine pass
 
@@ -70,6 +70,52 @@ SQUISHY_KINDS = {"soft_mesh", "soft_block"}
 RIGID_KINDS = {"ycb_mesh", "rigid_box", "rubiks_cube"}
 OVER_SHOULDER_CAMERA = "over_shoulder_left_camera"
 
+# =============================================================================================
+# THE PARTICLE-DEFORMABLE LIMIT — the ONE definition of "at most 1 cloth+soft+bag per scene".
+# The framework currently supports one particle-deformable config per scene (bag, cloth garment,
+# or squishy FEM). To lift the limit, change MAX_PARTICLE_DEFORMABLES; everything that STATES or
+# ENFORCES it routes through particle_family / count_particle_deformables / deformable_limit_text
+# below (grep for those names): validate_scene/_composition_errors, the pipeline scene prompt
+# ($deformable_rule slot in prompts/scene_system.md), the standalone _agent_system prompt, and the
+# substitution-inference prompt (prompts/self_substitute.md). The USER-REQUESTED substitution path
+# (substitutions_free) intentionally BYPASSES it. Prose copies to update by hand when it changes:
+# agentic_pipeline/SKILL.md, docs/agenticPipeline/agentic-pipeline.md ("Temporary solver/catalog guard"),
+# docs/agenticPipeline/scene-generator.md ("The catalog").
+# CLOTH_SCENE_MAX is the adjacent cloth-scene cap: a scene containing a cloth SHELL (garment or
+# bag) holds at most this many objects total.
+# =============================================================================================
+MAX_PARTICLE_DEFORMABLES = 1
+CLOTH_SCENE_MAX = 4
+
+
+def particle_family(entry: dict) -> str | None:
+    """'bag' | 'cloth' | 'squishy' when the catalog entry is a particle deformable, else None."""
+    if entry.get("category") == "bag":
+        return "bag"
+    if entry["kind"] in CLOTH_KINDS:
+        return "cloth"
+    if entry["kind"] in SQUISHY_KINDS:
+        return "squishy"
+    return None
+
+
+def count_particle_deformables(entries) -> int:
+    return sum(1 for e in entries if particle_family(e) is not None)
+
+
+def deformable_limit_text(baseline: int = 0) -> str:
+    """The prompt sentence stating the limit. ``baseline`` grandfathers a source scene that
+    already exceeds it (the effective limit never REMOVES existing deformables)."""
+    limit = max(MAX_PARTICLE_DEFORMABLES, baseline)
+    if limit == 1:
+        return ("Across bags, cloth garments, and squishy items, use at most ONE item TOTAL "
+                "(the current framework supports one particle-deformable config per scene). "
+                "At most ONE cable/rope.")
+    why = (f"this scene already carries {baseline}; keep them, but do not add more"
+           if baseline > MAX_PARTICLE_DEFORMABLES else "framework limit")
+    return (f"Across bags, cloth garments, and squishy items, use at most {limit} items TOTAL "
+            f"({why}). At most ONE cable/rope.")
+
 # Relational placement vocabulary (RoboLab predicate analog). 2D relations reposition the subject
 # next to its target on the tabletop; "on"/"in" pin the subject's x/y to the target and spawn it
 # ABOVE the target so gravity settles the stack / drops it into the container.
@@ -78,11 +124,14 @@ RELATIONS_STACK = ("on", "in")
 
 
 def container_names(catalog: dict | None = None) -> list[str]:
-    """Open-top container object names usable as an 'in' target — read from the catalog's
-    ``container`` flag so any imported container (bowls, buckets, bins, non-articulated cabinets)
-    is recognized without editing this module."""
+    """Rigid open-top container names usable as an initial-scene ``in`` target.
+
+    Deformable bags retain ``container: true`` for task generation (open/insert), but start in an
+    honest collapsed pose and therefore cannot already contain another object during scene gen.
+    """
     catalog = catalog or load_catalog()
-    return [o["name"] for o in catalog["objects"] if o.get("container") is True]
+    return [o["name"] for o in catalog["objects"]
+            if o.get("container") is True and o["kind"] in RIGID_KINDS]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -121,13 +170,13 @@ def _agent_system(catalog: dict) -> str:
     x0, x1, y0, y1 = workspace_bounds()
     lines = []
     for o in catalog["objects"]:
-        kind = {"ycb_mesh": "rigid", "rigid_box": "rigid", "rubiks_cube": "rigid",
-                "cloth": "cloth", "cable": "cable",
-                "soft_mesh": "squishy", "soft_block": "squishy"}[o["kind"]]
+        kind = o.get("category", {"ycb_mesh": "rigid", "rigid_box": "rigid",
+                                  "rubiks_cube": "rigid", "cloth": "cloth", "cable": "cable",
+                                  "soft_mesh": "squishy", "soft_block": "squishy"}[o["kind"]])
         d = o["dims"]
         lines.append(f'- {o["name"]} [{kind}, {o["class"]}, footprint {d[0]:.2f}x{d[1]:.2f} m] — {o["description"]}')
     return f"""You compose realistic tabletop scenes for a Franka-arm robot-manipulation simulator with
-full deformable-body physics (cloth, cables/ropes, squishy FEM objects) — pick objects, a
+full deformable-body physics (cloth, bags, cables/ropes, squishy FEM objects) — pick objects, a
 background, a table material, and physically sensible placements.
 
 WORKSPACE (metres, world frame; the robot base is at the origin, the table is in front of it):
@@ -153,10 +202,10 @@ RELATIONS (optional per object; use them whenever the prompt implies arrangement
 
 HARD CONSTRAINTS (the physics solver requires them):
 - 1 to 7 objects total.
-- At most ONE cloth item and at most ONE squishy item per scene, and NEVER both a cloth item and a
-  squishy item in the same scene (one particle-deformable type per scene). At most ONE cable/rope.
-- A cloth garment laid flat is large: with a garment, add at most 3 other objects and place them
-  OFF the garment's footprint (or deliberately on it, if the prompt asks — they will settle onto it).
+- {deformable_limit_text()}
+- A cloth shell (garment or bag) is large: with one, add at most {CLOTH_SCENE_MAX - 1} other
+  objects and place them OFF its footprint (or deliberately on/in it if the prompt asks and the
+  relation is physically valid).
 - Leave clearance between free-standing objects; the spatial solver only nudges, it cannot untangle
   unintended piles.
 
@@ -227,10 +276,16 @@ def _credential_headers() -> dict:
     return {"Authorization": f"Bearer {token}", "anthropic-beta": "oauth-2025-04-20"}
 
 
-def _messages_request(system: str, messages: list, model: str, schema: dict) -> dict:
+def _messages_request(system: str, messages: list, model: str, schema: dict, *,
+                      max_tokens: int = 8000) -> dict:
+    # max_tokens is a parameter because reasoning models spend it on THINKING before any text:
+    # measured 2026-08-12, the llm_retry grasp prompt at 8000 ended with stop_reason=max_tokens
+    # and NO text block — the primary model burned the whole budget reasoning and the call failed
+    # over to the fallback. Callers with reasoning-heavy multimodal prompts pass a larger budget;
+    # the default stays 8000 for the scene-gen callers this transport was built for.
     body = {
         "model": model,
-        "max_tokens": 8000,
+        "max_tokens": max_tokens,
         "system": [{"type": "text", "text": CLAUDE_CODE_IDENTITY},
                    {"type": "text", "text": system}],
         "messages": messages,
@@ -253,37 +308,53 @@ def _response_text(resp: dict) -> str:
     raise RuntimeError(f"no text block in response (stop_reason={resp.get('stop_reason')})")
 
 
-def validate_scene(scene: dict, catalog: dict) -> list[str]:
-    """Grammar/constraint check on the agent's scene (RoboLab FeedbackSystem-style messages)."""
-    by_name = catalog_by_name(catalog)
+def _composition_errors(objs: list, entries: list, deformable_baseline: int = 0) -> list[str]:
+    """The checks that depend ONLY on the object MULTISET (count, duplicates, deformable mix).
+    Skipped when the multiset is copied verbatim from a scene that already passed them
+    (rearrange mode) — there they can never fire without the multiset-equality check firing too.
+    ``deformable_baseline`` grandfathers a source scene that already exceeds the particle-
+    deformable limit (the limit then only forbids adding MORE, never removing what's there)."""
     errs = []
-    objs = scene.get("objects", [])
     if not 1 <= len(objs) <= 7:
         errs.append(f"scene has {len(objs)} objects; must be 1-7")
     counts: dict[str, int] = {}
-    kinds = []
+    for o in objs:
+        counts[o["name"]] = counts.get(o["name"], 0) + 1
+    for n, c in counts.items():
+        if c > 2:
+            errs.append(f"{n} appears {c} times; max 2 instances of a name")
+    limit = max(MAX_PARTICLE_DEFORMABLES, deformable_baseline)
+    n_deform = count_particle_deformables(entries)
+    if n_deform > limit:
+        errs.append(f"scene has {n_deform} bag/cloth/squishy items (current limit: {limit} total)")
+    if sum(e["kind"] == "cable" for e in entries) > 1:
+        errs.append("more than one cable/rope")
+    if any(e["kind"] in CLOTH_KINDS for e in entries) and len(objs) > CLOTH_SCENE_MAX:
+        errs.append(f"a cloth-or-bag scene allows at most {CLOTH_SCENE_MAX - 1} other objects")
+    return errs
+
+
+def validate_scene(scene: dict, catalog: dict, *, check_composition: bool = True,
+                   deformable_baseline: int = 0) -> list[str]:
+    """Grammar/constraint check on the agent's scene (RoboLab FeedbackSystem-style messages).
+
+    ``check_composition=False`` drops the multiset-only rules (see ``_composition_errors``) for
+    rearrange mode, where the object multiset is FIXED to a source scene that already satisfies
+    them; the name/bounds/relation checks always run. ``deformable_baseline`` (rearrange with
+    substitutions) grandfathers a source scene already over the particle-deformable limit."""
+    by_name = catalog_by_name(catalog)
+    errs = []
+    objs = scene.get("objects", [])
+    entries = []
     for o in objs:
         e = by_name.get(o.get("name"))
         if e is None:
             errs.append(f"unknown object name {o.get('name')!r}")
             continue
-        counts[o["name"]] = counts.get(o["name"], 0) + 1
-        kinds.append(e["kind"])
-    for n, c in counts.items():
-        if c > 2:
-            errs.append(f"{n} appears {c} times; max 2 instances of a name")
-    n_cloth = sum(k in CLOTH_KINDS for k in kinds)
-    n_squishy = sum(k in SQUISHY_KINDS for k in kinds)
-    if n_cloth > 1:
-        errs.append("more than one cloth item")
-    if n_squishy > 1:
-        errs.append("more than one squishy item")
-    if n_cloth and n_squishy:
-        errs.append("scene mixes a cloth item with a squishy item (one particle-deformable type per scene)")
-    if sum(k == "cable" for k in kinds) > 1:
-        errs.append("more than one cable/rope")
-    if n_cloth and len(objs) > 4:
-        errs.append("a garment scene allows at most 3 other objects")
+        entries.append(e)
+    if check_composition:
+        errs += _composition_errors([o for o in objs if by_name.get(o.get("name"))], entries,
+                                    deformable_baseline)
     x0, x1, y0, y1 = workspace_bounds()
     for o in objs:
         if not (x0 - 0.2 <= o.get("x", 1e9) <= x1 + 0.2 and y0 - 0.2 <= o.get("y", 1e9) <= y1 + 0.2):
@@ -321,8 +392,11 @@ def _validate_relations(objs: list, by_name: dict) -> list[str]:
                 elif max(se["dims"][0], se["dims"][1]) > 1.6 * max(te["dims"][0], te["dims"][1]):
                     errs.append(f"{label}: footprint too large to stack on {objs[tgt]['name']}")
             if rtype == "in":
-                containers = [n for n, e in by_name.items() if e.get("container") is True]
-                if not te.get("container"):
+                containers = container_names({"objects": list(by_name.values())})
+                if te.get("category") == "bag":
+                    errs.append(f"{label}: a collapsed deformable bag cannot be an initial 'in' "
+                                "target; open/insert belongs in the generated task")
+                elif not te.get("container"):
                     errs.append(f"{label}: 'in' target must be an open-top container "
                                 f"({', '.join(sorted(containers))}), not {objs[tgt]['name']}")
                 elif min(se["dims"][0], se["dims"][1]) > 0.75 * max(te["dims"][0], te["dims"][1]):
@@ -627,7 +701,8 @@ def demo_spec_from_scene(scene: dict):
             has_deformable = True
         elif kind == "cloth":
             particle_cfg = replace(ClothConfig(), **cfg)
-            objs.append(Obj("cloth", particle_cfg, pos=(x, y, base_z + 0.04), yaw=yaw))
+            cloth_z = base_z + (particle_cfg.particle_radius if particle_cfg.rest_on_z else 0.04)
+            objs.append(Obj("cloth", particle_cfg, pos=(x, y, cloth_z), yaw=yaw))
             soft_color = soft_colors.get(o["name"], soft_color)
             has_cloth = has_deformable = True
         elif kind == "cable":
@@ -766,18 +841,26 @@ def _verify_schema(catalog: dict) -> dict:
     }
 
 
-def verify_scene_render(scene: dict, png_path: Path | str, *, model: str = DEFAULT_MODEL,
-                        catalog: dict | None = None) -> dict:
-    """Show the agent the SETTLED over-the-shoulder render of its own scene and ask for a verdict:
+def verify_scene_render(scene: dict, png_path: Path | str, wrist_png: Path | str, *,
+                        model: str = DEFAULT_MODEL, catalog: dict | None = None) -> dict:
+    """Show the agent the SETTLED renders of its own scene and ask for a verdict:
     ``{ok, issues, revised}``. The verifier checks that every object is present and resting sanely
     (nothing fallen off, floating, or interpenetrating), that the arrangement matches the prompt
     and relations, and that the look suits the prompt — the agent analog of RoboLab's post-settle
-    screenshot sanity check."""
+    screenshot sanity check. It is shown BOTH views for complete perspective: the exterior
+    over-the-shoulder image (whole table) AND the wrist-camera image (close top-down look from the
+    gripper — catches occluded / sunken / interpenetrating objects the exterior view hides, e.g. a
+    can settled inside a bin). If a render file happens to be missing, the other view is used and
+    Claude is told which is unavailable — the verification prompt itself is unchanged."""
     import base64
     catalog = catalog or load_catalog()
     shown = {k: v for k, v in scene.items() if k not in ("paths", "verification", "verification_revised")}
-    ask = f"""This image is the PHYSICALLY SETTLED render of the scene you composed (over-the-shoulder
-camera; the pale robot arm in the foreground is expected; image-left = +x, farther = -y).
+    ask = f"""These are the PHYSICALLY SETTLED renders of the scene you composed. The FIRST image is the
+exterior OVER-THE-SHOULDER view (the whole table; the pale robot arm in the foreground is expected;
+image-left = +x, farther = -y). The SECOND image is the WRIST camera (looking down from the gripper —
+a close view that reveals objects the exterior view occludes, e.g. something resting inside a container).
+Use BOTH views together — an object hidden behind another (or down inside a container) in one view is
+often clearly visible in the other, so do not report it missing unless it is absent from BOTH.
 
 Original user prompt: {scene.get('prompt', '(unknown)')}
 
@@ -785,8 +868,8 @@ The scene as generated:
 {json.dumps(shown, indent=1)}
 
 Verify the render:
-1. Every object in the scene JSON is visible on the table — none missing, fallen off, floating,
-   sunken into the table, or interpenetrating another object.
+1. Every object in the scene JSON is visible in at least one view — none missing, fallen off,
+   floating, sunken into the table, or interpenetrating another object.
 2. The arrangement matches the prompt and every declared relation (stacks stacked, contained
    objects in their container, left/right/front/behind as stated).
 3. Background and table material suit the prompt.
@@ -795,11 +878,20 @@ If everything is acceptable: ok=true, issues=[], revised=null. If something is w
 different placements/relations/object choices, set ok=false, list the concrete issues, and return a
 FULL corrected scene in 'revised' (same rules and constraints as before, keep the same name). If
 wrong but not fixable by re-placement, set ok=false with issues and revised=null."""
-    content = [
-        {"type": "image", "source": {"type": "base64", "media_type": "image/png",
-                                     "data": base64.standard_b64encode(Path(png_path).read_bytes()).decode()}},
-        {"type": "text", "text": ask},
-    ]
+
+    def _img(p):
+        return {"type": "image", "source": {"type": "base64", "media_type": "image/png",
+                                            "data": base64.standard_b64encode(Path(p).read_bytes()).decode()}}
+    content = []
+    missing = []
+    for p, label in ((png_path, "the over-the-shoulder view"), (wrist_png, "the wrist-camera view")):
+        if Path(p).exists():
+            content.append(_img(p))
+        else:
+            missing.append(label)
+    if missing:
+        ask += f"\n\n(NOTE: {' and '.join(missing)} could not be rendered; judge from the available view.)"
+    content.append({"type": "text", "text": ask})
     schema = _verify_schema(catalog)
     system = _agent_system(catalog)
     for use_model in (model, FALLBACK_MODEL):
@@ -826,11 +918,14 @@ def generate_scene(prompt: str, *, model: str = DEFAULT_MODEL, out_dir: Path | s
     scene["paths"] = {"scene_json": str(scene_json), "demo": str(demo_py)}
     if not render:
         return scene
-    png = render_scene(demo_py, device=device, verbose=verbose)
+    wrist_png = demo_py.parent / "scene_wrist.png"
+    png = render_scene(demo_py, device=device,
+                       extra_cameras={"wrist_camera": wrist_png}, verbose=verbose)
     scene["paths"]["image"] = str(png)
+    scene["paths"]["wrist"] = str(wrist_png)
     if not verify:
         return scene
-    verdict = verify_scene_render(scene, png, model=model, catalog=catalog)
+    verdict = verify_scene_render(scene, png, wrist_png, model=model, catalog=catalog)
     scene["verification"] = {"ok": bool(verdict.get("ok")), "issues": verdict.get("issues", [])}
     if verbose:
         print(f"[sceneGen] verification: ok={verdict.get('ok')} issues={verdict.get('issues', [])}")
@@ -843,8 +938,9 @@ def generate_scene(prompt: str, *, model: str = DEFAULT_MODEL, out_dir: Path | s
         if ok:
             (demo_py.parent / "scene_initial.json").write_text(json.dumps(scene, indent=1))
             write_scene(revised, out_dir=demo_py.parent)
-            png2 = render_scene(demo_py, device=device, verbose=verbose)
-            verdict2 = verify_scene_render(revised, png2, model=model, catalog=catalog)
+            png2 = render_scene(demo_py, device=device,
+                                extra_cameras={"wrist_camera": wrist_png}, verbose=verbose)
+            verdict2 = verify_scene_render(revised, png2, wrist_png, model=model, catalog=catalog)
             revised["paths"] = dict(scene["paths"], image=str(png2))
             revised["verification"] = scene["verification"]
             revised["verification_revised"] = {"ok": bool(verdict2.get("ok")),

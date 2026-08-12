@@ -1,0 +1,434 @@
+{
+ "_comment": [
+  "llm_retry state cache for catalog object 'banana_soft' \u2014 the raw LLM responses the pass's",
+  "candidates are deterministically re-derived from (docs/trajPipeline/llm-retry.md).",
+  "GENERATED. Deleting this file RE-ARMS the retry (both rounds) for this asset."
+ ],
+ "asset": "banana_soft",
+ "cache_key": "1|67f63b61a1ab33275007ea1c4902c9db414b38a9|2|1",
+ "cache_version": 1,
+ "mesh_sha1": "67f63b61a1ab33275007ea1c4902c9db414b38a9",
+ "pass_version": 1,
+ "prompt_version": 2,
+ "rounds": {
+  "a": {
+   "answer": {
+    "candidates": [
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       -0.014,
+       -0.014
+      ],
+      "rationale": "Top-down centre pinch like pz_jawy_c but width cut from 45mm to 24mm so the pads indent the soft flesh (~6mm squeeze) instead of barely touching, with deep 31mm seat near the centre of mass.",
+      "width": 0.024
+     },
+     {
+      "approach": [
+       0,
+       0,
+       1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       -0.014,
+       0.014
+      ],
+      "rationale": "Bottom-up mirror of the centre pinch; firm 24mm width on the 30mm y-section deforms the FEM flesh for form closure at the mass centre.",
+      "width": 0.024
+     },
+     {
+      "approach": [
+       0,
+       -1,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       -0.03,
+       0.0
+      ],
+      "rationale": "Side approach from +y across the 36mm z-thickness; unlike py_jawz_c (41mm width) this closes to 30mm so the fingers actually compress the soft banana rather than resting on it.",
+      "width": 0.03
+     },
+     {
+      "approach": [
+       0,
+       1,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "rationale": "Side approach from -y, seated 33mm deep (fixes a09's 4mm shallow seat) with 30mm squeezing width across the z-thickness at the mass centre.",
+      "width": 0.03
+     },
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       -0.37,
+       0.93,
+       0
+      ],
+      "label": "body",
+      "position": [
+       0.055,
+       -0.01,
+       -0.012
+      ],
+      "rationale": "Top-down pinch on the +x half with jaw axis rotated to lie perpendicular to the local curved centerline, so both pads meet parallel flesh faces squarely.",
+      "width": 0.026
+     },
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       0.37,
+       0.93,
+       0
+      ],
+      "label": "body",
+      "position": [
+       -0.055,
+       -0.002,
+       -0.012
+      ],
+      "rationale": "Mirror tilted-jaw pinch on the -x half, jaw normal to the local tangent of the banana arc for even bilateral contact.",
+      "width": 0.026
+     },
+     {
+      "approach": [
+       1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       -0.058,
+       0.001,
+       -0.002
+      ],
+      "rationale": "End clamp over the blunt -x tip with jaw across y (all failed end clamps used jaw z); 40mm seat swallows the tip so the pads cup the tapering flesh.",
+      "width": 0.028
+     },
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "neck",
+      "position": [
+       0.078,
+       0.008,
+       0.0
+      ],
+      "rationale": "Top-down pinch on the narrow stiff neck below the stem (~15mm thick); the tight 18mm width gives high pressure on the least deformable part.",
+      "width": 0.018
+     },
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       0.03,
+       -0.013,
+       -0.014
+      ],
+      "rationale": "Firm top-down squeeze slightly toward the stem side of centre, balancing the heavier stem half about the jaw line while indenting the soft flesh.",
+      "width": 0.024
+     },
+     {
+      "approach": [
+       0,
+       -0.6,
+       -0.8
+      ],
+      "jaw_axis": [
+       0,
+       -0.8,
+       0.6
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       -0.022,
+       -0.01
+      ],
+      "rationale": "Oblique approach onto the upper +y shoulder with jaw closing across the y-z diagonal (~32mm section), a contact geometry no prior axis-aligned attempt sampled, seated 30mm deep with squeeze.",
+      "width": 0.026
+     }
+    ]
+   },
+   "authoring_failures": [],
+   "model": "claude-fable-5",
+   "request_digest": "2c9ce3a8c7c94f4be9143e59ca04f8b49fc1dee6"
+  },
+  "b": {
+   "answer": {
+    "candidates": [
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       0.25,
+       0.97,
+       0
+      ],
+      "label": "body",
+      "position": [
+       -0.072,
+       0.006,
+       -0.016
+      ],
+      "rationale": "Taper-cage at the thin -x tip: jaws close snugly around the ~20mm tip section so the thicker body cannot pull through the 16mm gap, adding mechanical caging that no failed centre pinch had.",
+      "width": 0.016
+     },
+     {
+      "approach": [
+       0,
+       1,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "body",
+      "position": [
+       -0.072,
+       0.021,
+       -0.004
+      ],
+      "rationale": "Side pinch across the ~16mm z-thickness of the -x tip; taper toward the body jams in the jaws under load, and the 25mm seat keeps flesh deep on the pads.",
+      "width": 0.014
+     },
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       -0.6,
+       0.8,
+       0
+      ],
+      "label": "neck",
+      "position": [
+       0.075,
+       0.0,
+       -0.008
+      ],
+      "rationale": "Retry of a07's stem-side neck with corrected centring (y=0 not +8mm) and jaw rotated normal to the strongly curved local tangent so both pads land simultaneously instead of pushing the fruit away (a07 slid 61mm).",
+      "width": 0.013
+     },
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       -0.7,
+       0.7,
+       0
+      ],
+      "label": "stem",
+      "position": [
+       0.091,
+       0.016,
+       -0.005
+      ],
+      "rationale": "Tight 8mm pinch on the stiff woody stem nub itself, the only non-mushy feature; jaw set perpendicular to the stem axis.",
+      "width": 0.008
+     },
+     {
+      "approach": [
+       0,
+       0,
+       1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       -0.014,
+       0.026
+      ],
+      "rationale": "a01 (same bottom-up centre pinch) survived to 96%/96% shake before dropping; this deepens the seat from -32 to -44mm so the palm brackets the fruit and tightens width 24->22 for residual squeeze.",
+      "width": 0.022
+     },
+     {
+      "approach": [
+       0,
+       0,
+       -1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       -0.014,
+       -0.026
+      ],
+      "rationale": "Top-down mirror of the near-success a01: 44mm seat puts the centre of mass right at the palm, width 22 gives 8mm of indentation into the 30mm section for sustained grip force.",
+      "width": 0.022
+     },
+     {
+      "approach": [
+       0,
+       -1,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       -0.042,
+       0.0
+      ],
+      "rationale": "Side grasp across the full 36mm z-thickness like a03 (which DID reach grip force) but seated 43mm deep so the palm blocks the squeeze-pop escape toward the opening that dumped a03 at gravity-on.",
+      "width": 0.03
+     },
+     {
+      "approach": [
+       0,
+       1,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "body",
+      "position": [
+       0.0,
+       0.014,
+       0.0
+      ],
+      "rationale": "Mirror side grasp from -y with maximal 43mm seat; pads above and below the fruit directly support weight while the palm cages lateral pop-out.",
+      "width": 0.03
+     },
+     {
+      "approach": [
+       0,
+       0,
+       1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       0.03,
+       -0.013,
+       0.025
+      ],
+      "rationale": "Bottom-up deep-seated pinch just stem-side of centre (a08's station but inverted approach, seat -43 vs -32) to balance the heavier stem half with the palm hugging the flesh.",
+      "width": 0.022
+     },
+     {
+      "approach": [
+       0,
+       0,
+       1
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "body",
+      "position": [
+       -0.03,
+       -0.006,
+       0.025
+      ],
+      "rationale": "Bottom-up deep-seated pinch on the -x half, centred on the local arc centreline (y=-0.006); 22mm width indents the 30mm section 8mm and 43mm seat keeps mass at the palm.",
+      "width": 0.022
+     }
+    ]
+   },
+   "authoring_failures": [],
+   "feedback_digest": "ffca96c633b01c1b620a4ff81879deb5a65b9850",
+   "model": "claude-fable-5",
+   "request_digest": "6e03f50e5b24ccce1caae81c086fcb786a864799"
+  }
+ }
+}

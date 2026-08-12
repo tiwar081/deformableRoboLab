@@ -1,0 +1,120 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'geometric' for catalog object 'wood_block'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "geometric",
+  "source": "geometric",
+  "version": 7,
+  "requires": [],
+  "notes": "geometry: watertight mesh, width measured by ray cast. medial_axis: 2 kept (2 node(s) x 4 roll(s) -> 2 (4 off-centre) [skeletor.by_wavefront, 63/70 nodes usable; 2 node(s) kept of 63]; pad-seated by -21.1 mm median, 2 deeper than the pads, 1 retreated to clear the hand). cross_section: 0 kept (12 slice(s) x 3 axes -> 0 pair(s), 0 candidate(s); nothing to seat). quality unmeasured \u2014 a later pass fills it."
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "wood_block",
+   "kind": "ycb_mesh",
+   "file": "ycb/wood_block.usd",
+   "scale": 1.0,
+   "mesh_sha1": "b9154dff9f1594bc187a585c6a0997d1cef734f0",
+   "extents": [0.205977591, 0.089670637, 0.089242924],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.005193343, -0.004430261, 0.999976701],
+     [0.977722509, -0.209860641, 0.004148007],
+     [0.209837374, 0.977721271, 0.005421444]
+    ],
+    "translation": [0.00029063, 0.00029107, 0.000502319],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew+handedness"
+    ],
+    "ambiguous": true,
+    "drift": 0.086046923
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "geometric@7",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "geometric/medial_001_r1",
+     "transform": [
+      [0.42232919, 0.895519016, 0.140298779, 0.089199666],
+      [-0.0, 0.154779563, -0.98794903, 0.042106165],
+      [-0.906442527, 0.417239714, 0.065367928, 0.022880711],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.041054074,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.091257858,
+     "seat_depth": -0.004,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 35.2 mm, linearity 0.97, measured span 41.1 mm centred to 0.02 of it [skeletor_wavefront]; pad-seated -31.1 mm along the approach [raycast], object is 91 mm deep and the pads CANNOT enclose it, retreated 41 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_001_r3",
+     "transform": [
+      [-0.42232919, 0.895519016, -0.140298779, 0.095128392],
+      [0.0, 0.154779563, 0.98794903, 0.000357555],
+      [0.906442527, 0.417239714, -0.065367928, 0.025643019],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.041054074,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.091257858,
+     "seat_depth": -0.045,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 35.2 mm, linearity 0.97, measured span 41.1 mm centred to 0.02 of it [skeletor_wavefront]; pad-seated -11.1 mm along the approach [raycast], object is 91 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

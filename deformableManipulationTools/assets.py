@@ -1,7 +1,7 @@
 """Centralized object/asset builders. Every demo adds its scene objects through these so the
 collision/representation NUANCES (mesh-vs-viz split, coacd convex decomposition for concave
 meshes, FEM grids, contact materials, realistic masses) live in ONE place and a new demo cannot
-re-introduce a per-object collision bug (e.g. the raw-concave-mesh ejection, docs/SOLVERS.md §4).
+re-introduce a per-object collision bug (e.g. the raw-concave-mesh ejection, docs/physicsEngine/SOLVERS.md §4).
 
 An example only chooses WHICH objects to add and WHERE (the scene); the physical properties come
 from :mod:`deformableManipulationTools.params`.
@@ -86,7 +86,7 @@ class ClothConfig:
     framework's SI (m, kg) world. Newton's example runs in centimetre-gram units, so copying its
     numbers verbatim (the original state of this config) made the cloth contact ~1000x stiffer and
     ~100x more damped RELATIVE TO PARTICLE WEIGHT than Newton's working grasp, and the shirt 10x too
-    light — which is what actually broke the cloth grasp (see docs/cloths.md). The conversion law
+    light — which is what actually broke the cloth grasp (see docs/physicsEngine/cloths.md). The conversion law
     (cm,g -> m,kg): stiffness-like [M/T^2] (ke, kf, tri_ke/ka) x1e-3; damping-like [M/T] (kd) x1e-3;
     bending [M*L/T^2] (edge_ke; force units, VBD's k = edge_ke*rest_len with dtheta/dx ~ 1/L) x1e-5;
     edge_kd [M*L/T] x1e-5; area density [M/L^2] x10 (0.02 g/cm^2 = 0.2 kg/m^2); lengths x0.01.
@@ -118,6 +118,9 @@ class ClothConfig:
     flatten_z: float = 0.12           # squash the native 3D (worn) shirt mesh in z so it starts LAID
                                        # FLAT on the table (~3 cm thick); the cloth_franka demos pass 1.0
                                        # to drop the inflated shirt like Newton's init.
+    # Bags and other placed shells need their lowest vertex anchored at center_pos.z instead of
+    # straddling it around the mesh centroid. Garments keep the historical centred behavior.
+    rest_on_z: bool = False
     density: float = 0.2              # per-area [kg/m^2] = Newton's 0.02 g/cm^2 (~0.17 kg shirt)
     particle_radius: float = 0.008    # Newton's 0.8 cm — the cloth's contact thickness vs bodies
     tri_ke: float = 10.0              # stretch / shear (Newton 1e4, [M/T^2] x1e-3)
@@ -154,7 +157,7 @@ class ClothConfig:
                                        # stamp anymore: under Newton's cheat friction the recipe
                                        # needed table eff ~0.6, and the fold recipe now compensates
                                        # the physical value with pressing normal force instead —
-                                       # docs/cloths.md "grasp recipe".)
+                                       # docs/physicsEngine/cloths.md "grasp recipe".)
     # ---- VBD particle self-contact (thin-shell fidelity; cf. cloth_particle_kwargs) ----
     # A thin shell folded/draped on itself MUST self-collide or layers pass through each other (and
     # through the table) — the FEM block never needs this (its volume can't fold), which is why the
@@ -246,9 +249,12 @@ def _validate_cloth_topology(tm, cfg: ClothConfig) -> None:
 
 
 def add_cloth(builder: newton.ModelBuilder, cfg: ClothConfig, center_pos, *, yaw: float = 0.0):
-    """Load the vendored T-shirt USD mesh and add it as a VBD cloth shell, centred in x/y at
-    ``center_pos`` with its centroid at ``center_pos[2]`` (drop it slightly above the table and let it
-    settle). EXPERIMENTAL (see :class:`ClothConfig`). Returns ``(particle_start, particle_count)``."""
+    """Load a triangle mesh and add it as a VBD cloth shell.
+
+    The mesh is centred in x/y. Its z centroid is placed at ``center_pos[2]`` for garments, while
+    ``rest_on_z=True`` anchors the lowest vertex there for bags. Returns
+    ``(particle_start, particle_count)``.
+    """
     import newton.usd
     from pxr import Usd
 
@@ -270,8 +276,17 @@ def add_cloth(builder: newton.ModelBuilder, cfg: ClothConfig, center_pos, *, yaw
             p for p in stage.Traverse() if p.GetTypeName() == "Mesh")
         mesh = newton.usd.get_mesh(prim)
         verts = np.asarray(mesh.vertices, dtype=np.float64)
-        indices = mesh.indices
-    verts = verts - verts.mean(axis=0)            # centre the mesh at the origin (its native frame is offset)
+        indices = np.asarray(mesh.indices, dtype=np.int64)
+        if cfg.expected_boundary_loops is not None:
+            import trimesh
+            _validate_cloth_topology(
+                trimesh.Trimesh(vertices=verts, faces=indices.reshape(-1, 3), process=False), cfg
+            )
+    verts[:, :2] -= verts[:, :2].mean(axis=0)     # centre the mesh in x/y (native frames vary)
+    if cfg.rest_on_z:
+        verts[:, 2] -= verts[:, 2].min()
+    else:
+        verts[:, 2] -= verts[:, 2].mean()
     verts[:, 2] *= cfg.flatten_z                  # lay the draped shirt flat so it starts clear of the gripper
     builder.default_particle_radius = cfg.particle_radius
     # See add_soft_block: particle_max_velocity is inert under SolverVBD; not set (false safety net).
@@ -417,7 +432,7 @@ def add_rubiks_cube(builder: newton.ModelBuilder, pos, cfg: RigidBoxConfig):
 def add_ycb_mesh(builder: newton.ModelBuilder, cfg: YcbMeshConfig, pos, *, rest_on_z: float | None = None,
                  yaw: float = 0.0):
     """A YCB mesh object: coacd convex-hull pieces COLLIDE (consistent normals), the full mesh
-    RENDERS (docs/SOLVERS.md §4). ``rest_on_z`` lifts the body so its lowest vertex sits on that z
+    RENDERS (docs/physicsEngine/SOLVERS.md §4). ``rest_on_z`` lifts the body so its lowest vertex sits on that z
     (e.g. the table top); otherwise ``pos[2]`` is used. ``yaw`` spins the body about world z.
     Returns (body, mesh). Apply the realistic mass post-finalize via ``rescale_body_mass`` (the
     framework does this from the example's mass-override list)."""

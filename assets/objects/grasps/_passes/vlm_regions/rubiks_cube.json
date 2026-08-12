@@ -1,0 +1,65 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'vlm_regions' for catalog object 'rubiks_cube'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "vlm_regions",
+  "source": "vlm_regions",
+  "version": 2,
+  "requires": [],
+  "notes": "0 region(s) [A Rubik's cube is a plain cubic block grasped anywhere on its body; it has no handle, rim, knob, or other distinguished grasp feature.] -> rubiks_cube.json"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "rubiks_cube",
+   "kind": "rubiks_cube",
+   "file": null,
+   "scale": 1.0,
+   "mesh_sha1": "92abb01fe7da235ed4b2fe13f04dcc7dd417172a",
+   "extents": [0.058, 0.058, 0.058],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [1.0, -0.0, -0.0],
+     [0.0, 1.0, -0.0],
+     [0.0, 0.0, 1.0]
+    ],
+    "translation": [0.0, 0.0, 0.0],
+    "axis_order": [0, 1, 2],
+    "sign_rules": [
+     "asset_align",
+     "asset_align",
+     "asset_align"
+    ],
+    "ambiguous": true,
+    "drift": 0.058
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "vlm_regions@2",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {}
+}

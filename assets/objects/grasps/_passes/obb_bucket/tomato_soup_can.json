@@ -1,0 +1,648 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'obb_bucket' for catalog object 'tomato_soup_can'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "obb_bucket",
+  "source": "obb_bucket",
+  "version": 1,
+  "requires": [
+   "fixture",
+   "geometric",
+   "obb_face",
+   "rim_pinch",
+   "vlm_regions"
+  ],
+  "notes": "bucketed 95 candidate(s) from [fixture, geometric, obb_face]; 3 borderline, frame ambiguous=True"
+ },
+ "upstream_sha1": "f94716af25f13394ba8b2beed17e680c4de41b27",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "tomato_soup_can",
+   "kind": "ycb_mesh",
+   "file": "ycb/tomato_soup_can.usd",
+   "scale": 1.0,
+   "mesh_sha1": "50e191fc37395f9ba2d93b03a57d962d6a1235bc",
+   "extents": [0.101893504, 0.067346678, 0.067521875],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.003597114, 0.002321149, 0.999990836],
+     [0.937425423, 0.34816103, -0.004180198],
+     [-0.348167542, 0.937431869, -0.000923529]
+    ],
+    "translation": [6.9599e-05, 0.000125648, -2.7812e-05],
+    "axis_order": [2, 0, 1],
+    "sign_rules": [
+     "skew",
+     "skew+handedness",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.04812218
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "obb_bucket@1",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {
+  "fixture/mid_across_y": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "fixture/mid_across_z": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "fixture/near_end_across_y": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/medial_002_r0": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/medial_002_r1": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/medial_002_r2": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/medial_002_r3": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_000": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_028": {
+   "labels": [
+    "face:+z",
+    "face_borderline",
+    "face_alt:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_029": {
+   "labels": [
+    "face:-z",
+    "face_borderline",
+    "face_alt:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_048": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_049": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_076": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_077": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_080": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_081": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_094": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_115": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_141": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_148": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_167": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_174": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_178": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_206": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_235": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x00_282": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x04_043": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x05_010": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x05_032": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x05_078": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x06_001": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x06_015": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x07_038": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x08_024": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x08_037": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x09_039": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_005": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_006": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_019": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_034": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_047": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_083": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y00_028": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y00_029": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y02_000": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y02_001": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y10_000": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y10_001": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_038": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_039": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_042": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_043": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_046": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_047": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_092": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_093": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_014": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_022": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z01_024": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z01_044": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z01_052": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z03_070": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z03_071": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z05_016": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_000": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_001": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_003": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_008": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_028": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_031": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_050": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawy_m50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawy_c": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawy_p50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_m50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_c": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_p50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawy_m50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawy_c": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawy_p50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_m50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_c": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_p50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_m50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_c": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_p50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_m50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_c": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_p50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawy_m50": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawy_c": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawy_p50": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawy_m50": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawy_c": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawy_p50": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  }
+ }
+}

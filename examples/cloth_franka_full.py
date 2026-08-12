@@ -7,7 +7,7 @@ put the far grasps out of the arm's reach envelope from the shared base placemen
 TOP-DOWN (Newton's 45°-tilted "left" wrist is replaced with the straight-down orientation), and the
 transits are restructured so the gripper never plows the cloth (see SEQUENCE).
 
-MAPPING (verified numerically; see docs/cloths.md):
+MAPPING (verified numerically; see docs/physicsEngine/cloths.md):
   * Poses: p = shirt_centre + 0.8 * (p_newton - newton_shirt_centre) in xy (same shirt regions),
     z -> TT + (z_newton - 20 cm) (table-relative, fingertip to the table top on grasps).
   * Our home EE orientation IS Newton's straight-down grasp quat (0.9239,-0.3827,0,0) — measured
@@ -128,5 +128,5 @@ DEMO = DemoSpec(
                           "rigid_body_particle_contact_buffer_size": 65536},
     object_pipeline_kwargs={"soft_contact_margin": CLOTH.contact_margin},
     substeps=10, vbd_iterations=5, num_frames=int(76.5 * 60),  # Newton's dt (10 @ 60 fps) — part of
-                                                       # the dimensionless contact parity (docs/cloths.md)
+                                                       # the dimensionless contact parity (docs/physicsEngine/cloths.md)
 )

@@ -6,7 +6,7 @@ one new ``examples/<name>.py`` data file and run it.
     python -m examples soft_pickplace_franka --device cuda:0      # equivalent shim
 
 See deformableManipulationTools/demo_runner.py for the DemoSpec schema and the shared executor, and
-docs/examples.md for the per-demo descriptions.
+docs/physicsEngine/examples.md for the per-demo descriptions.
 """
 from __future__ import annotations
 

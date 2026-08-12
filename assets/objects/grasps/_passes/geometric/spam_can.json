@@ -1,0 +1,2175 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'geometric' for catalog object 'spam_can'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "geometric",
+  "source": "geometric",
+  "version": 7,
+  "requires": [],
+  "notes": "geometry: watertight mesh, width measured by ray cast. medial_axis: 12 kept (6 node(s) x 4 roll(s) -> 12 (4 off-centre) [skeletor.by_wavefront, 63/70 nodes usable; 6 node(s) kept of 63]; pad-seated by -6.9 mm median, 12 deeper than the pads, 9 retreated to clear the hand). cross_section: 65 kept (12 slice(s) x 3 axes -> 1882 pair(s), 1882 candidate(s); pad-seated by 6.4 mm median, 38 deeper than the pads, 24 retreated to clear the hand, 29 seat_blocked (no clear depth)). quality unmeasured \u2014 a later pass fills it."
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "spam_can",
+   "kind": "ycb_mesh",
+   "file": "ycb/spam_can.usd",
+   "scale": 1.0,
+   "mesh_sha1": "055b3e3dec8dfeea070f4a17d121bcd77e1497a0",
+   "extents": [0.101737212, 0.08347718, 0.057226886],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.998787423, 0.049009304, -0.004665925],
+     [0.004821601, -0.003058716, 0.999983698],
+     [0.048994233, -0.998793639, -0.00329131]
+    ],
+    "translation": [7.7743e-05, 0.000102231, 0.000164261],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": false,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "geometric@7",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "geometric/medial_001_r1",
+     "transform": [
+      [-0.735221566, -0.616317564, -0.282138102, -0.03107273],
+      [-0.677826857, 0.668503999, 0.306028029, 0.026067812],
+      [-0.0, 0.41623919, -0.909255155, 0.027951708],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.025923479,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.057439855,
+     "seat_depth": -0.002,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 16.2 mm, linearity 0.88, measured span 25.9 mm centred to 0.06 of it [skeletor_wavefront]; pad-seated -8.3 mm along the approach [raycast], object is 57 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_001_r3",
+     "transform": [
+      [0.735221566, -0.616317564, 0.282138102, -0.034582487],
+      [0.677826857, 0.668503999, -0.306028029, 0.029874757],
+      [0.0, 0.41623919, 0.909255155, 0.016640705],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.025923479,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.057439855,
+     "seat_depth": -0.043,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 16.2 mm, linearity 0.88, measured span 25.9 mm centred to 0.06 of it [skeletor_wavefront]; pad-seated -4.1 mm along the approach [raycast], object is 57 mm deep and the pads CANNOT enclose it, retreated 2 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_003_r0",
+     "transform": [
+      [-0.315453514, 0.665698219, -0.676265453, -0.02695215],
+      [0.28959206, -0.611123066, -0.736658019, 0.023470549],
+      [-0.903673348, -0.428222466, 0.0, 0.000150704],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.055826962,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.084664742,
+     "seat_depth": -0.038,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 32.6 mm, linearity 0.94, measured span 55.8 mm centred to 0.25 of it [skeletor_wavefront]; pad-seated +1.8 mm along the approach [raycast], object is 85 mm deep and the pads CANNOT enclose it, retreated 7 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_003_r1",
+     "transform": [
+      [0.676265453, 0.665698219, -0.315453514, -0.02144644],
+      [0.736658019, -0.611123066, 0.28959206, 0.010091824],
+      [-0.0, -0.428222466, -0.903673348, 0.02780266],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.059701629,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.063946721,
+     "seat_depth": -0.002,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 32.6 mm, linearity 0.94, measured span 59.7 mm centred to 0.13 of it [skeletor_wavefront]; pad-seated -16.8 mm along the approach [raycast], object is 64 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_003_r2",
+     "transform": [
+      [0.315453514, 0.665698219, 0.676265453, -0.029430489],
+      [-0.28959206, -0.611123066, 0.736658019, 0.020770887],
+      [0.903673348, -0.428222466, -0.0, 0.000150704],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.055826962,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.084664742,
+     "seat_depth": -0.043,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 32.6 mm, linearity 0.94, measured span 55.8 mm centred to 0.25 of it [skeletor_wavefront]; pad-seated -5.5 mm along the approach [raycast], object is 85 mm deep and the pads CANNOT enclose it, retreated 2 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_003_r3",
+     "transform": [
+      [-0.676265453, 0.665698219, 0.315453514, -0.026792343],
+      [-0.736658019, -0.611123066, -0.28959206, 0.01499946],
+      [0.0, -0.428222466, 0.903673348, 0.012488361],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.059701629,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.063946721,
+     "seat_depth": -0.045,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 32.6 mm, linearity 0.94, measured span 59.7 mm centred to 0.13 of it [skeletor_wavefront]; pad-seated -0.1 mm along the approach [raycast], object is 64 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_004_r0",
+     "transform": [
+      [-0.396623618, 0.619531031, -0.677400183, 0.034321405],
+      [0.365235917, -0.570503052, -0.735614704, -0.008385136],
+      [-0.842195007, -0.539173042, 0.0, -0.001163011],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.057436933,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.109535082,
+     "seat_depth": -0.045,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 35.5 mm, linearity 0.97, measured span 57.4 mm centred to 0.21 of it [skeletor_wavefront]; pad-seated -10.5 mm along the approach [raycast], object is 110 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_004_r1",
+     "transform": [
+      [0.677400183, 0.619531031, -0.396623618, 0.021379955],
+      [0.735614704, -0.570503052, 0.365235917, -0.010726436],
+      [-0.0, -0.539173042, -0.842195007, -0.0135559],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.073473792,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.065811508,
+     "seat_depth": -0.045,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 35.5 mm, linearity 0.97, measured span 73.5 mm centred to 0.00 of it [skeletor_wavefront]; pad-seated +2.7 mm along the approach [raycast], object is 66 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_004_r2",
+     "transform": [
+      [0.396623618, 0.619531031, 0.677400183, 0.019733537],
+      [-0.365235917, -0.570503052, 0.735614704, -0.024226659],
+      [0.842195007, -0.539173042, -0.0, -0.001163011],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.057436933,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.109535082,
+     "seat_depth": -0.043,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 35.5 mm, linearity 0.97, measured span 57.4 mm centred to 0.21 of it [skeletor_wavefront]; pad-seated -11.0 mm along the approach [raycast], object is 110 mm deep and the pads CANNOT enclose it, retreated 2 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_004_r3",
+     "transform": [
+      [-0.677400183, 0.619531031, 0.396623618, 0.015505361],
+      [-0.735614704, -0.570503052, -0.365235917, -0.005316741],
+      [0.0, -0.539173042, 0.842195007, -0.026030078],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.073473792,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.065811508,
+     "seat_depth": -0.006,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 35.5 mm, linearity 0.97, measured span 73.5 mm centred to 0.00 of it [skeletor_wavefront]; pad-seated -17.5 mm along the approach [raycast], object is 66 mm deep and the pads CANNOT enclose it, retreated 39 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_005_r0",
+     "transform": [
+      [-0.871200349, -0.490927644, 0.0, 0.033201133],
+      [-0.326374233, 0.579183815, 0.747011358, -0.03087236],
+      [-0.366728526, 0.650796555, -0.664811275, -0.010108658],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.030371731,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.06251126,
+     "seat_depth": -0.026,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 21.4 mm, linearity 0.97, measured span 30.4 mm centred to 0.10 of it [skeletor_wavefront]; pad-seated -15.0 mm along the approach [raycast], object is 63 mm deep and the pads CANNOT enclose it, retreated 19 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/medial_005_r2",
+     "transform": [
+      [0.871200349, -0.490927644, -0.0, 0.033201133],
+      [0.326374233, 0.579183815, -0.747011358, -0.022273318],
+      [0.366728526, 0.650796555, 0.664811275, -0.017761473],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.030371731,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.06251126,
+     "seat_depth": -0.025,
+     "labels": [
+      "medial_axis"
+     ],
+     "notes": "perpendicular to the medial axis; local radius 21.4 mm, linearity 0.97, measured span 30.4 mm centred to 0.10 of it [skeletor_wavefront]; pad-seated +3.5 mm along the approach [raycast], object is 63 mm deep and the pads CANNOT enclose it, retreated 20 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x00_000",
+     "transform": [
+      [0.0, -1.0, 0.0, -0.048833862],
+      [-0.99754507, 0.0, 0.070027372, 0.035972362],
+      [-0.070027372, -0.0, -0.99754507, 0.018574258],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003368212,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.052952948,
+     "seat_depth": -0.007,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at -48.8 mm; normals antiparallel to within 6.5 deg, gap 3.4 mm; pad-seated -23.1 mm along the approach [raycast], retreated 38 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x00_005",
+     "transform": [
+      [0.0, 1.0, -0.0, -0.048833862],
+      [-0.999586729, 0.0, -0.028746678, 0.038884691],
+      [-0.028746678, 0.0, 0.999586729, -0.01728933],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004435784,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.054466204,
+     "seat_depth": -0.01,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at -48.8 mm; normals antiparallel to within 1.4 deg, gap 4.4 mm; pad-seated -5.2 mm along the approach [raycast], object is 54 mm deep and the pads CANNOT enclose it, retreated 35 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x01_001",
+     "transform": [
+      [0.0, 1.0, -0.0, -0.039954978],
+      [-0.006296774, 0.0, -0.999980175, -0.003470277],
+      [-0.999980175, 0.0, 0.006296774, -8.8207e-05],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.045045479,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.083156363,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at -40.0 mm; normals antiparallel to within 1.4 deg, gap 45.0 mm; pad-seated -31.9 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x01_036",
+     "transform": [
+      [0.0, -1.0, 0.0, -0.039954978],
+      [0.306272805, 0.0, -0.951943785, 0.012861428],
+      [0.951943785, 0.0, 0.306272805, 0.008212419],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.051554696,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.094242429,
+     "seat_depth": -0.038,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at -40.0 mm; normals antiparallel to within 17.8 deg, gap 51.6 mm; pad-seated +20.8 mm along the approach [raycast], object is 94 mm deep and the pads CANNOT enclose it, retreated 7 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x01_037",
+     "transform": [
+      [0.0, 1.0, -0.0, -0.039954978],
+      [0.306272805, 0.0, 0.951943785, -0.02735099],
+      [0.951943785, -0.0, -0.306272805, 0.021150126],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.051554696,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.094242429,
+     "seat_depth": -0.014,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at -40.0 mm; normals antiparallel to within 17.8 deg, gap 51.6 mm; pad-seated -63.1 mm along the approach [raycast], object is 94 mm deep and the pads CANNOT enclose it, retreated 31 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x02_071",
+     "transform": [
+      [0.0, 1.0, -0.0, -0.031076094],
+      [-0.177161903, 0.0, 0.984181721, 0.001874806],
+      [0.984181721, 0.0, 0.177161903, 0.006911346],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.051527033,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.087013515,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at -31.1 mm; normals antiparallel to within 12.3 deg, gap 51.5 mm; pad-seated +38.4 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x06_038",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.004439442],
+      [0.999999315, 0.0, -0.001170683, -0.000976598],
+      [0.001170683, 0.0, 0.999999315, 0.018177404],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.074789537,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.053422301,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +4.4 mm; normals antiparallel to within 1.5 deg, gap 74.8 mm; pad-seated +21.2 mm along the approach [raycast]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x06_039",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.004439442],
+      [0.999999315, 0.0, 0.001170683, -0.000933777],
+      [0.001170683, -0.0, -0.999999315, -0.01840027],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.074789537,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.053422301,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +4.4 mm; normals antiparallel to within 1.5 deg, gap 74.8 mm; pad-seated +15.4 mm along the approach [raycast]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x06_074",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.004439442],
+      [-0.275082403, -0.0, -0.961420653, 0.025184624],
+      [0.961420653, 0.0, -0.275082403, 0.015405288],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.05210103,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.084715562,
+     "seat_depth": -0.014,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +4.4 mm; normals antiparallel to within 15.2 deg, gap 52.1 mm; pad-seated -56.5 mm along the approach [raycast], object is 85 mm deep and the pads CANNOT enclose it, retreated 31 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x10_000",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.039954978],
+      [-0.215119631, 0.0, 0.976587704, -0.006729274],
+      [-0.976587704, -0.0, -0.215119631, -0.00654231],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.045960019,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.088424422,
+     "seat_depth": -0.039,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +40.0 mm; normals antiparallel to within 13.4 deg, gap 46.0 mm; pad-seated +29.2 mm along the approach [raycast], object is 88 mm deep and the pads CANNOT enclose it, retreated 6 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x10_001",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.039954978],
+      [-0.215119631, 0.0, -0.976587704, 0.030795544],
+      [-0.976587704, 0.0, 0.215119631, -0.014808157],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.045960019,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.088424422,
+     "seat_depth": -0.011,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +40.0 mm; normals antiparallel to within 13.4 deg, gap 46.0 mm; pad-seated -67.6 mm along the approach [raycast], object is 88 mm deep and the pads CANNOT enclose it, retreated 34 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x10_034",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.039954978],
+      [0.000516024, 0.0, 0.999999867, 0.00364414],
+      [-0.999999867, 0.0, 0.000516024, -5.1906e-05],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.04530996,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.082887094,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +40.0 mm; normals antiparallel to within 0.6 deg, gap 45.3 mm; pad-seated -23.5 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x10_035",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.039954978],
+      [0.000516024, -0.0, -0.999999867, -0.003468764],
+      [-0.999999867, 0.0, -0.000516024, -5.5576e-05],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.04530996,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.082887094,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +40.0 mm; normals antiparallel to within 0.6 deg, gap 45.3 mm; pad-seated +30.6 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x11_004",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.048833862],
+      [-0.941764623, 0.0, 0.3362728, 0.041207452],
+      [-0.3362728, -0.0, -0.941764623, -0.018430558],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004244661,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.04974118,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to x at +48.8 mm; normals antiparallel to within 9.0 deg, gap 4.2 mm; pad-seated +6.9 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x11_005",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.048833862],
+      [-0.941764623, 0.0, -0.3362728, 0.039102781],
+      [-0.3362728, 0.0, 0.941764623, -0.012536223],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004244661,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.04974118,
+     "seat_depth": -0.011,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +48.8 mm; normals antiparallel to within 9.0 deg, gap 4.2 mm; pad-seated -0.6 mm along the approach [raycast], retreated 34 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x11_012",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.048833862],
+      [0.977319235, 0.0, 0.211771367, 0.032013829],
+      [-0.211771367, 0.0, 0.977319235, -0.020912407],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004410185,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.051472916,
+     "seat_depth": -0.003,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +48.8 mm; normals antiparallel to within 17.6 deg, gap 4.4 mm; pad-seated -34.1 mm along the approach [raycast], retreated 42 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_x11_013",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.048833862],
+      [0.977319235, -0.0, -0.211771367, 0.039737748],
+      [-0.211771367, 0.0, -0.977319235, 0.014733275],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004410185,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.051472916,
+     "seat_depth": -0.012,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to x at +48.8 mm; normals antiparallel to within 17.6 deg, gap 4.4 mm; pad-seated -2.4 mm along the approach [raycast], retreated 33 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_008",
+     "transform": [
+      [0.714838203, 0.0, -0.699289885, 0.031878934],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [-0.699289885, -0.0, -0.714838203, -0.028182994],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004235354,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.024113095,
+     "seat_depth": -0.024813095,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 3.9 deg, gap 4.2 mm; pad-seated +11.9 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_009",
+     "transform": [
+      [0.714838203, 0.0, 0.699289885, 0.049719983],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [-0.699289885, 0.0, 0.714838203, -0.009945259],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004235354,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.024113095,
+     "seat_depth": -0.024813095,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 3.9 deg, gap 4.2 mm; pad-seated +13.6 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_012",
+     "transform": [
+      [0.343107922, 0.0, -0.939295988, 0.021349937],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [-0.939295988, -0.0, -0.343107922, -0.027908425],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00401144,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.025548422,
+     "seat_depth": -0.026248422,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 3.0 deg, gap 4.0 mm; pad-seated +13.8 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_015",
+     "transform": [
+      [0.191020097, 0.0, 0.981586126, 0.044752704],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [-0.981586126, 0.0, 0.191020097, -0.021154834],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003727063,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.031687812,
+     "seat_depth": -0.032387812,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 3.2 deg, gap 3.7 mm; pad-seated +14.2 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_042",
+     "transform": [
+      [0.21062151, 0.0, -0.977567685, 0.004248678],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [-0.977567685, -0.0, -0.21062151, -0.016864465],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003791224,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.087184227,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 14.1 deg, gap 3.8 mm; pad-seated -28.7 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_045",
+     "transform": [
+      [-0.103761413, 0.0, 0.994602217, 0.001414251],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [-0.994602217, 0.0, -0.103761413, -0.026154996],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003618827,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.056170835,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 11.6 deg, gap 3.6 mm; pad-seated +28.7 mm along the approach [raycast], object is 56 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_069",
+     "transform": [
+      [0.298976722, -0.0, -0.954260405, -0.011375562],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [0.954260405, 0.0, 0.298976722, -0.014677172],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004379037,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.083639145,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 17.2 deg, gap 4.4 mm; pad-seated +29.7 mm along the approach [raycast], object is 84 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_083",
+     "transform": [
+      [-0.998563267, 0.0, -0.053585462, 0.043477205],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [0.053585462, -0.0, -0.998563267, -0.022865926],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004666123,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.041609148,
+     "seat_depth": -0.042309148,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 15.7 deg, gap 4.7 mm; pad-seated +8.8 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_088",
+     "transform": [
+      [-0.997646283, 0.0, 0.068570353, 0.046671594],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [0.068570353, 0.0, 0.997646283, 0.01837555],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003574243,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.039130967,
+     "seat_depth": -0.039830967,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 12.0 deg, gap 3.6 mm; pad-seated +17.3 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_105",
+     "transform": [
+      [0.023940185, 0.0, 0.999713393, 0.002152395],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [-0.999713393, 0.0, 0.023940185, 0.022899554],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003295859,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.08281687,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 12.5 deg, gap 3.3 mm; pad-seated -4.2 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_124",
+     "transform": [
+      [0.528641716, 0.0, -0.84884506, -0.048333401],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [-0.84884506, -0.0, -0.528641716, 0.014809183],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004309502,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.023272924,
+     "seat_depth": -0.023972924,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 4.5 deg, gap 4.3 mm; pad-seated +12.5 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_125",
+     "transform": [
+      [0.528641716, 0.0, 0.84884506, -0.027389912],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [-0.84884506, 0.0, 0.528641716, 0.02785232],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004309502,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.023272924,
+     "seat_depth": -0.023972924,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 4.5 deg, gap 4.3 mm; pad-seated +12.2 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_134",
+     "transform": [
+      [0.97512943, 0.0, 0.221636176, -0.039421902],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [0.221636176, 0.0, -0.97512943, -0.025452197],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.005730323,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.040619457,
+     "seat_depth": -0.041319457,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 17.2 deg, gap 5.7 mm; pad-seated +23.8 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_146",
+     "transform": [
+      [-0.90836679, -0.0, -0.418174335, -0.049469812],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [-0.418174335, 0.0, 0.90836679, 0.00345906],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003675442,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.031342677,
+     "seat_depth": -0.032042677,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 18.4 deg, gap 3.7 mm; pad-seated +13.1 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_156",
+     "transform": [
+      [-0.757968988, 0.0, 0.65229059, -0.033355603],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [0.65229059, 0.0, 0.757968988, 0.027595468],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004419743,
+     "face": "-z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.023424584,
+     "seat_depth": -0.024124584,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 6.9 deg, gap 4.4 mm; pad-seated +11.0 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_157",
+     "transform": [
+      [-0.757968988, 0.0, -0.65229059, -0.049548445],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [0.65229059, -0.0, -0.757968988, 0.008779203],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004419743,
+     "face": "+z",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.023424584,
+     "seat_depth": -0.024124584,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 6.9 deg, gap 4.4 mm; pad-seated +13.9 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_167",
+     "transform": [
+      [0.287788605, -0.0, -0.957693959, 0.005425345],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [0.957693959, 0.0, 0.287788605, 0.014475317],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003945775,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.087311931,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 19.1 deg, gap 3.9 mm; pad-seated -30.9 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_182",
+     "transform": [
+      [0.515070636, 0.0, 0.857147735, 0.034611756],
+      [0.0, -1.0, 0.0, -0.040069046],
+      [0.857147735, 0.0, -0.515070636, 0.003960787],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004346682,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.061692574,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 1.8 deg, gap 4.3 mm; pad-seated +36.9 mm along the approach [raycast], object is 62 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y00_187",
+     "transform": [
+      [-0.153455208, 0.0, -0.988155605, -0.010893256],
+      [0.0, 1.0, -0.0, -0.040069046],
+      [0.988155605, -0.0, -0.153455208, 0.019517809],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003618657,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.081735379,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to y at -40.1 mm; normals antiparallel to within 7.1 deg, gap 3.6 mm; pad-seated +23.2 mm along the approach [raycast], object is 82 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y06_070",
+     "transform": [
+      [0.197640028, 0.0, 0.980274665, -0.03452544],
+      [0.0, -1.0, 0.0, 0.003642641],
+      [0.980274665, 0.0, -0.197640028, 0.012461961],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.050718361,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.096176194,
+     "seat_depth": -0.012,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +3.6 mm; normals antiparallel to within 8.1 deg, gap 50.7 mm; pad-seated -66.5 mm along the approach [raycast], object is 96 mm deep and the pads CANNOT enclose it, retreated 33 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y07_002",
+     "transform": [
+      [-0.079315175, -0.0, -0.996849589, 0.00308825],
+      [0.0, -1.0, 0.0, 0.010927922],
+      [-0.996849589, 0.0, 0.079315175, 0.001789227],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.050541716,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.095992498,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +10.9 mm; normals antiparallel to within 5.2 deg, gap 50.5 mm; pad-seated +27.7 mm along the approach [raycast], object is 96 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y07_030",
+     "transform": [
+      [0.128596198, 0.0, -0.991697039, 0.031108405],
+      [0.0, -1.0, 0.0, 0.010927922],
+      [-0.991697039, -0.0, -0.128596198, 0.008031109],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.050863983,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.096928253,
+     "seat_depth": -0.017,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +10.9 mm; normals antiparallel to within 4.3 deg, gap 50.9 mm; pad-seated -62.0 mm along the approach [raycast], object is 97 mm deep and the pads CANNOT enclose it, retreated 28 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y11_000",
+     "transform": [
+      [0.553058731, 0.0, -0.833142269, 0.011018045],
+      [0.0, -1.0, 0.0, 0.040069046],
+      [-0.833142269, -0.0, -0.553058731, -0.00650647],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.064908623,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.100743449,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +40.1 mm; normals antiparallel to within 12.0 deg, gap 64.9 mm; pad-seated +13.2 mm along the approach [raycast], object is 101 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y11_039",
+     "transform": [
+      [-0.161595343, 0.0, 0.986857105, -0.00687668],
+      [0.0, 1.0, -0.0, 0.040069046],
+      [-0.986857105, 0.0, -0.161595343, -0.003991993],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.056841887,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.102969362,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +40.1 mm; normals antiparallel to within 15.4 deg, gap 56.8 mm; pad-seated +26.1 mm along the approach [raycast], object is 103 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y11_053",
+     "transform": [
+      [0.420999112, -0.0, -0.907061049, 0.029981062],
+      [0.0, 1.0, -0.0, 0.040069046],
+      [0.907061049, 0.0, 0.420999112, -0.021688055],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.062416931,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.102942244,
+     "seat_depth": -0.015,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +40.1 mm; normals antiparallel to within 5.8 deg, gap 62.4 mm; pad-seated -51.1 mm along the approach [raycast], object is 103 mm deep and the pads CANNOT enclose it, retreated 30 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y11_056",
+     "transform": [
+      [-0.367625868, 0.0, 0.929973774, -0.033925031],
+      [0.0, -1.0, 0.0, 0.040069046],
+      [0.929973774, 0.0, 0.367625868, -0.019807118],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.060674834,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.102520726,
+     "seat_depth": -0.012,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +40.1 mm; normals antiparallel to within 11.8 deg, gap 60.7 mm; pad-seated -53.3 mm along the approach [raycast], object is 103 mm deep and the pads CANNOT enclose it, retreated 33 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_y11_074",
+     "transform": [
+      [0.652798378, 0.0, 0.757531701, -0.021608852],
+      [0.0, -1.0, 0.0, 0.040069046],
+      [0.757531701, 0.0, -0.652798378, 0.035901799],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.067560213,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.096844402,
+     "seat_depth": -0.008,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to y at +40.1 mm; normals antiparallel to within 6.0 deg, gap 67.6 mm; pad-seated -59.2 mm along the approach [raycast], object is 97 mm deep and the pads CANNOT enclose it, retreated 37 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_002",
+     "transform": [
+      [0.416458122, 0.0, 0.9091549, -0.004953392],
+      [-0.9091549, 0.0, 0.416458122, 0.042585375],
+      [0.0, -1.0, 0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003242868,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.044881016,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 16.2 deg, gap 3.2 mm; pad-seated +6.8 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_003",
+     "transform": [
+      [0.416458122, -0.0, -0.9091549, -0.045973538],
+      [-0.9091549, 0.0, -0.416458122, 0.023795207],
+      [0.0, 1.0, -0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003242868,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.044881016,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 16.2 deg, gap 3.2 mm; pad-seated +38.3 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_004",
+     "transform": [
+      [-0.61283418, 0.0, 0.790211534, 0.037755119],
+      [-0.790211534, -0.0, -0.61283418, 0.014826402],
+      [0.0, -1.0, 0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003216411,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.055353518,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 3.0 deg, gap 3.2 mm; pad-seated +40.6 mm along the approach [raycast], object is 55 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_005",
+     "transform": [
+      [-0.61283418, 0.0, -0.790211534, 0.010377069],
+      [-0.790211534, 0.0, 0.61283418, 0.036058951],
+      [0.0, 1.0, -0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003216411,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.055353518,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 3.0 deg, gap 3.2 mm; pad-seated -6.0 mm along the approach [raycast], object is 55 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_015",
+     "transform": [
+      [0.050044433, -0.0, -0.998746992, 0.037719176],
+      [-0.998746992, 0.0, -0.050044433, 0.039974004],
+      [0.0, 1.0, -0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003507579,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.096552036,
+     "seat_depth": -0.011,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 3.4 deg, gap 3.5 mm; pad-seated -6.3 mm along the approach [raycast], object is 97 mm deep and the pads CANNOT enclose it, retreated 34 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_017",
+     "transform": [
+      [0.103018219, 0.0, 0.994679469, 0.046142326],
+      [0.994679469, -0.0, -0.103018219, 0.038217417],
+      [0.0, 1.0, -0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00347054,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.047420258,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 1.2 deg, gap 3.5 mm; pad-seated +12.9 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_026",
+     "transform": [
+      [0.205734748, 0.0, -0.978607794, 0.04232967],
+      [0.978607794, 0.0, 0.205734748, 0.025508822],
+      [0.0, -1.0, 0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003228614,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.084909538,
+     "seat_depth": -0.003,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 8.1 deg, gap 3.2 mm; pad-seated -66.3 mm along the approach [raycast], object is 85 mm deep and the pads CANNOT enclose it, retreated 42 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z00_027",
+     "transform": [
+      [0.205734748, 0.0, 0.978607794, -0.035870427],
+      [0.978607794, -0.0, -0.205734748, 0.041948991],
+      [0.0, 1.0, -0.0, -0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003228614,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.084909538,
+     "seat_depth": -0.002,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at -27.5 mm; normals antiparallel to within 8.1 deg, gap 3.2 mm; pad-seated -13.6 mm along the approach [raycast], object is 85 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z04_000",
+     "transform": [
+      [0.989063868, 0.0, 0.147487846, 0.02842163],
+      [-0.147487846, 0.0, 0.989063868, 0.003104879],
+      [0.0, -1.0, 0.0, -0.00749152],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.029201793,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.085737347,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at -7.5 mm; normals antiparallel to within 16.3 deg, gap 29.2 mm; pad-seated -33.8 mm along the approach [raycast], object is 86 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z04_001",
+     "transform": [
+      [0.989063868, -0.0, -0.147487846, 0.032512552],
+      [-0.147487846, 0.0, -0.989063868, 0.030538886],
+      [0.0, 1.0, -0.0, -0.00749152],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.029201793,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.085737347,
+     "seat_depth": -0.013,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at -7.5 mm; normals antiparallel to within 16.3 deg, gap 29.2 mm; pad-seated +6.1 mm along the approach [raycast], object is 86 mm deep and the pads CANNOT enclose it, retreated 32 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z06_019",
+     "transform": [
+      [0.006831108, 0.0, 0.999976668, -0.00458459],
+      [0.999976668, -0.0, -0.006831108, -0.001007977],
+      [0.0, 1.0, -0.0, 0.002497173],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.074930261,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.098201584,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at +2.5 mm; normals antiparallel to within 1.9 deg, gap 74.9 mm; pad-seated +5.5 mm along the approach [raycast], object is 98 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z07_001",
+     "transform": [
+      [0.00299713, -0.0, -0.999995509, 0.004401799],
+      [-0.999995509, 0.0, -0.00299713, -0.000944043],
+      [0.0, 1.0, -0.0, 0.00749152],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.074924826,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.098422826,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at +7.5 mm; normals antiparallel to within 0.5 deg, gap 74.9 mm; pad-seated -1.2 mm along the approach [raycast], object is 98 mm deep and the pads CANNOT enclose it",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z07_002",
+     "transform": [
+      [0.963310181, 0.0, -0.268390565, -0.009946007],
+      [0.268390565, 0.0, 0.963310181, -0.003972101],
+      [0.0, -1.0, 0.0, 0.00749152],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.058955288,
+     "face": "-y",
+     "source": "geometric",
+     "seat_mode": "clamped_deep",
+     "span": 0.092457028,
+     "seat_depth": -0.045,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at +7.5 mm; normals antiparallel to within 16.4 deg, gap 59.0 mm; pad-seated -34.4 mm along the approach [raycast], object is 92 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z07_003",
+     "transform": [
+      [0.963310181, 0.0, 0.268390565, -0.017851995],
+      [0.268390565, -0.0, -0.963310181, 0.024404154],
+      [0.0, 1.0, -0.0, 0.00749152],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.058955288,
+     "face": "+y",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.092457028,
+     "seat_depth": -0.018,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at +7.5 mm; normals antiparallel to within 16.4 deg, gap 59.0 mm; pad-seated +4.9 mm along the approach [raycast], object is 92 mm deep and the pads CANNOT enclose it, retreated 27 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z11_000",
+     "transform": [
+      [-0.364872818, -0.0, -0.93105737, 0.035385022],
+      [0.93105737, 0.0, -0.364872818, 0.040282891],
+      [0.0, -1.0, 0.0, 0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003109587,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.088829242,
+     "seat_depth": -0.002,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at +27.5 mm; normals antiparallel to within 19.6 deg, gap 3.1 mm; pad-seated -3.3 mm along the approach [raycast], object is 89 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z11_001",
+     "transform": [
+      [-0.364872818, 0.0, 0.93105737, -0.044526926],
+      [0.93105737, 0.0, 0.364872818, 0.008966134],
+      [0.0, 1.0, -0.0, 0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003109587,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.088829242,
+     "seat_depth": -0.001,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at +27.5 mm; normals antiparallel to within 19.6 deg, gap 3.1 mm; pad-seated -82.5 mm along the approach [raycast], object is 89 mm deep and the pads CANNOT enclose it, retreated 44 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z11_004",
+     "transform": [
+      [0.387265101, 0.0, -0.921968406, 0.044923427],
+      [0.921968406, 0.0, 0.387265101, 0.027618379],
+      [0.0, -1.0, 0.0, 0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003179528,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.038359924,
+     "seat_depth": -0.001059924,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at +27.5 mm; normals antiparallel to within 10.3 deg, gap 3.2 mm; pad-seated -31.0 mm along the approach [raycast], retreated 38 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z11_005",
+     "transform": [
+      [0.387265101, 0.0, 0.921968406, 0.046546021],
+      [0.921968406, -0.0, -0.387265101, 0.026936822],
+      [0.0, 1.0, -0.0, 0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.003179528,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.038359924,
+     "seat_depth": -0.039059924,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at +27.5 mm; normals antiparallel to within 10.3 deg, gap 3.2 mm; pad-seated +32.7 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z11_012",
+     "transform": [
+      [-0.315950135, -0.0, -0.948775797, -0.047316876],
+      [0.948775797, 0.0, -0.315950135, 0.035135167],
+      [0.0, -1.0, 0.0, 0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00320749,
+     "face": "+x",
+     "source": "geometric",
+     "seat_mode": "span_flush",
+     "span": 0.022011702,
+     "seat_depth": -0.022711702,
+     "labels": [
+      "cross_section",
+      "seat_blocked"
+     ],
+     "notes": "opposing faces in a section normal to z at +27.5 mm; normals antiparallel to within 4.9 deg, gap 3.2 mm; pad-seated +13.6 mm along the approach [raycast], hand collides at EVERY depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z11_013",
+     "transform": [
+      [-0.315950135, 0.0, 0.948775797, -0.044079935],
+      [0.948775797, 0.0, 0.315950135, 0.036213095],
+      [0.0, 1.0, -0.0, 0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00320749,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.022011702,
+     "seat_depth": -0.002711702,
+     "labels": [
+      "cross_section"
+     ],
+     "notes": "opposing faces in a section normal to z at +27.5 mm; normals antiparallel to within 4.9 deg, gap 3.2 mm; pad-seated -10.2 mm along the approach [raycast], retreated 20 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "geometric/xsec_z11_013_ctr",
+     "transform": [
+      [-0.315950135, 0.0, 0.948775797, -0.044180364],
+      [0.948775797, 0.0, 0.315950135, 0.036179651],
+      [0.0, 1.0, -0.0, 0.027468905],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00320749,
+     "face": "-x",
+     "source": "geometric",
+     "seat_mode": "retreated",
+     "span": 0.022011702,
+     "seat_depth": -0.002605851,
+     "labels": [
+      "cross_section",
+      "centred_variant"
+     ],
+     "notes": "opposing faces in a section normal to z at +27.5 mm; normals antiparallel to within 4.9 deg, gap 3.2 mm; centred depth variant [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

@@ -1,0 +1,738 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'obb_face' for catalog object 'tomato_soup_can'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "obb_face",
+  "source": "obb_face",
+  "version": 8,
+  "requires": [],
+  "notes": "24 face-aligned grasp(s) over the canonical OBB; dropped 0 empty-column, 12 over-jaw and 0 unseatable grid point(s); 24 deeper than the pads; 2 retreated to clear the hand; 0 seat_blocked (no clear depth)"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "tomato_soup_can",
+   "kind": "ycb_mesh",
+   "file": "ycb/tomato_soup_can.usd",
+   "scale": 1.0,
+   "mesh_sha1": "50e191fc37395f9ba2d93b03a57d962d6a1235bc",
+   "extents": [0.101893504, 0.067346678, 0.067521875],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.003597114, 0.002321149, 0.999990836],
+     [0.937425423, 0.34816103, -0.004180198],
+     [-0.348167542, 0.937431869, -0.000923529]
+    ],
+    "translation": [6.9599e-05, 0.000125648, -2.7812e-05],
+    "axis_order": [2, 0, 1],
+    "sign_rules": [
+     "skew",
+     "skew+handedness",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.04812218
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "obb_face@8",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "obb_face/px_jawy_m50",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.004824929],
+      [1.0, 0.0, -0.0, -0.000638186],
+      [0.0, -1.0, -0.0, -0.016880469],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071070424,
+     "face": "+x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.099365442,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the +x face, jaws along y; span 65.1 mm measured over a 20 mm column; pad-seated -4.8 mm along the approach (object 99 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/px_jawy_c",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.002183739],
+      [1.0, 0.0, -0.0, -0.000415356],
+      [0.0, -1.0, -0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072402133,
+     "face": "+x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.094829108,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the +x face, jaws along y; span 66.4 mm measured over a 20 mm column; pad-seated -2.2 mm along the approach (object 95 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/px_jawy_p50",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.00233703],
+      [1.0, 0.0, -0.0, -0.000102703],
+      [0.0, -1.0, -0.0, 0.016880469],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.070218292,
+     "face": "+x",
+     "source": "obb_face",
+     "seat_mode": "retreated",
+     "span": 0.096519911,
+     "seat_depth": -0.044,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the +x face, jaws along y; span 64.2 mm measured over a 20 mm column; pad-seated -2.3 mm along the approach (object 97 mm deep, longer than the pads \u2014 not fully enclosed); retreated 1 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/px_jawz_m50",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.004076931],
+      [0.0, 1.0, -0.0, -0.016836669],
+      [1.0, 0.0, -0.0, 0.000973708],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.068615387,
+     "face": "+x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.099683962,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the +x face, jaws along z; span 62.6 mm measured over a 20 mm column; pad-seated -4.1 mm along the approach (object 100 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/px_jawz_c",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.002593067],
+      [0.0, 1.0, -0.0, 0.0],
+      [1.0, 0.0, -0.0, 0.000446666],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071872636,
+     "face": "+x",
+     "source": "obb_face",
+     "seat_mode": "retreated",
+     "span": 0.094186556,
+     "seat_depth": -0.044,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the +x face, jaws along z; span 65.9 mm measured over a 20 mm column; pad-seated -2.6 mm along the approach (object 94 mm deep, longer than the pads \u2014 not fully enclosed); retreated 1 mm to clear the hand",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/px_jawz_p50",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.004344399],
+      [0.0, 1.0, -0.0, 0.016836669],
+      [1.0, 0.0, -0.0, 0.000219891],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071025038,
+     "face": "+x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.099331066,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the +x face, jaws along z; span 65.0 mm measured over a 20 mm column; pad-seated -4.3 mm along the approach (object 99 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nx_jawy_m50",
+     "transform": [
+      [0.0, 0.0, 1.0, -0.004540514],
+      [1.0, 0.0, 0.0, -0.000638186],
+      [0.0, 1.0, 0.0, -0.016880469],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071070424,
+     "face": "-x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.099365442,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the -x face, jaws along y; span 65.1 mm measured over a 20 mm column; pad-seated -4.5 mm along the approach (object 99 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nx_jawy_c",
+     "transform": [
+      [0.0, 0.0, 1.0, -0.002645369],
+      [1.0, 0.0, 0.0, -0.000415356],
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072402133,
+     "face": "-x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.094829108,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the -x face, jaws along y; span 66.4 mm measured over a 20 mm column; pad-seated -2.6 mm along the approach (object 95 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nx_jawy_p50",
+     "transform": [
+      [0.0, 0.0, 1.0, -0.005182881],
+      [1.0, 0.0, 0.0, -0.000102703],
+      [0.0, 1.0, 0.0, 0.016880469],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.070218292,
+     "face": "-x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.096519911,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the -x face, jaws along y; span 64.2 mm measured over a 20 mm column; pad-seated -5.2 mm along the approach (object 97 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nx_jawz_m50",
+     "transform": [
+      [0.0, 0.0, 1.0, -0.005607031],
+      [0.0, -1.0, 0.0, -0.016836669],
+      [1.0, 0.0, 0.0, 0.000973708],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.068615387,
+     "face": "-x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.099683962,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the -x face, jaws along z; span 62.6 mm measured over a 20 mm column; pad-seated -5.6 mm along the approach (object 100 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nx_jawz_c",
+     "transform": [
+      [0.0, 0.0, 1.0, -0.002593489],
+      [0.0, -1.0, 0.0, 0.0],
+      [1.0, 0.0, 0.0, 0.000446666],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071872636,
+     "face": "-x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.094186556,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the -x face, jaws along z; span 65.9 mm measured over a 20 mm column; pad-seated -2.6 mm along the approach (object 94 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nx_jawz_p50",
+     "transform": [
+      [0.0, 0.0, 1.0, -0.004986667],
+      [0.0, -1.0, 0.0, 0.016836669],
+      [1.0, 0.0, 0.0, 0.000219891],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071025038,
+     "face": "-x",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.099331066,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the -x face, jaws along z; span 65.0 mm measured over a 20 mm column; pad-seated -5.0 mm along the approach (object 99 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/py_jawz_m50",
+     "transform": [
+      [0.0, -1.0, -0.0, -0.025473376],
+      [0.0, 0.0, -1.0, -0.01217024],
+      [1.0, 0.0, -0.0, 0.000500263],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071653785,
+     "face": "+y",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.065963265,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 65.7 mm measured over a 20 mm column; pad-seated +12.2 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/py_jawz_c",
+     "transform": [
+      [0.0, -1.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.01227385],
+      [1.0, 0.0, -0.0, 0.000446666],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071872636,
+     "face": "+y",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.06625612,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 65.9 mm measured over a 20 mm column; pad-seated +12.3 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/py_jawz_p50",
+     "transform": [
+      [0.0, -1.0, -0.0, 0.025473376],
+      [0.0, 0.0, -1.0, -0.012204147],
+      [1.0, 0.0, -0.0, 0.000281665],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072322989,
+     "face": "+y",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.06637675,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 66.3 mm measured over a 20 mm column; pad-seated +12.2 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/ny_jawz_m50",
+     "transform": [
+      [0.0, 1.0, 0.0, -0.025473376],
+      [0.0, 0.0, 1.0, 0.011866495],
+      [1.0, 0.0, 0.0, 0.000500263],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071653785,
+     "face": "-y",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.065963265,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 65.7 mm measured over a 20 mm column; pad-seated +11.9 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/ny_jawz_c",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 1.0, 0.011470031],
+      [1.0, 0.0, 0.0, 0.000446666],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071872636,
+     "face": "-y",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.06625612,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 65.9 mm measured over a 20 mm column; pad-seated +11.5 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/ny_jawz_p50",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.025473376],
+      [0.0, 0.0, 1.0, 0.011419104],
+      [1.0, 0.0, 0.0, 0.000281665],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072322989,
+     "face": "-y",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.06637675,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_z"
+     ],
+     "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 66.3 mm measured over a 20 mm column; pad-seated +11.4 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/pz_jawy_m50",
+     "transform": [
+      [0.0, 1.0, -0.0, -0.025473376],
+      [1.0, 0.0, -0.0, -0.000192894],
+      [0.0, 0.0, -1.0, -0.011716046],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072054626,
+     "face": "+z",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.065090658,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the +z face, jaws along y; span 66.1 mm measured over a 20 mm column; pad-seated +11.7 mm along the approach (object 65 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/pz_jawy_c",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.0],
+      [1.0, 0.0, -0.0, -0.000415356],
+      [0.0, 0.0, -1.0, -0.011647839],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072402133,
+     "face": "+z",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.065540564,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the +z face, jaws along y; span 66.4 mm measured over a 20 mm column; pad-seated +11.6 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/pz_jawy_p50",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.025473376],
+      [1.0, 0.0, -0.0, -0.000405271],
+      [0.0, 0.0, -1.0, -0.011633878],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072536136,
+     "face": "+z",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.066174372,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the +z face, jaws along y; span 66.5 mm measured over a 20 mm column; pad-seated +11.6 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nz_jawy_m50",
+     "transform": [
+      [0.0, -1.0, 0.0, -0.025473376],
+      [1.0, 0.0, 0.0, -0.000192894],
+      [0.0, 0.0, 1.0, 0.013193297],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072054626,
+     "face": "-z",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.065090658,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the -z face, jaws along y; span 66.1 mm measured over a 20 mm column; pad-seated +13.2 mm along the approach (object 65 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nz_jawy_c",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.0],
+      [1.0, 0.0, 0.0, -0.000415356],
+      [0.0, 0.0, 1.0, 0.012811597],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072402133,
+     "face": "-z",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.065540564,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the -z face, jaws along y; span 66.4 mm measured over a 20 mm column; pad-seated +12.8 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "obb_face/nz_jawy_p50",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.025473376],
+      [1.0, 0.0, 0.0, -0.000405271],
+      [0.0, 0.0, 1.0, 0.01219175],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072536136,
+     "face": "-z",
+     "source": "obb_face",
+     "seat_mode": "clamped_deep",
+     "span": 0.066174372,
+     "seat_depth": -0.045,
+     "labels": [
+      "obb_face",
+      "jaw_y"
+     ],
+     "notes": "face-aligned box grasp: enters the -z face, jaws along y; span 66.5 mm measured over a 20 mm column; pad-seated +12.2 mm along the approach (object 66 mm deep, longer than the pads \u2014 not fully enclosed)",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

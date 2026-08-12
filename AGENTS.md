@@ -32,10 +32,10 @@ zip-ties, clothing, towels**. The rod (cable) + FEM block are done; the cloth (`
 Newton's shirt SI-converted, `add_cloth`) is done including the **flat-sheet grasp**: `cloth_franka`
 reproduces Newton's folding sequence through the standard proxy bridge at fully per-object
 PHYSICAL friction (recipe: fingertip pressed 5 mm below the table top — mu*N anchoring — and a
-finite jaw gap never 0; [docs/cloths.md](docs/cloths.md)).
+finite jaw gap never 0; [docs/physicsEngine/cloths.md](docs/physicsEngine/cloths.md)).
 `cloth_franka` grips via the force `GripController` (`force_target=2 N`, inside the shell's
 achievable squeeze — the target-relative admittance law converges to a stable ~8–9 mm pinch,
-[docs/gripper.md](docs/gripper.md)); the default pad is the finger's own collider. Live status:
+[docs/physicsEngine/gripper.md](docs/physicsEngine/gripper.md)); the default pad is the finger's own collider. Live status:
 [docs/ONGOING.md](docs/ONGOING.md).
 
 Final vision: render **custom scenes** (table + background + any combination of deformable
@@ -59,7 +59,7 @@ neither). An example only declares its scene; it never picks the solver.
   Newton solver hosting rigid+cable+soft+mutual two-way contact in one world. **Here the grip is
   FORCE-CONTROLLED** by the centralized `GripController` with ONE unified law for every object (rigid,
   cable, AND soft): a bidirectional admittance regulator, asymmetric in its GAINS (opens ~20× more reluctantly than it closes; the jaw-speed cap is symmetric and physical). A demo declares only a `GraspWindow`
-  and the one allowed knob, its `force_target`. See [docs/gripper.md](docs/gripper.md). (The
+  and the one allowed knob, its `force_target`. See [docs/physicsEngine/gripper.md](docs/physicsEngine/gripper.md). (The
   controller's gain/deadband are derived PER TARGET by `GripConfig.window_params` — anchored
   bit-exact at 30 N, so low targets like the 2 N cloth pinch regulate briskly and converge instead
   of dying in an absolute deadband. Physical params — max finger speed, engage floor, filter tau —
@@ -72,7 +72,7 @@ neither). An example only declares its scene; it never picks the solver.
   scene **plus a token soft cube**, which auto-routes it to VBD — the A/B twin proving the routing.
   (MuJoCo rigid-only ≈ 2.2× faster than the VBD+proxy path on the same ycb scene.)
 
-Details: [docs/solver-architecture.md](docs/solver-architecture.md).
+Details: [docs/physicsEngine/solver-architecture.md](docs/physicsEngine/solver-architecture.md).
 
 ## Physics rules (favor faithful simulation over visual shortcuts)
 
@@ -108,13 +108,13 @@ doesn't expose, add the knob to the package, don't special-case it in the exampl
 force** (`GraspWindow.force_target` [N], one per grasped object). Everything else about the grasp (the
 control law, close speed, engage threshold, materials, proxies — and the target-DERIVED gain/deadband,
 `GripConfig.window_params`) is centralized and identical in form for every object — rigid, cable, AND soft (one unified bidirectional admittance regulator;
-see [docs/gripper.md](docs/gripper.md)). A demo script must NOT contain any other grasp detail: no
+see [docs/physicsEngine/gripper.md](docs/physicsEngine/gripper.md)). A demo script must NOT contain any other grasp detail: no
 preset widths, no compressible/object-type flags, no per-object gains or biases. The demo specifies
 *when* to grasp (the `GraspWindow` times, a policy concern) and *how hard* (`force_target`), nothing
 more. If a grasp needs tuning beyond the target force, fix it centrally in the package, not the demo.
 
 **CONTACT-MATERIAL OWNERSHIP (two standing constraints; mechanics + numbers in
-[docs/solver-architecture.md](docs/solver-architecture.md) "Contact materials").** (1) An object
+[docs/physicsEngine/solver-architecture.md](docs/physicsEngine/solver-architecture.md) "Contact materials").** (1) An object
 authors ONLY its own contact properties — it never defines another object's property FOR it, and
 its builder must REGISTER them (`assets._register_material`) or the blanket proxy-fill silently
 replaces them post-finalize (the 2026-07-11 table bug). (2) The coupling of two objects' materials
@@ -170,8 +170,8 @@ turns the spec into the configure/plan/build_scene/policy the framework expects,
 render + force grip + solver routing for free. A demo file must contain NO physics/solver/grip
 detail — only scene + policy + optional render look (the one grasp knob is `GraspWindow.force_target`).
 Import the physics API with `from deformableManipulationTools import …` and the render-look classes
-with `from robolabViz import RenderSpec, ObjectStyle, …`. Grip-force tuning: [docs/gripper.md](docs/gripper.md).
-Renderer details: [docs/robolab-graphics.md](docs/robolab-graphics.md).
+with `from robolabViz import RenderSpec, ObjectStyle, …`. Grip-force tuning: [docs/physicsEngine/gripper.md](docs/physicsEngine/gripper.md).
+Renderer details: [docs/rendering/robolab-graphics.md](docs/rendering/robolab-graphics.md).
 
 ## Newton version (environment gotcha)
 
@@ -202,7 +202,7 @@ the 1 kg cube), not in any example.
   kd_eff/kd_crit against the source. Also: VBD body↔particle contact mixes the SHAPE's stored
   material into the contact (arithmetic mean); the framework re-targets stored shape ke/kd
   centrally onto the harmonic mean of the two objects' own authored values (the contact-material
-  rule above) — see [docs/cloths.md](docs/cloths.md).
+  rule above) — see [docs/physicsEngine/cloths.md](docs/physicsEngine/cloths.md).
 - **A penalty pinch on a thin shell must close to a FINITE gap, never 0.** The MuJoCo fingers feel
   no VBD object, so they really do reach a commanded 0 width, and a zero-gap pinch EXPELS the cloth
   (measured: 17 captured particles → 0). Newton closes to 8 mm; `cloth_franka` does the same.
@@ -252,44 +252,87 @@ the 1 kg cube), not in any example.
 
 ## docs/ index — read when relevant
 
-This repo's own docs:
+Docs live in subfolders of `docs/`, grouped by pipeline stage. The ONE file at the root is
+[docs/ONGOING.md](docs/ONGOING.md) — live log of in-flight work; read before editing an area it
+names as active. Trust the file, not a summary here.
 
-- [docs/solver-architecture.md](docs/solver-architecture.md) — the solver framework rule, robot & VBD
+- [docs/project-overview.md](docs/project-overview.md) — strictly high-level map
+  of the end-to-end pipeline and package layout; changes only on major restructuring.
+
+`docs/physicsEngine/` — the simulation core:
+
+- [solver-architecture.md](docs/physicsEngine/solver-architecture.md) — the solver framework rule, robot & VBD
   object solver config + `alpha=0`/ALM rationale, CUDA-graph capture rules, the verification standard.
-- [docs/gripper.md](docs/gripper.md) — the centralized proxy grip + harvest (net-to-EE, no per-finger
+- [gripper.md](docs/physicsEngine/gripper.md) — the centralized proxy grip + harvest (net-to-EE, no per-finger
   feedback) and the unified admittance force controller; per-demo knob is `GraspWindow.force_target`.
-- [docs/deformables.md](docs/deformables.md) — cable (rod) + soft-FEM-block tuned parameters and reasons.
-- [docs/cloths.md](docs/cloths.md) — adding a cloth deformable (`ClothConfig` + `add_cloth`) + the
+- [deformables.md](docs/physicsEngine/deformables.md) — cable (rod) + soft-FEM-block tuned parameters and reasons.
+- [cloths.md](docs/physicsEngine/cloths.md) — adding a cloth deformable (`ClothConfig` + `add_cloth`) + the
   cloth gotchas (≈critical `soft_contact_kd`, particle self-contact, the flat-sheet grasp limit).
-- [docs/examples.md](docs/examples.md) — per-example descriptions and run commands.
-- [docs/robolab-graphics.md](docs/robolab-graphics.md) — the `robolabViz/` RoboLab-look renderer,
-  customization surface, vendored assets, render gotchas.
-- [docs/scene-generator.md](docs/scene-generator.md) — the agentic scene generator
-  (`agentic_pipeline/scene_generator.py`): prompt → LLM → spatial solver → settle-only DemoSpec → over-the-shoulder
-  still; the imported-object catalog (`assets/objects/scene_catalog.json`, incl. deformables +
-  every inferred parameter); the RoboLab scene-gen vs environment-gen boundary.
-- [docs/agentic-pipeline.md](docs/agentic-pipeline.md) — the three-stage pipeline
+- [examples.md](docs/physicsEngine/examples.md) — per-example descriptions and run commands. These
+  demos exist to test the physics engine; other pipeline stages (agentic, traj) use their own.
+- [SOLVERS.md](docs/physicsEngine/SOLVERS.md) — deep solver reference (large; consult on demand): why
+  `SolverVBD` is fragile for *rigid* objects, the object↔gripper wiring, and an annotated catalog
+  of Newton's upstream examples.
+
+`docs/agenticPipeline/` — scene/task/env generation + scoring:
+
+- [agentic-pipeline.md](docs/agenticPipeline/agentic-pipeline.md) — the three-stage pipeline
   (`agent_pipeline.py` + `agentic_pipeline/`): scene gen (objects only + settle check) → task gen
   (task + ROBOT PLACEMENT: edge-touching robot table, base-aware reach) → env gen (look + cameras);
   robot-POV direction words, prompt templates in `agentic_pipeline/prompts/`, the SKILL.md
   interactive session, and the --user / userless / --scene_init modes.
-- [docs/task-generator.md](docs/task-generator.md) — the agentic task generator
+- [scene-generator.md](docs/agenticPipeline/scene-generator.md) — the agentic scene generator
+  (`agentic_pipeline/scene_generator.py`): prompt → LLM → spatial solver → settle-only DemoSpec → over-the-shoulder
+  still; the imported-object catalog (`assets/objects/scene_catalog.json`, incl. deformables +
+  every inferred parameter); the RoboLab scene-gen vs environment-gen boundary.
+- [task-generator.md](docs/agenticPipeline/task-generator.md) — the agentic task generator
   (`agentic_pipeline/task_generator.py`): scene → LLM → validate → deformable-aware feasibility checks → ideated
   `Task` (instruction variants + goal predicate + subtasks). Mirrors RoboLab's task-gen structure;
   adds affordance gating by object type (fold=cloth, coil=cable, stack=rigid) + folded-volume
   container fit. Ideates the task only — grasp force/trajectory are the downstream pipeline's job.
-- [docs/ONGOING.md](docs/ONGOING.md) — live log of in-flight work; read before editing an area it
-  names as active. Trust the file, not a summary here.
-- Creating/improving this CLAUDE.md → [docs/howToWriteCLAUDE.md](docs/howToWriteCLAUDE.md).
+- [success-evaluators.md](docs/agenticPipeline/success-evaluators.md) — the SCORING layer
+  (`agentic_pipeline/success.py`): `SceneState`, the `driver` field + `evaluable: false` semantics,
+  and the queue of 11 unscorable predicates — why each AABB heuristic was withdrawn 2026-07-27 and
+  what to build instead (two pairs are blocked on per-asset annotation, not geometry code).
 
-External references (large; consult on demand, don't read up front):
+`docs/trajPipeline/` — trajectory generation (grasp substrate + the executable stage):
 
-- [docs/NVIDIA_Newton_release.md](docs/NVIDIA_Newton_release.md) — authoritative reference for the
+- [README.md](docs/trajPipeline/README.md) — the stage between task gen and simulation: what
+  exists, the pre-shaped-approach contract, and the index of the docs below. Live status is in
+  ONGOING.md.
+- [trajectory-generation.md](docs/trajPipeline/trajectory-generation.md) — the stage itself
+  (`deformableManipulationTools/traj_gen/`, landed 2026-08-12): online selection (physics-tiered
+  re-rank + score-weighted sampling), Bezier legs with collision-driven control points, the
+  measured headless rollout, and the 2-attempt grasp-failure LLM loop. Consumes a pipeline run
+  dir; writes `traj.json` (picked up by `build.demo_from_dir`) + `traj_result.json` + the video.
+- [grasp-library.md](docs/trajPipeline/grasp-library.md) — the per-asset grasp record store:
+  canonical OBB frame (+ ambiguity detectors), the pad-seated v2 pose convention, `pad_seat` and
+  the three seat modes with their measured rationale, schema/versioning rules, catalog coverage.
+- [grasp-passes.md](docs/trajPipeline/grasp-passes.md) — the parallel-agent pass framework and
+  the seven passes (fixture, geometric, obb_face, obb_bucket, vlm_regions, rim_pinch,
+  shake_validate): measured findings + dead ends beyond each pass's in-code docs.
+- [grasp-selection.md](docs/trajPipeline/grasp-selection.md) — selection for a placed object
+  (prune → clearance → projection → score → sample) and the Z-X-Z projection result that closed
+  the IK-vocabulary question.
+
+`docs/rendering/`:
+
+- [robolab-graphics.md](docs/rendering/robolab-graphics.md) — the `robolabViz/` RoboLab-look renderer,
+  customization surface, vendored assets, render gotchas.
+
+`docs/SKILLS/` — working procedures:
+
+- [update-ongoing.md](docs/SKILLS/update-ongoing.md) — when and how to write ONGOING.md entries.
+- [promote-ongoing-to-docs.md](docs/SKILLS/promote-ongoing-to-docs.md) — moving durable ONGOING.md
+  content into `docs/` and resetting the file (done per big task).
+- [writing-claude-md.md](docs/SKILLS/writing-claude-md.md) — creating/improving this CLAUDE.md.
+
+`docs/external/` — external works (large; consult on demand, don't read up front):
+
+- [NVIDIA_Newton_release.md](docs/external/NVIDIA_Newton_release.md) — authoritative reference for the
   two-way MuJoCo↔VBD proxy coupling + the Isaac Lab Franka-cube physics config / high-fidelity path.
-- [docs/NVIDIA_cloth_manip.md](docs/NVIDIA_cloth_manip.md) — NVIDIA's Isaac Lab + Newton cloth /
+- [NVIDIA_cloth_manip.md](docs/external/NVIDIA_cloth_manip.md) — NVIDIA's Isaac Lab + Newton cloth /
   deformable-manipulation writeup. Read when working the cloth/towel/zip-tie roadmap.
-- [docs/robolab.md](docs/robolab.md) — summary of NVIDIA's RoboLab benchmark (paper + the
+- [robolab.md](docs/external/robolab.md) — summary of NVIDIA's RoboLab benchmark (paper + the
   `_external/RoboLab` repo): our sim2real reference (arm gains, friction anchors) and the
   `robolabViz` look source; its stated deformables gap is this project's vision.
-- [docs/SOLVERS.md](docs/SOLVERS.md) — deep solver reference: why `SolverVBD` is fragile for *rigid*
-  objects, the object↔gripper wiring, and an annotated catalog of Newton's upstream examples.

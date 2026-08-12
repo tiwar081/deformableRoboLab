@@ -1,0 +1,1827 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'shake_validate' for catalog object 'mug'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "shake_validate",
+  "source": "shake_validate",
+  "version": 4,
+  "requires": [
+   "fixture",
+   "geometric",
+   "llm_retry",
+   "obb_face",
+   "rim_pinch",
+   "vlm_regions"
+  ],
+  "notes": "8 carried forward, 10 trialed, 0 pre-check skipped, 77 skipped weak (retreated), 47 skipped blocked; llm_retry/a00: dropped (shake 0.0 mm / 0.0 deg); llm_retry/a01: dropped (shake 0.0 mm / 0.0 deg); llm_retry/a02: dropped (shake 0.0 mm / 0.0 deg); llm_retry/a03: dropped (shake 0.0 mm / 0.0 deg); llm_retry/a04: held (shake 0.8 mm / 0.7 deg); llm_retry/a05: dropped (shake 0.0 mm / 0.0 deg); llm_retry/a06: held (shake 4.2 mm / 4.9 deg); llm_retry/a07: dropped (shake 0.0 mm / 0.0 deg); llm_retry/a08: held (shake 11.0 mm / 9.6 deg); llm_retry/a09: dropped (shake 160.6 mm / 72.8 deg)"
+ },
+ "upstream_sha1": "c217c83368a7d9fc01ec882e23ed7000cc9b8d7f",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "mug",
+   "kind": "ycb_mesh",
+   "file": "ycb/mug.usd",
+   "scale": 1.0,
+   "mesh_sha1": "6bdc727421e688f2d6bea98a1b92211e9cae7c09",
+   "extents": [0.105846917, 0.092883191, 0.081354902],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.841341593, 0.540497266, 0.002651221],
+     [0.540501671, -0.841341872, -0.001340852],
+     [0.001505856, 0.002561104, -0.999995587]
+    ],
+    "translation": [0.003263386, 0.006603831, -1.905e-06],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew+handedness",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.100727365
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "shake_validate@4",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {
+  "fixture/rim_wall_px": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15024,
+    "object_motion_during_closing_angular": 2.94499,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "pinch the wall near the rim, +x side [fixture: pinch 8.1 mm measured over a 20 mm column; seated -4.6 mm along the approach] [shake_validate@3: dropped: pushed out of the jaws during the close, 5.33 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:bdf43bc53d3a]"
+  },
+  "fixture/rim_wall_px_ctr": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15933,
+    "object_motion_during_closing_angular": 1.98788,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "centred depth variant of rim_wall_px [centred] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.05 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:7aedc8f4d440]"
+  },
+  "fixture/rim_wall_py": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15332,
+    "object_motion_during_closing_angular": 1.9281500000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "[fixture: pinch 9.6 mm measured over a 20 mm column; seated +37.3 mm along the approach, deeper than the pads] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.18 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:43c0ac7200f6]"
+  },
+  "geometric/medial_002_r0": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15167,
+    "object_motion_during_closing_angular": 1.4609400000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 18.6 mm, linearity 0.83, measured span 30.4 mm centred to 0.04 of it [skeletor_wavefront]; pad-seated -36.8 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, retreated 7 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.07 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_002_r1": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15216000000000002,
+    "object_motion_during_closing_angular": 1.9161700000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 18.6 mm, linearity 0.83, measured span 10.3 mm centred to 0.15 of it [skeletor_wavefront]; pad-seated -31.6 mm along the approach [raycast], object is 76 mm deep and the pads CANNOT enclose it, retreated 36 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.57 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_002_r2": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.1507,
+    "object_motion_during_closing_angular": 2.8638100000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 18.6 mm, linearity 0.83, measured span 30.4 mm centred to 0.04 of it [skeletor_wavefront]; pad-seated -9.0 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, retreated 42 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.23 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_002_r3": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15358000000000002,
+    "object_motion_during_closing_angular": 2.21512,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00055
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 18.6 mm, linearity 0.83, measured span 10.3 mm centred to 0.15 of it [skeletor_wavefront]; pad-seated -26.7 mm along the approach [raycast], object is 76 mm deep and the pads CANNOT enclose it, retreated 36 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.42 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_004_r1": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15039000000000002,
+    "object_motion_during_closing_angular": 2.6466600000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 33.8 mm, linearity 0.65, measured span 35.2 mm centred to 0.04 of it [skeletor_wavefront]; pad-seated -19.0 mm along the approach [raycast], retreated 40 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 2.07 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_004_r3": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 33.8 mm, linearity 0.65, measured span 35.2 mm centred to 0.04 of it [skeletor_wavefront]; pad-seated +21.1 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:239, finger_right[1]:314, palm[0]:2456 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/medial_007_r0": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15189000000000002,
+    "object_motion_during_closing_angular": 0.9415100000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00037000000000000005
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 12.7 mm, linearity 0.80, measured span 36.9 mm centred to 0.05 of it [skeletor_wavefront]; pad-seated -75.3 mm along the approach [raycast], object is 80 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.85 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_007_r1": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15041000000000002,
+    "object_motion_during_closing_angular": 2.88554,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0006500000000000001
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 12.7 mm, linearity 0.80, measured span 7.2 mm centred to 0.23 of it [skeletor_wavefront]; pad-seated -33.5 mm along the approach [raycast], object is 69 mm deep and the pads CANNOT enclose it, retreated 40 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 1.25 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_007_r2": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15059,
+    "object_motion_during_closing_angular": 2.05993,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 12.7 mm, linearity 0.80, measured span 36.9 mm centred to 0.05 of it [skeletor_wavefront]; pad-seated +0.9 mm along the approach [raycast], object is 80 mm deep and the pads CANNOT enclose it, retreated 41 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.30 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_007_r3": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15276,
+    "object_motion_during_closing_angular": 2.07168,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 12.7 mm, linearity 0.80, measured span 7.2 mm centred to 0.23 of it [skeletor_wavefront]; pad-seated -24.1 mm along the approach [raycast], object is 69 mm deep and the pads CANNOT enclose it, retreated 39 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.68 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_012_r0": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15326,
+    "object_motion_during_closing_angular": 0.57579,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 5.5 mm, linearity 0.94, measured span 9.8 mm centred to 0.01 of it [skeletor_wavefront]; pad-seated +16.9 mm along the approach [raycast], object is 84 mm deep and the pads CANNOT enclose it, retreated 23 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.07 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_012_r1": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15022000000000002,
+    "object_motion_during_closing_angular": 2.8000700000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 5.5 mm, linearity 0.94, measured span 7.9 mm centred to 0.01 of it [skeletor_wavefront]; pad-seated +10.6 mm along the approach [raycast] [shake_validate@3: dropped: pushed out of the jaws during the close, 1.93 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:5ccfc3b54189]"
+  },
+  "geometric/medial_012_r1_ctr": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.17852,
+    "object_motion_during_closing_angular": 1.90514,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 5.5 mm, linearity 0.94, measured span 7.9 mm centred to 0.01 of it [skeletor_wavefront]; centred depth variant [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.20 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_012_r2": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 5.5 mm, linearity 0.94, measured span 9.8 mm centred to 0.01 of it [skeletor_wavefront]; pad-seated -33.7 mm along the approach [raycast], object is 84 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:38, palm[0]:532 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/medial_012_r3": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 5.5 mm, linearity 0.94, measured span 7.9 mm centred to 0.01 of it [skeletor_wavefront]; pad-seated +6.4 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:546, palm[0]:1558 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/medial_013_r0": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.16227000000000003,
+    "object_motion_during_closing_angular": 2.14597,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 6.2 mm, linearity 0.97, measured span 9.4 mm centred to 0.04 of it [skeletor_wavefront]; pad-seated +18.6 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it, retreated 22 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.02 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/medial_013_r1": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15556,
+    "object_motion_during_closing_angular": 2.6462700000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 6.2 mm, linearity 0.97, measured span 9.0 mm centred to 0.14 of it [skeletor_wavefront]; pad-seated +7.5 mm along the approach [raycast] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.25 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:fd5046de0682]"
+  },
+  "geometric/medial_013_r2": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 6.2 mm, linearity 0.97, measured span 9.4 mm centred to 0.04 of it [skeletor_wavefront]; pad-seated -34.1 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:30, palm[0]:823 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/medial_013_r3": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "perpendicular to the medial axis; local radius 6.2 mm, linearity 0.97, measured span 9.0 mm centred to 0.14 of it [skeletor_wavefront]; pad-seated +6.9 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:355, palm[0]:1872 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_x01_000": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15263000000000002,
+    "object_motion_during_closing_angular": 1.9436700000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at -41.6 mm; normals antiparallel to within 13.4 deg, gap 39.9 mm; pad-seated -10.1 mm along the approach [raycast], object is 65 mm deep and the pads CANNOT enclose it, retreated 37 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x01_040": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15046,
+    "object_motion_during_closing_angular": 2.8451600000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at -41.6 mm; normals antiparallel to within 0.9 deg, gap 41.9 mm; pad-seated -57.0 mm along the approach [raycast], object is 81 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 5.18 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x01_048": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15035,
+    "object_motion_during_closing_angular": 0.9439700000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at -41.6 mm; normals antiparallel to within 19.8 deg, gap 40.0 mm; pad-seated -30.0 mm along the approach [raycast], object is 74 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 2.65 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x01_060": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15209,
+    "object_motion_during_closing_angular": 1.5415500000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00012000000000000002
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at -41.6 mm; normals antiparallel to within 19.0 deg, gap 43.0 mm; pad-seated +6.8 mm along the approach [raycast], object is 95 mm deep and the pads CANNOT enclose it, retreated 19 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.68 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x02_074": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15208000000000002,
+    "object_motion_during_closing_angular": 1.22808,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at -32.3 mm; normals antiparallel to within 1.5 deg, gap 40.4 mm; pad-seated -43.5 mm along the approach [raycast], object is 85 mm deep and the pads CANNOT enclose it, retreated 33 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.88 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x05_003": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15138000000000001,
+    "object_motion_during_closing_angular": 1.19558,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00011
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at -4.6 mm; normals antiparallel to within 15.2 deg, gap 19.1 mm; pad-seated -19.6 mm along the approach [raycast], retreated 34 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.98 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x07_012": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to x at +13.9 mm; normals antiparallel to within 9.6 deg, gap 37.2 mm; pad-seated +1.8 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:126, palm[0]:170 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_x07_013": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to x at +13.9 mm; normals antiparallel to within 9.6 deg, gap 37.2 mm; pad-seated +0.8 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:99, palm[0]:433 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_x08_000": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15773,
+    "object_motion_during_closing_angular": 0.5115700000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00017
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at +23.1 mm; normals antiparallel to within 8.3 deg, gap 3.0 mm; pad-seated +7.1 mm along the approach [raycast], object is 82 mm deep and the pads CANNOT enclose it, retreated 32 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, -0.08 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x09_126": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15045,
+    "object_motion_during_closing_angular": 3.1345300000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at +32.3 mm; normals antiparallel to within 5.6 deg, gap 5.2 mm; pad-seated -75.9 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, retreated 40 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 2.80 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x09_127": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to x at +32.3 mm; normals antiparallel to within 5.6 deg, gap 5.2 mm; pad-seated +38.6 mm along the approach [raycast], object is 87 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:263, finger_right[1]:507, palm[0]:132 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_x09_128": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to x at +32.3 mm; normals antiparallel to within 13.2 deg, gap 3.1 mm; pad-seated +0.7 mm along the approach [raycast], object is 66 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:588, palm[0]:620 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_x09_132": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.1534,
+    "object_motion_during_closing_angular": 2.7421,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at +32.3 mm; normals antiparallel to within 18.6 deg, gap 3.2 mm; pad-seated -43.4 mm along the approach [raycast], object is 63 mm deep and the pads CANNOT enclose it, retreated 38 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.48 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x10_007": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15137,
+    "object_motion_during_closing_angular": 2.60829,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at +41.6 mm; normals antiparallel to within 7.9 deg, gap 3.3 mm; pad-seated -28.2 mm along the approach [raycast], retreated 30 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 1.13 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_x11_006": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15209,
+    "object_motion_during_closing_angular": 2.32072,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to x at +50.8 mm; normals antiparallel to within 2.5 deg, gap 6.9 mm; pad-seated +11.6 mm along the approach [raycast], retreated 8 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.10 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y01_000": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15265,
+    "object_motion_during_closing_angular": 2.5045300000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to y at -36.5 mm; normals antiparallel to within 7.8 deg, gap 3.3 mm; pad-seated +2.8 mm along the approach [raycast], object is 66 mm deep and the pads CANNOT enclose it, retreated 35 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.43 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y01_001": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15022000000000002,
+    "object_motion_during_closing_angular": 0.7578100000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00019
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to y at -36.5 mm; normals antiparallel to within 7.8 deg, gap 3.3 mm; pad-seated -57.4 mm along the approach [raycast], object is 66 mm deep and the pads CANNOT enclose it, retreated 44 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.32 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y01_002": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15009,
+    "object_motion_during_closing_angular": 2.73475,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to y at -36.5 mm; normals antiparallel to within 4.2 deg, gap 3.2 mm; pad-seated -4.3 mm along the approach [raycast], object is 81 mm deep and the pads CANNOT enclose it, retreated 43 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.77 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y01_005": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at -36.5 mm; normals antiparallel to within 4.7 deg, gap 3.2 mm; pad-seated -26.1 mm along the approach [raycast], object is 82 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:543, finger_right[1]:88 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y02_069": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15149,
+    "object_motion_during_closing_angular": 2.16589,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to y at -28.4 mm; normals antiparallel to within 18.0 deg, gap 40.9 mm; pad-seated -36.7 mm along the approach [raycast], object is 85 mm deep and the pads CANNOT enclose it, retreated 31 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.75 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y04_018": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at -12.2 mm; normals antiparallel to within 19.2 deg, gap 22.1 mm; pad-seated +13.3 mm along the approach [raycast], object is 88 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:206, palm[0]:1016 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y05_011": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at -4.1 mm; normals antiparallel to within 15.5 deg, gap 20.6 mm; pad-seated +25.5 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:284, palm[0]:2258 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y06_006": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +4.1 mm; normals antiparallel to within 4.8 deg, gap 36.3 mm; pad-seated +33.5 mm along the approach [raycast], object is 86 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:182, palm[0]:265 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y06_008": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15049,
+    "object_motion_during_closing_angular": 1.97747,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to y at +4.1 mm; normals antiparallel to within 16.2 deg, gap 20.6 mm; pad-seated -14.7 mm along the approach [raycast], retreated 32 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.97 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y06_018": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +4.1 mm; normals antiparallel to within 11.8 deg, gap 39.7 mm; pad-seated -38.2 mm along the approach [raycast], object is 94 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:202, finger_right[1]:433, palm[0]:215 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y08_048": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15253,
+    "object_motion_during_closing_angular": 0.6849200000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to y at +20.3 mm; normals antiparallel to within 4.9 deg, gap 37.9 mm; pad-seated -48.3 mm along the approach [raycast], object is 109 mm deep and the pads CANNOT enclose it, retreated 36 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.58 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y09_124": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15035,
+    "object_motion_during_closing_angular": 0.96828,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00035000000000000005
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to y at +28.4 mm; normals antiparallel to within 19.9 deg, gap 13.1 mm; pad-seated -67.3 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it, retreated 39 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.90 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_y09_125": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +28.4 mm; normals antiparallel to within 19.9 deg, gap 13.1 mm; pad-seated +35.3 mm along the approach [raycast], object is 83 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:286, palm[0]:230 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y09_126": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +28.4 mm; normals antiparallel to within 11.9 deg, gap 3.5 mm; pad-seated +15.8 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:292, palm[0]:1769 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y09_127": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +28.4 mm; normals antiparallel to within 11.9 deg, gap 3.5 mm; pad-seated +26.9 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:353, palm[0]:788 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y10_005": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +36.5 mm; normals antiparallel to within 15.9 deg, gap 9.1 mm; pad-seated +23.6 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:191, palm[0]:1541 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y10_007": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +36.5 mm; normals antiparallel to within 12.4 deg, gap 5.8 mm; pad-seated +39.8 mm along the approach [raycast], object is 76 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:233, finger_right[1]:650, palm[0]:89 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_y10_026": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to y at +36.5 mm; normals antiparallel to within 14.2 deg, gap 9.2 mm; pad-seated +19.9 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:83, palm[0]:1732 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_005": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 10.4 deg, gap 5.6 mm; pad-seated +27.5 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:52, palm[0]:1590 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_018": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 8.0 deg, gap 5.1 mm; pad-seated +26.2 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:92, palm[0]:1086 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_030": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 8.8 deg, gap 4.7 mm; pad-seated +17.4 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:55, palm[0]:1039 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_043": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 1.8 deg, gap 5.1 mm; pad-seated +24.4 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:60, palm[0]:994 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_068": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 18.5 deg, gap 6.0 mm; pad-seated -0.8 mm along the approach [raycast], object is 56 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:45, palm[0]:1307 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_071": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 19.4 deg, gap 5.9 mm; pad-seated +3.2 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:45, palm[0]:945 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_082": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 1.2 deg, gap 4.7 mm; pad-seated +25.6 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:35, palm[0]:1166 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_095": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 8.4 deg, gap 4.9 mm; pad-seated +20.4 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:54, palm[0]:1211 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_100": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 3.8 deg, gap 5.5 mm; pad-seated +11.0 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:28, palm[0]:998 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_106": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 7.1 deg, gap 5.7 mm; pad-seated +32.2 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:82, palm[0]:801 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_148": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 15.8 deg, gap 5.6 mm; pad-seated +30.6 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:27, palm[0]:953 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_155": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 11.7 deg, gap 5.3 mm; pad-seated +26.5 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:36, palm[0]:1728 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z00_167": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -39.1 mm; normals antiparallel to within 13.0 deg, gap 5.1 mm; pad-seated +19.0 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:90, palm[0]:1535 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z02_010": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15403,
+    "object_motion_during_closing_angular": 1.3406600000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to z at -24.9 mm; normals antiparallel to within 4.3 deg, gap 12.7 mm; pad-seated -90.3 mm along the approach [raycast], object is 108 mm deep and the pads CANNOT enclose it, retreated 42 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.22 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_z02_011": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15249000000000001,
+    "object_motion_during_closing_angular": 3.0902900000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to z at -24.9 mm; normals antiparallel to within 4.3 deg, gap 12.7 mm; pad-seated +14.1 mm along the approach [raycast], object is 108 mm deep and the pads CANNOT enclose it, retreated 16 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.37 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_z02_030": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at -24.9 mm; normals antiparallel to within 18.3 deg, gap 3.4 mm; pad-seated -42.7 mm along the approach [raycast], object is 105 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:100, finger_right[1]:169, palm[0]:69 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z03_004": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15026,
+    "object_motion_during_closing_angular": 0.9015900000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00021
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to z at -17.8 mm; normals antiparallel to within 14.2 deg, gap 6.7 mm; pad-seated +0.9 mm along the approach [raycast], retreated 8 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.10 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_z05_002": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15095,
+    "object_motion_during_closing_angular": 3.1132500000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to z at -3.6 mm; normals antiparallel to within 8.4 deg, gap 12.9 mm; pad-seated +30.8 mm along the approach [raycast], object is 111 mm deep and the pads CANNOT enclose it, retreated 12 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.37 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_z07_201": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15818000000000002,
+    "object_motion_during_closing_angular": 1.88552,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to z at +10.7 mm; normals antiparallel to within 8.2 deg, gap 6.8 mm; pad-seated -2.7 mm along the approach [raycast], retreated 11 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.07 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_z07_201_ctr": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.1572,
+    "object_motion_during_closing_angular": 2.27672,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00044
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "opposing faces in a section normal to z at +10.7 mm; normals antiparallel to within 8.2 deg, gap 6.8 mm; centred depth variant [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.02 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "geometric/xsec_z10_017": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +32.0 mm; normals antiparallel to within 7.2 deg, gap 8.0 mm; pad-seated +22.3 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:561, palm[0]:1380 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z10_030": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +32.0 mm; normals antiparallel to within 18.1 deg, gap 9.3 mm; pad-seated +20.0 mm along the approach [raycast], object is 61 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:590, palm[0]:793 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z10_083": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +32.0 mm; normals antiparallel to within 9.4 deg, gap 12.4 mm; pad-seated +15.3 mm along the approach [raycast], object is 59 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:951, palm[0]:497 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z10_105": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +32.0 mm; normals antiparallel to within 4.2 deg, gap 10.4 mm; pad-seated +18.1 mm along the approach [raycast], object is 55 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:936, palm[0]:563 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_126": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 13.5 deg, gap 4.8 mm; pad-seated +31.1 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:1157, palm[0]:665 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_178": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 11.2 deg, gap 19.8 mm; pad-seated +14.3 mm along the approach [raycast], object is 73 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:894 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_218": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 17.8 deg, gap 4.7 mm; pad-seated +34.7 mm along the approach [raycast], object is 57 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:998, palm[0]:419 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_219": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 17.8 deg, gap 4.7 mm; pad-seated -1.9 mm along the approach [raycast], object is 57 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:1133, palm[0]:884 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_408": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 16.8 deg, gap 21.1 mm; pad-seated +12.9 mm along the approach [raycast], object is 74 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:836, palm[0]:146 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_482": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 6.2 deg, gap 13.5 mm; pad-seated -0.5 mm along the approach [raycast], object is 76 mm deep and the pads CANNOT enclose it, hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:129, finger_right[1]:737 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_500": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 8.7 deg, gap 3.3 mm; pad-seated +16.6 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:952, palm[0]:744 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "geometric/xsec_z11_505": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "opposing faces in a section normal to z at +39.1 mm; normals antiparallel to within 19.9 deg, gap 3.5 mm; pad-seated +7.5 mm along the approach [raycast], hand collides at EVERY depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:906, palm[0]:665 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "llm_retry/a00": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15041000000000002,
+    "object_motion_during_closing_angular": 2.6017300000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Verbatim reuse of retreated pose rim_rim_0_p000 which HELD through shake (close 18mm, shake 15mm) pinching the -x rim wall. [shake_validate@4: dropped: pushed out of the jaws during the close, 1.25 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:fbccf62b51e0]"
+  },
+  "llm_retry/a01": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.21357,
+    "object_motion_during_closing_angular": 2.4696100000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Verbatim reuse of retreated pose rim_rim_1_p018 which HELD through shake (shake 1mm) pinching the -y rim wall deep in the pads. [shake_validate@4: dropped: pushed out of the jaws during the close, -0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:0be089c4819f]"
+  },
+  "llm_retry/a02": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.18852000000000002,
+    "object_motion_during_closing_angular": 2.72895,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Verbatim reuse of retreated pose rim_rim_2_m126 which HELD (close 25mm, shake 21mm) pinching the +x rim wall. [shake_validate@4: dropped: pushed out of the jaws during the close, -0.15 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:a82465b39da3]"
+  },
+  "llm_retry/a03": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15686,
+    "object_motion_during_closing_angular": 2.4264300000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Vertical pinch of the -x cup wall exactly on the wall centreline (radius 0.041 about body centre x=-0.0065), 30mm deep so the ~6mm wall sits well up the pads; unlike failed px fixtures this is centred on real wall material. [shake_validate@4: dropped: pushed out of the jaws during the close, 0.02 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:cad2960405dc]"
+  },
+  "llm_retry/a04": {
+   "quality": {
+    "object_in_gripper": 1.0,
+    "object_motion_during_closing_linear": 0.014180000000000002,
+    "object_motion_during_closing_angular": 0.41969,
+    "object_motion_during_shaking_linear": 0.0008100000000000001,
+    "object_motion_during_shaking_angular": 0.011850000000000001
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "retained"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Vertical pinch of the -y cup wall at its true centre (y=-0.042), 30mm seat depth; outer finger at y=-0.054 clears the -0.048 flare. [shake_validate@4: retained; both pads pressing 100% of the hold; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 5.2 N, shake applied at 96%/96% of command] [pose:8b159b6b0399]"
+  },
+  "llm_retry/a05": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.16498000000000002,
+    "object_motion_during_closing_angular": 1.04732,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Vertical pinch of the +y wall; differs from failed rim_wall_py by being centred on the wall (y=0.040 not 0.039 at x=0) at moderate 30mm depth instead of a 45mm palm-deep clamp that torqued the mug. [shake_validate@4: dropped: pushed out of the jaws during the close, -0.07 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:118e61b7914c]"
+  },
+  "llm_retry/a06": {
+   "quality": {
+    "object_in_gripper": 1.0,
+    "object_motion_during_closing_linear": 0.0071,
+    "object_motion_during_closing_angular": 0.14617000000000002,
+    "object_motion_during_shaking_linear": 0.004240000000000001,
+    "object_motion_during_shaking_angular": 0.08582000000000001
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "retained"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Vertical pinch of the +x wall at the semantic rim_2 point (x=0.0345), away from the handle azimuth; earlier px fixture at x=0.045 missed the wall (span 2mm), this one straddles it. [shake_validate@4: retained; both pads pressing 100% of the hold; target 4.0 N on 118 g (mu_eff 0.60), gripped in 2.2 s, final squeeze 4.5 N, shake applied at 96%/96% of command] [pose:84b8ce52cd57]"
+  },
+  "llm_retry/a07": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.19318000000000002,
+    "object_motion_during_closing_angular": 2.05402,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Diagonal-azimuth wall pinch at 225deg, approach tilted 20deg inward like the three HELD poses so the outer finger clears the flared lip during entry. [shake_validate@4: dropped: pushed out of the jaws during the close, -0.18 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:a1d8189b02a3]"
+  },
+  "llm_retry/a08": {
+   "quality": {
+    "object_in_gripper": 1.0,
+    "object_motion_during_closing_linear": 0.0032600000000000003,
+    "object_motion_during_closing_angular": 0.056380000000000006,
+    "object_motion_during_shaking_linear": 0.01101,
+    "object_motion_during_shaking_angular": 0.1668
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "retained"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Radial pinch of the vertical outer limb of the C-handle at mid-height, closing tangentially across the ~12mm bar with the bar seated 1-13mm up the pads. [shake_validate@4: retained; both pads pressing 100% of the hold; target 4.0 N on 118 g (mu_eff 0.60), gripped in 1.7 s, final squeeze 2.7 N, shake applied at 96%/96% of command] [pose:52624ddcbe43]"
+  },
+  "llm_retry/a09": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.0082,
+    "object_motion_during_closing_angular": 0.14609000000000003,
+    "object_motion_during_shaking_linear": 0.16062,
+    "object_motion_during_shaking_angular": 1.27068
+   },
+   "quality_source": "shake_validate@4",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "LLM-proposed (llm_round_a): Top-down pinch of the upper handle limb (top surface z~0.020, TCP 18mm past it), jaws closing tangentially across the bar; fingertips stop above the lower limb. [shake_validate@4: dropped: object left the jaws 0.18 s after gravity came on; target 4.0 N on 118 g (mu_eff 0.60), gripped in 2.7 s, final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:834a52858b05]"
+  },
+  "obb_face/px_jawz_m50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15077000000000002,
+    "object_motion_during_closing_angular": 2.9476600000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the +x face, jaws along z; span 38.9 mm measured over a 20 mm column; pad-seated -26.7 mm along the approach (object 77 mm deep, longer than the pads \u2014 not fully enclosed); retreated 40 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 1.50 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/px_jawz_c": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.014610000000000001,
+    "object_motion_during_closing_angular": 0.6704300000000001,
+    "object_motion_during_shaking_linear": 0.19069000000000003,
+    "object_motion_during_shaking_angular": 0.6865600000000001
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the +x face, jaws along z; span 2.0 mm measured over a 20 mm column; pad-seated -31.4 mm along the approach (object 80 mm deep, longer than the pads \u2014 not fully enclosed); retreated 43 mm to clear the hand [shake_validate@3: dropped: object left the jaws 0.20 s after gravity came on; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/px_jawz_p50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.06269000000000001,
+    "object_motion_during_closing_angular": 2.29924,
+    "object_motion_during_shaking_linear": 0.11295000000000001,
+    "object_motion_during_shaking_angular": 0.07455
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the +x face, jaws along z; span 39.7 mm measured over a 20 mm column; pad-seated -41.6 mm along the approach (object 95 mm deep, longer than the pads \u2014 not fully enclosed); retreated 37 mm to clear the hand [shake_validate@3: dropped: object left the jaws 0.13 s after gravity came on; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/nx_jawz_m50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15067000000000003,
+    "object_motion_during_closing_angular": 1.0048400000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00024000000000000003
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the -x face, jaws along z; span 38.9 mm measured over a 20 mm column; pad-seated -40.4 mm along the approach (object 77 mm deep, longer than the pads \u2014 not fully enclosed); retreated 40 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.15 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/nx_jawz_c": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.0274,
+    "object_motion_during_closing_angular": 0.95701,
+    "object_motion_during_shaking_linear": 0.19553,
+    "object_motion_during_shaking_angular": 0.84801
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the -x face, jaws along z; span 2.0 mm measured over a 20 mm column; pad-seated -45.0 mm along the approach (object 80 mm deep, longer than the pads \u2014 not fully enclosed); retreated 43 mm to clear the hand [shake_validate@3: dropped: object left the jaws 0.20 s after gravity came on; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/nx_jawz_p50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15003000000000002,
+    "object_motion_during_closing_angular": 1.14694,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00023
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the -x face, jaws along z; span 39.7 mm measured over a 20 mm column; pad-seated -40.4 mm along the approach (object 95 mm deep, longer than the pads \u2014 not fully enclosed); retreated 40 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.10 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/py_jawz_m50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15024,
+    "object_motion_during_closing_angular": 2.6898700000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 38.9 mm measured over a 20 mm column; pad-seated -35.7 mm along the approach (object 80 mm deep, longer than the pads \u2014 not fully enclosed); retreated 41 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.10 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/py_jawz_c": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15053000000000002,
+    "object_motion_during_closing_angular": 3.0462700000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0001
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the +y face, jaws along z; span 2.0 mm measured over a 20 mm column; pad-seated -38.3 mm along the approach (object 80 mm deep, longer than the pads \u2014 not fully enclosed); retreated 43 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 4.63 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/ny_jawz_m50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15141000000000002,
+    "object_motion_during_closing_angular": 0.7506400000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 38.9 mm measured over a 20 mm column; pad-seated -36.1 mm along the approach (object 80 mm deep, longer than the pads \u2014 not fully enclosed); retreated 41 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 0.20 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/ny_jawz_c": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15014000000000002,
+    "object_motion_during_closing_angular": 1.50353,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the -y face, jaws along z; span 2.0 mm measured over a 20 mm column; pad-seated -38.0 mm along the approach (object 80 mm deep, longer than the pads \u2014 not fully enclosed); retreated 43 mm to clear the hand [shake_validate@3: dropped: pushed out of the jaws during the close, 3.50 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "obb_face/pz_jawy_p50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15084,
+    "object_motion_during_closing_angular": 2.27842,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the +z face, jaws along y; span 66.1 mm measured over a 20 mm column; pad-seated +4.4 mm along the approach (object 81 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: pushed out of the jaws during the close, 3.12 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:684ba977739b]"
+  },
+  "obb_face/nz_jawy_p50": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.03894,
+    "object_motion_during_closing_angular": 0.7707,
+    "object_motion_during_shaking_linear": 0.15028000000000002,
+    "object_motion_during_shaking_angular": 1.06417
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "face-aligned box grasp: enters the -z face, jaws along y; span 66.1 mm measured over a 20 mm column; pad-seated +4.8 mm along the approach (object 81 mm deep, longer than the pads \u2014 not fully enclosed) [shake_validate@3: dropped: object left the jaws 3.80 s after gravity came on; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 96%/96% of command] [pose:90ea6609e55b]"
+  },
+  "rim_pinch/rim_rim_0_m126": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15291000000000002,
+    "object_motion_during_closing_angular": 0.59138,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc -126 mm; wall 1.7 mm, jaw 5.7 mm; seated +16.0 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.12 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_0_m108": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15489,
+    "object_motion_during_closing_angular": 0.41894000000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc -108 mm; wall 2.5 mm, jaw 6.5 mm; seated +17.6 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.08 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_0_m072": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15423,
+    "object_motion_during_closing_angular": 0.37164,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 3.0000000000000004e-05
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc -72 mm; wall 2.0 mm, jaw 6.0 mm; seated +17.6 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.08 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_0_m054": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15235,
+    "object_motion_during_closing_angular": 0.8228000000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00023
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc -54 mm; wall 1.3 mm, jaw 5.3 mm; seated +16.8 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.73 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_0_m018": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15065,
+    "object_motion_during_closing_angular": 3.08591,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc -18 mm; wall 2.9 mm, jaw 6.9 mm; seated +19.4 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 2.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_0_p000": {
+   "quality": {
+    "object_in_gripper": 1.0,
+    "object_motion_during_closing_linear": 0.018070000000000003,
+    "object_motion_during_closing_angular": 0.33116,
+    "object_motion_during_shaking_linear": 0.015460000000000002,
+    "object_motion_during_shaking_angular": 0.30977000000000005
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "retained"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc +0 mm; wall 1.1 mm, jaw 5.1 mm; seated +24.0 mm [retreated] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 2.4 N, shake applied at 96%/96% of command]"
+  },
+  "rim_pinch/rim_rim_0_p018": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15009,
+    "object_motion_during_closing_angular": 3.00857,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc +18 mm; wall 2.1 mm, jaw 6.1 mm; seated +17.0 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 1.97 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_0_p036": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15397000000000002,
+    "object_motion_during_closing_angular": 2.9065800000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc +36 mm; wall 2.0 mm, jaw 6.0 mm; seated +18.5 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.05 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_0_p054": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.19514,
+    "object_motion_during_closing_angular": 2.76771,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00055
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_0 (rim) at arc +54 mm; wall 2.3 mm, jaw 6.3 mm; seated +18.9 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.15 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_1_m036": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15333000000000002,
+    "object_motion_during_closing_angular": 0.37096,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_1 (rim) at arc -36 mm; wall 2.0 mm, jaw 6.0 mm; seated +15.8 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.13 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_1_m018": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15069000000000002,
+    "object_motion_during_closing_angular": 1.3649900000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_1 (rim) at arc -18 mm; wall 0.9 mm, jaw 4.9 mm; seated +13.9 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 1.25 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_1_p000": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15745,
+    "object_motion_during_closing_angular": 0.38492000000000004,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_1 (rim) at arc +0 mm; wall 2.6 mm, jaw 6.6 mm; seated +17.4 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.12 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_1_p018": {
+   "quality": {
+    "object_in_gripper": 1.0,
+    "object_motion_during_closing_linear": 0.034730000000000004,
+    "object_motion_during_closing_angular": 0.48728000000000005,
+    "object_motion_during_shaking_linear": 0.0006000000000000001,
+    "object_motion_during_shaking_angular": 0.04891
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "retained"
+   ],
+   "notes": "lip pinch on rim_1 (rim) at arc +18 mm; wall 1.8 mm, jaw 5.8 mm; seated +24.6 mm [retreated] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 132.7 N, shake applied at 96%/96% of command]"
+  },
+  "rim_pinch/rim_rim_1_p054": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.21370000000000003,
+    "object_motion_during_closing_angular": 1.9152700000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_1 (rim) at arc +54 mm; wall 1.7 mm, jaw 5.7 mm; seated +25.5 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_2_m126": {
+   "quality": {
+    "object_in_gripper": 1.0,
+    "object_motion_during_closing_linear": 0.025,
+    "object_motion_during_closing_angular": 0.46614000000000005,
+    "object_motion_during_shaking_linear": 0.02102,
+    "object_motion_during_shaking_angular": 0.48462000000000005
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "retained"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc -126 mm; wall 1.3 mm, jaw 5.3 mm; seated +26.7 mm [retreated] [shake_validate@3: retained; both pads pressing 100% of the hold; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 1.9 N, shake applied at 96%/96% of command]"
+  },
+  "rim_pinch/rim_rim_2_m108": {
+   "labels": [
+    "shake_skipped",
+    "pregrasp_collision"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc -108 mm; wall 2.0 mm, jaw 6.0 mm; seated +44.6 mm [clamped_deep], NO clear depth on this approach [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:499 vertices inside), so this pose is unreachable rather than a failed grasp]"
+  },
+  "rim_pinch/rim_rim_2_m072": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15055000000000002,
+    "object_motion_during_closing_angular": 2.7514000000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc -72 mm; wall 2.2 mm, jaw 6.2 mm; seated +0.5 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 1.52 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_2_m018": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.19744,
+    "object_motion_during_closing_angular": 3.0352900000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0008
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc -18 mm; wall 3.3 mm, jaw 7.3 mm; seated +23.1 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_2_p000": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.1559,
+    "object_motion_during_closing_angular": 1.7834100000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc +0 mm; wall 1.7 mm, jaw 5.7 mm; seated +24.8 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.18 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_2_p018": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.16665000000000002,
+    "object_motion_during_closing_angular": 0.6210600000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc +18 mm; wall 3.2 mm, jaw 7.2 mm; seated +20.2 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.10 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_2_p036": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15918000000000002,
+    "object_motion_during_closing_angular": 1.62609,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc +36 mm; wall 2.6 mm, jaw 6.6 mm; seated +17.0 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_2_p054": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.17312000000000002,
+    "object_motion_during_closing_angular": 2.1739100000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc +54 mm; wall 2.9 mm, jaw 6.9 mm; seated +19.1 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_2_p072": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.19971000000000003,
+    "object_motion_during_closing_angular": 2.2451600000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00039000000000000005
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_2 (rim) at arc +72 mm; wall 1.6 mm, jaw 5.6 mm; seated +26.9 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.18 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_m036": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.16159,
+    "object_motion_during_closing_angular": 0.76797,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc -36 mm; wall 1.1 mm, jaw 5.1 mm; seated +34.5 mm [clamped_deep] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:f4956a270770]"
+  },
+  "rim_pinch/rim_rim_3_m018": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.02619,
+    "object_motion_during_closing_angular": 0.28253,
+    "object_motion_during_shaking_linear": 0.13664,
+    "object_motion_during_shaking_angular": 1.1719400000000002
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc -18 mm; wall 1.1 mm, jaw 5.1 mm; seated +30.5 mm [retreated] [shake_validate@3: dropped: object left the jaws 3.10 s after gravity came on; grip did NOT reach its 4.0 N target in 6.0 s of closing; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 96%/58% of command]"
+  },
+  "rim_pinch/rim_rim_3_p000": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15791000000000002,
+    "object_motion_during_closing_angular": 1.8615700000000002,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +0 mm; wall 1.2 mm, jaw 5.2 mm; seated +23.9 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, 0.07 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_p018": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15907000000000002,
+    "object_motion_during_closing_angular": 2.95956,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +18 mm; wall 2.6 mm, jaw 6.6 mm; seated +17.0 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.07 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_p036": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15098,
+    "object_motion_during_closing_angular": 2.2749900000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +36 mm; wall 2.4 mm, jaw 6.4 mm; seated +16.6 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_p054": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.1675,
+    "object_motion_during_closing_angular": 2.3842700000000003,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +54 mm; wall 2.1 mm, jaw 6.1 mm; seated +17.4 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_p072": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.15388000000000002,
+    "object_motion_during_closing_angular": 1.5871600000000001,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +72 mm; wall 2.3 mm, jaw 6.3 mm; seated +19.6 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.15 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_p090": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.16585000000000003,
+    "object_motion_during_closing_angular": 2.49481,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.00072
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +90 mm; wall 1.5 mm, jaw 5.5 mm; seated +24.5 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.13 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_p108": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.20397,
+    "object_motion_during_closing_angular": 2.91007,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +108 mm; wall 1.3 mm, jaw 5.3 mm; seated +23.8 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.17 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  },
+  "rim_pinch/rim_rim_3_p126": {
+   "quality": {
+    "object_in_gripper": 0.0,
+    "object_motion_during_closing_linear": 0.20125,
+    "object_motion_during_closing_angular": 2.46192,
+    "object_motion_during_shaking_linear": 0.0,
+    "object_motion_during_shaking_angular": 0.0005700000000000001
+   },
+   "quality_source": "shake_validate@3",
+   "labels": [
+    "shake_validated",
+    "dropped"
+   ],
+   "notes": "lip pinch on rim_3 (rim) at arc +126 mm; wall 1.4 mm, jaw 5.4 mm; seated +23.4 mm [retreated] [shake_validate@3: dropped: pushed out of the jaws during the close, -0.18 s in; target 4.0 N on 118 g (mu_eff 0.60), final squeeze 0.0 N, shake applied at 0%/0% of command]"
+  }
+ }
+}

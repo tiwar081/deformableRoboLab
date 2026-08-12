@@ -1,0 +1,65 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'rim_pinch' for catalog object 'cheez_it'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "rim_pinch",
+  "source": "rim_pinch",
+  "version": 4,
+  "requires": [],
+  "notes": "'cheez_it' is annotated but carries no rim/lip/spout region (labels present: none; annotator said: This is a plain rectangular cracker box (Cheez-It) with no handle, rim, tab, or other distinguished feature; a gripper would grasp it anywhere on the body.). Not an open container as far as the store is concerned, so nothing is emitted."
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "cheez_it",
+   "kind": "ycb_mesh",
+   "file": "ycb/cheez_it.usd",
+   "scale": 1.0,
+   "mesh_sha1": "5633f7c20e4003e0d3abcdce823cabb6f419933e",
+   "extents": [0.213782576, 0.163704087, 0.071600909],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.009606236, 0.002528029, 0.999950663],
+     [0.001792589, 0.999995241, -0.002510921],
+     [-0.999952252, 0.00176838, -0.009610722]
+    ],
+    "translation": [0.000112507, 0.000156605, -0.000773229],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew+handedness"
+    ],
+    "ambiguous": false,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "rim_pinch@4",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {}
+}

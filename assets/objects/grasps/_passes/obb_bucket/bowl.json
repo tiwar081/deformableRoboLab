@@ -1,0 +1,767 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'obb_bucket' for catalog object 'bowl'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "obb_bucket",
+  "source": "obb_bucket",
+  "version": 1,
+  "requires": [
+   "geometric",
+   "obb_face",
+   "rim_pinch",
+   "vlm_regions"
+  ],
+  "notes": "bucketed 114 candidate(s) from [geometric, obb_face, rim_pinch]; 6 borderline, frame ambiguous=True"
+ },
+ "upstream_sha1": "b4fcacb2e3cfd94866f0b178b2cd56a8a8d6a062",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "bowl",
+   "kind": "ycb_mesh",
+   "file": "ycb/bowl.usd",
+   "scale": 1.0,
+   "mesh_sha1": "abf1bbb87d2b4cc3f9b1413c6ed99723f41d0d77",
+   "extents": [0.160945401, 0.160343162, 0.054590273],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.969203511, 0.246253209, -0.001977596],
+     [0.246261048, -0.969164572, 0.008690716],
+     [0.000223501, -0.008910077, -0.999960279]
+    ],
+    "translation": [8.478e-05, -0.000241277, -0.000511524],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "asset_align+handedness",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.114063812
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "obb_bucket@1",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {
+  "geometric/xsec_x03_000": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x03_001": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x04_000": {
+   "labels": [
+    "face:+z",
+    "face_borderline",
+    "face_alt:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x05_001": {
+   "labels": [
+    "face:-z",
+    "face_borderline",
+    "face_alt:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x08_000": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x08_001": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_000": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_x11_001": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y05_000": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y05_001": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y10_001": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y10_005": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_002": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_y11_003": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_006": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_042": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_083": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_086": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_100": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_103": {
+   "labels": [
+    "face:-x",
+    "face_borderline",
+    "face_alt:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_131": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_149": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_151": {
+   "labels": [
+    "face:-y",
+    "face_borderline",
+    "face_alt:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_164": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_169": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_173": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_215": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_246": {
+   "labels": [
+    "face:-y",
+    "face_borderline",
+    "face_alt:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_247": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_256": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_267": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_294": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_295": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_297": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_302": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_319": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_326": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_328": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_336": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z00_341": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_001": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_029": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_030": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_035": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_038": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_054": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_068": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_069": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_072": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_073": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_078": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_082": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_100": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_124": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_134": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_140": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_141": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_199": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_202": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_210": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_219": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_223": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_224": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/xsec_z11_225": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_m50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_c": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_p50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_m50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_c": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_p50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_m50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_c": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_p50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_m50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_c": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_p50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_m090": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_m072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_m054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_m036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_m018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_p000": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_p018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_p036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_p054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_p072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_0_p090": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_m072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_m054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_m036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_m018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_p000": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_p018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_p036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_p054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_1_p072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_m072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_m054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_m036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_m018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_p000": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_p018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_p036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_p054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_2_p072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_m072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_m054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_m036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_m018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_p000": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_p018": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_p036": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_p054": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "rim_pinch/rim_rim_3_p072": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  }
+ }
+}

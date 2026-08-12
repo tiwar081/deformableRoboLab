@@ -1,6 +1,6 @@
 """Stable Newton collision geometry from concave meshes, via coacd convex decomposition.
 
-Centralizes the docs/SOLVERS.md §4 fix: a raw *concave* mesh (e.g. the YCB bowl) on a rigid
+Centralizes the docs/physicsEngine/SOLVERS.md §4 fix: a raw *concave* mesh (e.g. the YCB bowl) on a rigid
 body gives contradictory contact normals → a single-substep VBD penalty spike → the whole
 solve ejects to infinity. coacd splits the mesh into convex hull pieces (consistent normals,
 cavity preserved); the full mesh is kept for rendering only. This is the shared helper any
@@ -29,22 +29,51 @@ _WORKER = Path(__file__).resolve().parent / "coacd_worker.py"
 
 
 def load_usd_mesh(path: Path) -> Mesh:
-    """Load the first ``UsdGeom.Mesh`` prim from a USD file as a Newton ``Mesh``, with the prim's
-    local-to-world xform BAKED into the vertices. Assets store points in prim-local units and pose
-    them via xformOps (the objaverse apple: a 0.01 scale + rotate — its raw points are 100x too
-    big, which threw the robot the first time the apple was actually placed in a scene);
-    ``Mesh.create_from_usd`` reads raw points only. Every legacy YCB/HOT3D asset has an identity
-    xform (verified), so their meshes — and coacd cache keys — are bit-identical to before."""
+    """Load a USD file's geometry as one Newton ``Mesh``, MERGING every ``UsdGeom.Mesh`` prim with
+    each prim's local-to-world xform baked into its vertices. Assets store points in prim-local
+    units and pose them via xformOps (the objaverse apple: a 0.01 scale + rotate — its raw points
+    are 100x too big); ``Mesh.create_from_usd`` reads raw points only, so the bake is required.
+
+    A single-mesh asset (every legacy YCB/HOT3D object) is byte-identical to before — one prim, its
+    xform baked (identity for those, so verts + coacd cache keys are unchanged). Multi-prim assets
+    (the VoMP utility bucket = a decal + body + handle + handle-joint; the objaverse apple = 2
+    prims) previously loaded only the FIRST prim in traversal order — for the bucket that was the
+    flat 141-vert decal sticker, so both collision and viz used a flat panel (it rendered as loose
+    sheets and sank through the table). Merging recovers the true geometry (bucket: 7.5k verts,
+    0.34x0.33x0.26 m matching the catalog)."""
     from pxr import Usd, UsdGeom
 
     stage = Usd.Stage.Open(str(path))
-    prim = next(p for p in stage.Traverse() if p.IsA(UsdGeom.Mesh))
-    mesh = Mesh.create_from_usd(prim)
-    m = np.array(UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()))
-    if not np.allclose(m, np.eye(4), atol=1e-9):
-        v = np.asarray(mesh.vertices, dtype=np.float64)
-        mesh = Mesh((v @ m[:3, :3]) + m[3, :3], np.asarray(mesh.indices))
-    return mesh
+    # Merge only the OBJECT's own mesh prims: those under the stage default prim (the asset root).
+    # Some USDs ship stray sibling prims that must NOT be merged — the objaverse apple carries a
+    # /GroundPlane/CollisionMesh (a 0.9x0.9 m plane) alongside /apple_01/mesh; merging it would blow
+    # the apple's bbox to ~0.9 m. Scoping to the default prim's subtree drops those. (When there is
+    # no default prim, fall back to the whole stage.)
+    root = stage.GetDefaultPrim()
+    prims = Usd.PrimRange(root) if root and root.IsValid() else stage.Traverse()
+    verts_all: list[np.ndarray] = []
+    idx_all: list[np.ndarray] = []
+    offset = 0
+    for prim in prims:
+        if not prim.IsA(UsdGeom.Mesh):
+            continue
+        # Skip proxy/guide-purpose prims (render/collision stand-ins); keep default + render.
+        purpose = UsdGeom.Imageable(prim).ComputePurpose()
+        if purpose in (UsdGeom.Tokens.proxy, UsdGeom.Tokens.guide):
+            continue
+        sub = Mesh.create_from_usd(prim)
+        v = np.asarray(sub.vertices, dtype=np.float64)
+        m = np.array(UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()))
+        if not np.allclose(m, np.eye(4), atol=1e-9):
+            v = (v @ m[:3, :3]) + m[3, :3]
+        verts_all.append(v)
+        idx_all.append(np.asarray(sub.indices) + offset)
+        offset += len(v)
+    if not verts_all:
+        raise ValueError(f"no UsdGeom.Mesh prims in {path}")
+    if len(verts_all) == 1:                       # fast path: one prim -> unchanged (cache-key stable)
+        return Mesh(verts_all[0], idx_all[0])
+    return Mesh(np.concatenate(verts_all), np.concatenate(idx_all))
 
 
 def decimate_mesh(mesh: Mesh, target_faces: int) -> Mesh:

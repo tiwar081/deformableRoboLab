@@ -271,7 +271,7 @@ class GraspExample:
         # material re-derivation: the fold recipe compensates the physical, lower cloth<->table
         # friction with pressing normal force instead (fingertips COMMANDED below the table top,
         # the robot-side stopper converts the excess into N, and anchoring is mu*N). See
-        # docs/cloths.md "grasp recipe".)
+        # docs/physicsEngine/cloths.md "grasp recipe".)
         # CENTRAL effective harvest ke — IDENTICAL derivation for EVERY particle object (cloth, FEM
         # block, any future shell/volume): the soft harvest reconstructs the pad reaction as
         # f = ke_eff * penetration, and VBD's body<->particle contact uses the ARITHMETIC MEAN of the

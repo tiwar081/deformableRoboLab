@@ -1,0 +1,346 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'llm_retry' for catalog object 'pitcher'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "llm_retry",
+  "source": "llm_retry",
+  "version": 1,
+  "requires": [],
+  "notes": "round A: 10 candidate(s) emitted, 0 dropped at authoring; round B pends shake coverage of the a* candidates"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "pitcher",
+   "kind": "ycb_mesh",
+   "file": "ycb/pitcher.usd",
+   "scale": 1.0,
+   "mesh_sha1": "ca68165593b53fc0f86bfc76456923fef66f326d",
+   "extents": [0.245581644, 0.146382046, 0.142246206],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.055775389, -0.049909859, 0.997195122],
+     [-0.998435781, -0.00109861, -0.055899767],
+     [0.003885478, -0.998753122, -0.049770514]
+    ],
+    "translation": [0.000295122, 0.005150304, 0.004535031],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "asset_align+handedness"
+    ],
+    "ambiguous": true,
+    "drift": 0.149904251
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "llm_retry@1",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "llm_retry/a00",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.095],
+      [0.0, 1.0, 0.0, 0.0],
+      [1.0, -0.0, 0.0, 0.068],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.23529677,
+     "seat_depth": -0.022678995,
+     "labels": [
+      "rim",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Axial pinch straddling the ~5mm top wall at the +z rim point, 28mm of wall seated between the pads, far from spout and handle.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a01",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.095],
+      [0.0, 1.0, 0.0, 0.0],
+      [1.0, -0.0, 0.0, -0.068],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.011490446,
+     "seat_depth": -0.015625312,
+     "labels": [
+      "rim",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Same axial wall pinch at the diametrically opposite (-z) rim point for a clean, uncluttered wall section.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a02",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.095],
+      [1.0, 0.0, 0.0, 0.068],
+      [0.0, -1.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.236407781,
+     "seat_depth": -0.023467667,
+     "labels": [
+      "rim",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Wall pinch on the +y side of the rim; jaw closes radially across the thin wall with 28mm pad overlap.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a03",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.095],
+      [1.0, 0.0, 0.0, -0.068],
+      [0.0, -1.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.003717841,
+     "seat_depth": -0.015403609,
+     "labels": [
+      "rim",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Wall pinch on the -y side of the rim, mirror of the +y grasp, away from handle attachment diagonal.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a04",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.09],
+      [-0.707106781, 0.707106781, 0.0, -0.048],
+      [0.707106781, 0.707106781, 0.0, 0.048],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.02,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.114852213,
+     "seat_depth": -0.023852926,
+     "labels": [
+      "rim",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Diagonal (-y,+z) rim wall pinch at 33mm depth, radial jaw axis, clear of both spout (+y+z) and handle (-y-z).",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a05",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.081],
+      [0.0, 1.0, 0.0, 0.0],
+      [1.0, -0.0, 0.0, 0.068],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.022,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.235930591,
+     "seat_depth": -0.037182691,
+     "labels": [
+      "rim",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Deep-seated variant of the top rim pinch: rim edge sits 42mm behind the tips (within the 45mm palm limit) for maximum pad-wall contact.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a06",
+     "transform": [
+      [0.0, 0.0, -1.0, 0.1],
+      [0.628337107, 0.77794118, 0.0, 0.05],
+      [0.77794118, -0.628337107, 0.0, 0.062],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.022,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.233136116,
+     "seat_depth": -0.016610859,
+     "labels": [
+      "spout",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Axial pinch across the flared pouring lip at (+y,+z); the thickened spout wall gives a wedged, form-closed hold on a 0.24kg object.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a07",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.03],
+      [-0.707106781, 0.0, 0.707106781, -0.051],
+      [0.707106781, -0.0, 0.707106781, -0.051],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.035,
+     "face": "-y",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.167430059,
+     "seat_depth": -0.018789072,
+     "labels": [
+      "handle",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Radially inward approach onto the mid-handle bar (outer surface at r\u22480.09), tangential closure across the ~20mm strap with the bar seated 6-20mm behind the tips.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a08",
+     "transform": [
+      [0.0, 1.0, 0.0, -0.015],
+      [-0.707106781, 0.0, 0.707106781, -0.05],
+      [0.707106781, -0.0, 0.707106781, -0.05],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.035,
+     "face": "-y",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.160205056,
+     "seat_depth": -0.01172669,
+     "labels": [
+      "handle",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Same tangential handle-bar pinch near the lower end of the loop where the strap still runs along x, giving a second independent handle hold.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a09",
+     "transform": [
+      [0.0, -0.0, -1.0, 0.095],
+      [0.707106781, -0.707106781, 0.0, 0.048],
+      [-0.707106781, -0.707106781, 0.0, -0.048],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018,
+     "face": "+x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.136559359,
+     "seat_depth": -0.018408067,
+     "labels": [
+      "rim",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Diagonal (+y,-z) rim wall pinch, radial jaw axis, 28mm engagement on an unobstructed arc of the rim.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

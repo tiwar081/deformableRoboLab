@@ -1,0 +1,224 @@
+{
+ "_comment": [
+  "llm_retry state cache for catalog object 'pitcher' \u2014 the raw LLM responses the pass's",
+  "candidates are deterministically re-derived from (docs/trajPipeline/llm-retry.md).",
+  "GENERATED. Deleting this file RE-ARMS the retry (both rounds) for this asset."
+ ],
+ "asset": "pitcher",
+ "cache_key": "1|ca68165593b53fc0f86bfc76456923fef66f326d|2|1",
+ "cache_version": 1,
+ "mesh_sha1": "ca68165593b53fc0f86bfc76456923fef66f326d",
+ "pass_version": 1,
+ "prompt_version": 2,
+ "rounds": {
+  "a": {
+   "answer": {
+    "candidates": [
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "rim",
+      "position": [
+       0.095,
+       0.0,
+       0.068
+      ],
+      "rationale": "Axial pinch straddling the ~5mm top wall at the +z rim point, 28mm of wall seated between the pads, far from spout and handle.",
+      "width": 0.018
+     },
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "rim",
+      "position": [
+       0.095,
+       0.0,
+       -0.068
+      ],
+      "rationale": "Same axial wall pinch at the diametrically opposite (-z) rim point for a clean, uncluttered wall section.",
+      "width": 0.018
+     },
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "rim",
+      "position": [
+       0.095,
+       0.068,
+       0.0
+      ],
+      "rationale": "Wall pinch on the +y side of the rim; jaw closes radially across the thin wall with 28mm pad overlap.",
+      "width": 0.018
+     },
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       1,
+       0
+      ],
+      "label": "rim",
+      "position": [
+       0.095,
+       -0.068,
+       0.0
+      ],
+      "rationale": "Wall pinch on the -y side of the rim, mirror of the +y grasp, away from handle attachment diagonal.",
+      "width": 0.018
+     },
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       -0.707,
+       0.707
+      ],
+      "label": "rim",
+      "position": [
+       0.09,
+       -0.048,
+       0.048
+      ],
+      "rationale": "Diagonal (-y,+z) rim wall pinch at 33mm depth, radial jaw axis, clear of both spout (+y+z) and handle (-y-z).",
+      "width": 0.02
+     },
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0,
+       1
+      ],
+      "label": "rim",
+      "position": [
+       0.081,
+       0.0,
+       0.068
+      ],
+      "rationale": "Deep-seated variant of the top rim pinch: rim edge sits 42mm behind the tips (within the 45mm palm limit) for maximum pad-wall contact.",
+      "width": 0.022
+     },
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0.63,
+       0.78
+      ],
+      "label": "spout",
+      "position": [
+       0.1,
+       0.05,
+       0.062
+      ],
+      "rationale": "Axial pinch across the flared pouring lip at (+y,+z); the thickened spout wall gives a wedged, form-closed hold on a 0.24kg object.",
+      "width": 0.022
+     },
+     {
+      "approach": [
+       0,
+       0.707,
+       0.707
+      ],
+      "jaw_axis": [
+       0,
+       -0.707,
+       0.707
+      ],
+      "label": "handle",
+      "position": [
+       0.03,
+       -0.051,
+       -0.051
+      ],
+      "rationale": "Radially inward approach onto the mid-handle bar (outer surface at r\u22480.09), tangential closure across the ~20mm strap with the bar seated 6-20mm behind the tips.",
+      "width": 0.035
+     },
+     {
+      "approach": [
+       0,
+       0.707,
+       0.707
+      ],
+      "jaw_axis": [
+       0,
+       -0.707,
+       0.707
+      ],
+      "label": "handle",
+      "position": [
+       -0.015,
+       -0.05,
+       -0.05
+      ],
+      "rationale": "Same tangential handle-bar pinch near the lower end of the loop where the strap still runs along x, giving a second independent handle hold.",
+      "width": 0.035
+     },
+     {
+      "approach": [
+       -1,
+       0,
+       0
+      ],
+      "jaw_axis": [
+       0,
+       0.707,
+       -0.707
+      ],
+      "label": "rim",
+      "position": [
+       0.095,
+       0.048,
+       -0.048
+      ],
+      "rationale": "Diagonal (+y,-z) rim wall pinch, radial jaw axis, 28mm engagement on an unobstructed arc of the rim.",
+      "width": 0.018
+     }
+    ]
+   },
+   "authoring_failures": [],
+   "model": "claude-fable-5",
+   "request_digest": "0d78ffe2bc1c643493ae1840bc6921c42a8565d0"
+  }
+ }
+}

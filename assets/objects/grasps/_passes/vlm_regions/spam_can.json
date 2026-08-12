@@ -1,0 +1,65 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'vlm_regions' for catalog object 'spam_can'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "vlm_regions",
+  "source": "vlm_regions",
+  "version": 2,
+  "requires": [],
+  "notes": "1 region(s) [tab] -> spam_can.json"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "spam_can",
+   "kind": "ycb_mesh",
+   "file": "ycb/spam_can.usd",
+   "scale": 1.0,
+   "mesh_sha1": "055b3e3dec8dfeea070f4a17d121bcd77e1497a0",
+   "extents": [0.101737212, 0.08347718, 0.057226886],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.998787423, 0.049009304, -0.004665925],
+     [0.004821601, -0.003058716, 0.999983698],
+     [0.048994233, -0.998793639, -0.00329131]
+    ],
+    "translation": [7.7743e-05, 0.000102231, 0.000164261],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": false,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "vlm_regions@2",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {}
+}

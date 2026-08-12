@@ -1,0 +1,709 @@
+{
+ "_comment": [
+  "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+  "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+  "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+  "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+  "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+  "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+ ],
+ "schema_version": 5,
+ "object": {
+  "name": "wood_block",
+  "kind": "ycb_mesh",
+  "file": "ycb/wood_block.usd",
+  "scale": 1.0,
+  "mesh_sha1": "b9154dff9f1594bc187a585c6a0997d1cef734f0",
+  "extents": [0.205977591, 0.089670637, 0.089242924],
+  "frame": {
+   "convention": "obb_extent_desc_v1",
+   "rotation": [
+    [-0.005193343, -0.004430261, 0.999976701],
+    [0.977722509, -0.209860641, 0.004148007],
+    [0.209837374, 0.977721271, 0.005421444]
+   ],
+   "translation": [0.00029063, 0.00029107, 0.000502319],
+   "axis_order": [2, 1, 0],
+   "sign_rules": [
+    "skew",
+    "skew",
+    "skew+handedness"
+   ],
+   "ambiguous": true,
+   "drift": 0.086046923
+  }
+ },
+ "gripper": {
+  "type": "franka_panda",
+  "max_width": 0.08,
+  "pose_convention": "tcp_z_approach_x_jaw_v2"
+ },
+ "grasps": {
+  "generator": "grasp_passes.merge: geometric@7, llm_retry@1, obb_bucket@1, obb_face@8, rim_pinch@4, shake_validate@4, vlm_regions@2",
+  "notes": "UNUSABLE for this gripper: every generator ran, physics validation covered the result, and the LLM retry stage exhausted both its rounds without a single held grasp. This is a measured verdict, not a failed run. Re-check if the gripper, the mesh, or MAX_JAW_WIDTH changes (re-arm by deleting the llm_retry sidecar). GENERATED from per-pass sidecars in _passes/ \u2014 do not hand-edit.",
+  "candidates": [
+   {
+    "id": "geometric/medial_001_r1",
+    "transform": [
+     [0.42232919, 0.895519016, 0.140298779, 0.089199666],
+     [-0.0, 0.154779563, -0.98794903, 0.042106165],
+     [-0.906442527, 0.417239714, 0.065367928, 0.022880711],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.041054074,
+    "face": "+y",
+    "source": "geometric",
+    "seat_mode": "retreated",
+    "span": 0.091257858,
+    "seat_depth": -0.004,
+    "labels": [
+     "medial_axis",
+     "face:+y",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped",
+     "weak_grasp_option"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 35.2 mm, linearity 0.97, measured span 41.1 mm centred to 0.02 of it [skeletor_wavefront]; pad-seated -31.1 mm along the approach [raycast], object is 91 mm deep and the pads CANNOT enclose it, retreated 41 mm to clear the hand [shake_validate@3: dropped: object left the jaws 0.08 s after gravity came on; grip did NOT reach its 28.0 N target in 6.0 s of closing; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.11091000000000001,
+     "object_motion_during_closing_angular": 2.9256,
+     "object_motion_during_shaking_linear": 0.051030000000000006,
+     "object_motion_during_shaking_angular": 0.05904
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "geometric/medial_001_r3",
+    "transform": [
+     [-0.42232919, 0.895519016, -0.140298779, 0.095128392],
+     [0.0, 0.154779563, 0.98794903, 0.000357555],
+     [0.906442527, 0.417239714, -0.065367928, 0.025643019],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.041054074,
+    "face": "-y",
+    "source": "geometric",
+    "seat_mode": "clamped_deep",
+    "span": 0.091257858,
+    "seat_depth": -0.045,
+    "overhang": 0.046957858,
+    "labels": [
+     "medial_axis",
+     "face:-y",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "perpendicular to the medial axis; local radius 35.2 mm, linearity 0.97, measured span 41.1 mm centred to 0.02 of it [skeletor_wavefront]; pad-seated -11.1 mm along the approach [raycast], object is 91 mm deep and the pads CANNOT enclose it [shake_validate@3: dropped: pushed out of the jaws during the close, 0.45 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:17f783dd33d3]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15095,
+     "object_motion_during_closing_angular": 0.7278600000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.00024000000000000003
+    },
+    "quality_source": "shake_validate@3"
+   },
+   {
+    "id": "llm_retry/a00",
+    "transform": [
+     [0.0, 1.0, 0.0, 0.0],
+     [0.707106781, 0.0, -0.707106781, 0.0194],
+     [-0.707106781, 0.0, -0.707106781, 0.0191],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.074,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.119970586,
+    "seat_depth": -0.033102016,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:+y",
+     "face_borderline",
+     "face_alt:+z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Both cross-sections (89.7/89.2mm) exceed the 80mm stroke, so this is a diagonal corner-wedge grasp on the +y/+z long edge at mid-length: fingers press the two 45-degree faces, squeezing seats the wedge apex against the palm, and the 72mm wedge width at the tips fits the jaws. [shake_validate@4: dropped: pushed out of the jaws during the close, 3.83 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:f17b629b5a3c]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15006,
+     "object_motion_during_closing_angular": 0.08102000000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a01",
+    "transform": [
+     [0.0, -1.0, 0.0, 0.0],
+     [0.707106781, 0.0, -0.707106781, 0.0194],
+     [0.707106781, 0.0, 0.707106781, -0.0191],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.074,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.120628897,
+    "seat_depth": -0.032723432,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:+y",
+     "face_borderline",
+     "face_alt:-z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Same corner-wedge strategy on the +y/-z long edge at mid-length, TCP 36mm past the edge so the 72mm local span fits the stroke and closing forces the block into the palm. [shake_validate@4: dropped: pushed out of the jaws during the close, 3.90 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:10f489009da1]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15059,
+     "object_motion_during_closing_angular": 0.11503000000000001,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a02",
+    "transform": [
+     [0.0, 1.0, 0.0, 0.0],
+     [0.707106781, -0.0, 0.707106781, -0.0194],
+     [0.707106781, 0.0, -0.707106781, 0.0191],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.074,
+    "face": "-y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.120572844,
+    "seat_depth": -0.033439416,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:-y",
+     "face_borderline",
+     "face_alt:+z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Corner-wedge grasp on the -y/+z long edge at the centroid; pads contact both adjacent faces symmetrically at 45 degrees and the squeeze wedges the edge against the palm face 11mm behind it. [shake_validate@4: dropped: pushed out of the jaws during the close, 3.87 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:3712478be008]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15008000000000002,
+     "object_motion_during_closing_angular": 0.1935,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 6.000000000000001e-05
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a03",
+    "transform": [
+     [0.0, -1.0, 0.0, 0.0],
+     [0.707106781, 0.0, 0.707106781, -0.0194],
+     [-0.707106781, 0.0, 0.707106781, -0.0191],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.074,
+    "face": "-y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.11992008,
+    "seat_depth": -0.03232481,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:-y",
+     "face_borderline",
+     "face_alt:-z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Corner-wedge grasp on the -y/-z long edge at mid-length, mirror of the other three edges for pose diversity; 36mm insertion keeps material within the 45mm seat limit. [shake_validate@4: dropped: pushed out of the jaws during the close, 3.95 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:e2cfa58edf5b]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15059,
+     "object_motion_during_closing_angular": 0.18350000000000002,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a04",
+    "transform": [
+     [0.0, 1.0, 0.0, 0.05],
+     [0.707106781, 0.0, -0.707106781, 0.0223],
+     [-0.707106781, 0.0, -0.707106781, 0.022],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.066,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.119918479,
+    "seat_depth": -0.029097309,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:+y",
+     "face_borderline",
+     "face_alt:+z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Shallower (32mm) corner-wedge on the +y/+z edge offset +50mm along x, giving 64mm wedge width and extra 8mm lateral clearance for the pre-shaped fingers. [shake_validate@4: dropped: pushed out of the jaws during the close, 5.48 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:e1204d274bf0]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.1501,
+     "object_motion_during_closing_angular": 1.49337,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a05",
+    "transform": [
+     [0.0, 1.0, 0.0, -0.05],
+     [0.707106781, -0.0, 0.707106781, -0.0223],
+     [0.707106781, 0.0, -0.707106781, 0.022],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.066,
+    "face": "-y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.120485188,
+    "seat_depth": -0.02923902,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:-y",
+     "face_borderline",
+     "face_alt:+z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): 32mm-deep corner-wedge on the -y/+z edge offset -50mm along x; different edge and x-station diversify contact placement while keeping the wedge inside the jaw stroke. [shake_validate@4: dropped: pushed out of the jaws during the close, 5.38 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:19977a8480c3]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15034,
+     "object_motion_during_closing_angular": 1.45686,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a06",
+    "transform": [
+     [0.0, -1.0, 0.0, 0.0],
+     [0.707106781, 0.0, -0.707106781, 0.0251],
+     [0.707106781, 0.0, 0.707106781, -0.0248],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.058,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.120628897,
+    "seat_depth": -0.024662415,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:+y",
+     "face_borderline",
+     "face_alt:-z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Shallow 28mm corner pinch on the +y/-z edge at mid-length: only 56mm of wedge between the pads, maximizing clearance in case mesh roughness blocked deeper insertions. [shake_validate@4: dropped: pushed out of the jaws during the close, 3.95 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:769bc7164950]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15056,
+     "object_motion_during_closing_angular": 0.15795,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a07",
+    "transform": [
+     [0.0, -1.0, 0.0, 0.0],
+     [0.707106781, 0.0, 0.707106781, -0.0187],
+     [-0.707106781, 0.0, 0.707106781, -0.0184],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.076,
+    "face": "-y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.11992008,
+    "seat_depth": -0.03331476,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:-y",
+     "face_borderline",
+     "face_alt:-z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Deepest feasible (37mm) corner-wedge on the -y/-z edge at the centroid, taking the maximum 74mm of wedge for the largest contact patches while still clearing the pre-shaped 80mm aperture. [shake_validate@4: dropped: pushed out of the jaws during the close, 3.92 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:da004d032b29]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15002000000000001,
+     "object_motion_during_closing_angular": 0.11275,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a08",
+    "transform": [
+     [0.707106781, 0.0, -0.707106781, 0.0775],
+     [0.0, -1.0, 0.0, 0.0],
+     [-0.707106781, -0.0, -0.707106781, 0.0191],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.074,
+    "face": "+x",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.160558619,
+    "seat_depth": -0.034660242,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:+x",
+     "face_borderline",
+     "face_alt:+z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Corner-wedge across the short edge where the +x end face meets the +z face: pads clamp end and top faces at 45 degrees near the block end, a distinct edge family in case long-edge poses are unreachable. [shake_validate@4: dropped: pushed out of the jaws during the close, 4.10 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:200e05a7afc5]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15016000000000002,
+     "object_motion_during_closing_angular": 0.46638,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/a09",
+    "transform": [
+     [0.707106781, -0.0, 0.707106781, -0.0775],
+     [0.0, 1.0, 0.0, 0.0],
+     [-0.707106781, 0.0, 0.707106781, -0.0191],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.074,
+    "face": "-x",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.16081018,
+    "seat_depth": -0.03471496,
+    "labels": [
+     "body",
+     "llm_round_a",
+     "face:-x",
+     "face_borderline",
+     "face_alt:-z",
+     "face_ambiguous",
+     "shake_validated",
+     "dropped"
+    ],
+    "notes": "LLM-proposed (llm_round_a): Mirror end-edge wedge grasp at the -x/-z corner edge; closing squeezes the wedge toward the palm which backs the block against sliding out during the shake. [shake_validate@4: dropped: pushed out of the jaws during the close, 4.12 s in; target 28.0 N on 729 g (mu_eff 0.63), final squeeze 0.0 N, shake applied at 0%/0% of command] [pose:865b43208c1b]",
+    "quality": {
+     "object_in_gripper": 0.0,
+     "object_motion_during_closing_linear": 0.15050000000000002,
+     "object_motion_during_closing_angular": 0.42114,
+     "object_motion_during_shaking_linear": 0.0,
+     "object_motion_during_shaking_angular": 0.0
+    },
+    "quality_source": "shake_validate@4"
+   },
+   {
+    "id": "llm_retry/b01",
+    "transform": [
+     [0.0, -1.0, 0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.0],
+     [1.0, 0.0, 0.0, 0.005],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.078,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.089270084,
+    "seat_depth": -0.044552233,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+y",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Approach along -y (44.8mm to first face far too shallow); TCP seated 44mm into y so pads span the 89.2mm z? No - jaw across z=89mm too wide. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_right[1]:77 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:dc9bffac1cf0]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   },
+   {
+    "id": "llm_retry/b02",
+    "transform": [
+     [1.0, -0.0, 0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.028],
+     [0.0, 1.0, 0.0, 0.0],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.078,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.08918146,
+    "seat_depth": -0.016438394,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+y",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Approach from +y face, jaw closes along the long x axis clamping a 78mm x-slab flat-on-flat; TCP 44mm-16mm inside y so real material seated near palm. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:17, finger_right[1]:16 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:0cf6645281a7]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   },
+   {
+    "id": "llm_retry/b03",
+    "transform": [
+     [1.0, 0.0, 0.0, 0.0],
+     [0.0, -1.0, 0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.028],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.078,
+    "face": "+z",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.087696182,
+    "seat_depth": -0.015936453,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+z",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Top-down approach along -z, jaw along long x axis on a 78mm x-slab of the flat top face, flat parallel pad contact rather than a wedge. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:15, finger_right[1]:15 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:b94ba349ae74]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   },
+   {
+    "id": "llm_retry/b04",
+    "transform": [
+     [1.0, 0.0, 0.0, 0.05],
+     [0.0, -1.0, 0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.028],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.078,
+    "face": "+z",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.087659261,
+    "seat_depth": -0.015940919,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+z",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Same flat top grip but shifted +50mm along x for a different x-station and better balance of the block mass. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:53, finger_right[1]:19 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:13c11ea7a99b]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   },
+   {
+    "id": "llm_retry/b05",
+    "transform": [
+     [1.0, 0.0, 0.0, -0.05],
+     [0.0, -1.0, 0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.028],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.078,
+    "face": "+z",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.08767247,
+    "seat_depth": -0.015824488,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+z",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Flat top grip offset -50mm along x, jaw along x on flat parallel faces to give full-pad contact for friction. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:18, finger_right[1]:46 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:c5579252d2d8]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   },
+   {
+    "id": "llm_retry/b06",
+    "transform": [
+     [0.0, -1.0, 0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.028],
+     [1.0, 0.0, 0.0, 0.0],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.078,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.089076835,
+    "seat_depth": -0.016438913,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+y",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Approach +y face, jaw along z clamping the 89mm z... instead reduce: seat mid so pads grip the 78mm-limited z slab flat, not corner wedge. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:29, finger_right[1]:13 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:eabb69060682]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   },
+   {
+    "id": "llm_retry/b08",
+    "transform": [
+     [1.0, 0.0, 0.0, 0.0],
+     [0.0, -0.707106781, -0.707106781, 0.028],
+     [0.0, 0.707106781, -0.707106781, 0.028],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.078,
+    "face": "+y",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.119912296,
+    "seat_depth": -0.020740184,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+y",
+     "face_borderline",
+     "face_alt:+z",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Diagonal approach into +y/+z edge but jaw closes along the long x axis on flat faces, avoiding the failed corner-wedge geometry where fingers pushed the block out. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:43, finger_right[1]:46 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:acee49f0e71d]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   },
+   {
+    "id": "llm_retry/b09",
+    "transform": [
+     [0.0, 1.0, 0.0, 0.0],
+     [1.0, -0.0, 0.0, 0.0],
+     [0.0, 0.0, -1.0, 0.028],
+     [0.0, 0.0, 0.0, 1.0]
+    ],
+    "width": 0.079,
+    "face": "+z",
+    "source": "llm_retry",
+    "seat_mode": "llm",
+    "span": 0.088218683,
+    "seat_depth": -0.0164105,
+    "labels": [
+     "body",
+     "llm_round_b",
+     "face:+z",
+     "face_ambiguous",
+     "shake_skipped",
+     "pregrasp_collision"
+    ],
+    "notes": "LLM-proposed (llm_round_b): Top-down, jaw along y closing on the 89mm... trimmed to 79mm just under stroke, clamping the top with wide flat pads for maximum contact friction. [shake_validate: NOT simulated \u2014 at the pre-grasp opening the object intrudes into the hand (finger_left[2]:32, finger_right[1]:35 vertices inside), so this pose is unreachable rather than a failed grasp] [pose:e2032124773d]",
+    "quality": {
+     "object_in_gripper": null,
+     "object_motion_during_closing_linear": null,
+     "object_motion_during_closing_angular": null,
+     "object_motion_during_shaking_linear": null,
+     "object_motion_during_shaking_angular": null
+    },
+    "quality_source": null
+   }
+  ]
+ }
+}

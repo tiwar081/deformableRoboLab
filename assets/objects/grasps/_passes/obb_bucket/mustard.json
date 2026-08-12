@@ -1,0 +1,503 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'obb_bucket' for catalog object 'mustard'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "obb_bucket",
+  "source": "obb_bucket",
+  "version": 1,
+  "requires": [
+   "geometric",
+   "obb_face",
+   "rim_pinch",
+   "vlm_regions"
+  ],
+  "notes": "bucketed 86 candidate(s) from [geometric, obb_face]; 1 borderline, frame ambiguous=False"
+ },
+ "upstream_sha1": "18dd638bb9b0e3f7420350d4b57b11b8e15b2e7b",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "mustard",
+   "kind": "ycb_mesh",
+   "file": "ycb/mustard.usd",
+   "scale": 1.0,
+   "mesh_sha1": "ee42db7b4e79e8e5bcb30ffacbe1a1edfb8a45b2",
+   "extents": [0.191512547, 0.095750748, 0.0576788],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.004643021, -0.00589958, -0.999971818],
+     [-0.910592258, 0.413301992, 0.001789642],
+     [0.413279786, 0.910574905, -0.007291082]
+    ],
+    "translation": [-4.9156e-05, 3.9048e-05, -0.000811811],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew+handedness",
+     "skew"
+    ],
+    "ambiguous": false,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "obb_bucket@1",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {
+  "geometric/medial_007_r0": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/medial_007_r1": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/medial_007_r2": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/medial_007_r3": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_x00_000": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_x00_000_ctr": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_x00_007": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_x00_007_ctr": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_x00_010": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_x00_010_ctr": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_x00_016": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_x00_016_ctr": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_x00_021": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_x00_021_ctr": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_x00_027": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_x00_027_ctr": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_x02_008": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_x02_013": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_x02_029": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_x02_064": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:+z"
+   ]
+  },
+  "geometric/xsec_x03_018": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_x05_038": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_x07_031": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_x11_021": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_x11_025": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_x11_026": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_y00_000": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_y00_002": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y00_039": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y00_043": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y00_054": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y00_059": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_y00_065": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y00_073": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y00_074": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_y01_029": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_y03_133": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y06_068": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_y06_069": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y06_070": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y06_078": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y06_079": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_y08_001": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_y08_130": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_y10_087": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y11_008": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_y11_022": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y11_027": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_y11_032": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y11_037": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_y11_054": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_y11_055": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y11_065": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_y11_068": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "geometric/xsec_y11_069": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "geometric/xsec_z00_002": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_z00_003": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_z00_007": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_z00_008": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_z00_024": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_z00_026": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_z00_029": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_z01_044": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_z01_055": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_z02_013": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_z06_006": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_z07_007": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_z10_027": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_z10_092": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "geometric/xsec_z10_093": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_z11_016": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "geometric/xsec_z11_018": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "geometric/xsec_z11_019": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "geometric/xsec_z11_025": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "obb_face/px_jawz_m50": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "obb_face/px_jawz_c": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "obb_face/px_jawz_p50": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "obb_face/nx_jawz_m50": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "obb_face/nx_jawz_c": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "obb_face/nx_jawz_p50": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "obb_face/py_jawz_m50": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "obb_face/py_jawz_c": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "obb_face/py_jawz_p50": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "obb_face/ny_jawz_m50": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "obb_face/ny_jawz_c": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "obb_face/ny_jawz_p50": {
+   "labels": [
+    "face:-y"
+   ]
+  }
+ }
+}

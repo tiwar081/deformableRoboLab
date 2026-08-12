@@ -554,12 +554,15 @@ def _grip_force_stop_kernel(
     substep: int,
     sim_dt: float,
     windows: wp.array(dtype=wp.float32),        # flat [close_start, close_end, release_start, release_end,
-                                                #       ft, k_close_w, k_open_w, deadband_w]*n — the last
-                                                #       three are the TARGET-RELATIVE controller params,
-                                                #       pre-resolved per window by
+                                                #       ft, k_close_w, k_open_w, deadband_w, preshape_q]*n —
+                                                #       ft..deadband_w are the TARGET-RELATIVE controller
+                                                #       params, pre-resolved per window by
                                                 #       GripConfig.window_params(ft); the close/open gain
                                                 #       split is the anti-drop asymmetry (the rate cap is
-                                                #       symmetric + physical)
+                                                #       symmetric + physical). preshape_q is the per-finger
+                                                #       PRE-SHAPED approach target (= preshape_width/2, or
+                                                #       gripper_open when the window declares none) — the
+                                                #       grasp library's pre-shaped-approach contract.
     n_windows: int,
     gripper_open: float,
     close_target: float,                        # width lower bound (0 on the VBD force grip — no floor;
@@ -586,9 +589,10 @@ def _grip_force_stop_kernel(
     # force_stop_enabled=0) has no squeeze signal, so it degrades to a plain smoothstep close.
     t = t_frame[0] + float(substep) * sim_dt
     sqz = squeeze_signal[0]
-    out = gripper_open                          # default (before/between/after all windows): open
+    out = gripper_open                          # default (after all windows): open
+    claimed = float(0.0)                        # set once the ACTIVE or next-UPCOMING window owns `out`
     for w in range(n_windows):
-        wb = 8 * w
+        wb = 9 * w
         cs = windows[wb + 0]
         ce = windows[wb + 1]
         rs = windows[wb + 2]
@@ -597,12 +601,19 @@ def _grip_force_stop_kernel(
         k_close = windows[wb + 5]                # target-relative CLOSE gain [m/s per N]
         k_open = windows[wb + 6]                 # target-relative OPEN gain (= k_close/k_open_ratio)
         grip_force_deadband = windows[wb + 7]    # target-relative deadband [N]
+        preshape_q = windows[wb + 8]             # pre-shaped approach per-finger target
         sb = 3 * w
         if t < cs:
-            # before this grasp: open, (re)arm the per-window state for a clean cycle
-            grip_state[sb + 0] = gripper_open    # admittance width w
+            # before this grasp: pre-shape, (re)arm the per-window state for a clean cycle. The
+            # admittance width is armed at the PRE-SHAPED aperture so the approach-phase close ramp
+            # starts from the aperture the fingers actually hold (the grasp library validated the
+            # whole procedure at that aperture, and it also shortens the close travel).
+            grip_state[sb + 0] = preshape_q      # admittance width w
             grip_state[sb + 1] = 0.0             # filtered squeeze f_filt
             grip_state[sb + 2] = 0.0             # engaged flag
+            if claimed == 0.0:                   # the EARLIEST upcoming window sets the aperture
+                out = preshape_q
+                claimed = 1.0
         elif t < re:
             width = grip_state[sb + 0]
             f_filt = grip_state[sb + 1]
@@ -612,9 +623,9 @@ def _grip_force_stop_kernel(
                 if t >= rs:                      # RELEASE: smoothstep reopen from the closed target to open
                     alpha = wp_smoothstep((t - rs) / (re - rs))
                     width = (1.0 - alpha) * close_target + alpha * gripper_open
-                elif t < ce:                     # CLOSING
+                elif t < ce:                     # CLOSING (from the pre-shaped approach aperture)
                     alpha = wp_smoothstep((t - cs) / (ce - cs))
-                    width = (1.0 - alpha) * gripper_open + alpha * close_target
+                    width = (1.0 - alpha) * preshape_q + alpha * close_target
                 else:                            # HOLD closed
                     width = close_target
             elif t >= rs:                        # RELEASE: smoothstep reopen FROM the held width to open
@@ -656,6 +667,7 @@ def _grip_force_stop_kernel(
             grip_state[sb + 1] = f_filt
             grip_state[sb + 2] = engaged
             out = width
+            claimed = 1.0                        # an active window always owns the command
     joint_target_q[finger_dof0] = out
     joint_target_q[finger_dof1] = out
 
@@ -707,9 +719,14 @@ class GripController:
             # centralized derivation GripConfig.window_params, and packed per window for the kernel.
             ft = float(win.force_target if win.force_target is not None else grip.force_target)
             k_close_w, k_open_w, deadband_w = grip.window_params(ft)
+            # Pre-shaped approach aperture (grasp-library contract; None -> legacy fully open).
+            # Stored as the PER-FINGER target (= jaw width / 2), clamped into the physical stroke.
+            pre = getattr(win, "preshape_width", None)
+            preshape_q = self.gripper_open if pre is None else \
+                min(max(0.5 * float(pre), 0.0), self.gripper_open)
             flat += [float(win.close_start), float(win.close_end),
                      float(win.release_start), float(win.release_end), ft,
-                     float(k_close_w), float(k_open_w), float(deadband_w)]
+                     float(k_close_w), float(k_open_w), float(deadband_w), preshape_q]
         self._windows = wp.array(flat, dtype=wp.float32, device=device)
         self._grip_state = wp.zeros(self.n_windows * 3, dtype=wp.float32, device=device)
 

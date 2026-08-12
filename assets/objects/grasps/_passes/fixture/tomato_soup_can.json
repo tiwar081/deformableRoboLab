@@ -1,0 +1,147 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'fixture' for catalog object 'tomato_soup_can'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "fixture",
+  "source": "fixture",
+  "version": 8,
+  "requires": [],
+  "notes": "hand-placed placeholders; widths measured from the mesh, poses pad-seated"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "tomato_soup_can",
+   "kind": "ycb_mesh",
+   "file": "ycb/tomato_soup_can.usd",
+   "scale": 1.0,
+   "mesh_sha1": "50e191fc37395f9ba2d93b03a57d962d6a1235bc",
+   "extents": [0.101893504, 0.067346678, 0.067521875],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.003597114, 0.002321149, 0.999990836],
+     [0.937425423, 0.34816103, -0.004180198],
+     [-0.348167542, 0.937431869, -0.000923529]
+    ],
+    "translation": [6.9599e-05, 0.000125648, -2.7812e-05],
+    "axis_order": [2, 0, 1],
+    "sign_rules": [
+     "skew",
+     "skew+handedness",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.04812218
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "fixture@8",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "fixture/mid_across_y",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.0],
+      [1.0, 0.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.011621513],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072402133,
+     "face": "+z",
+     "source": "fixture",
+     "seat_mode": "clamped_deep",
+     "span": 0.065610705,
+     "seat_depth": -0.045,
+     "labels": [
+      "mid_span"
+     ],
+     "notes": "across the barrel at mid height (x is the can axis) [fixture: span 66.4 mm measured over a 20 mm column; seated +11.6 mm along the approach, deeper than the pads]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "fixture/mid_across_z",
+     "transform": [
+      [0.0, -1.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.012278136],
+      [1.0, 0.0, -0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.071872636,
+     "face": "+y",
+     "source": "fixture",
+     "seat_mode": "clamped_deep",
+     "span": 0.066288167,
+     "seat_depth": -0.045,
+     "labels": [
+      "mid_span"
+     ],
+     "notes": " [fixture: span 65.9 mm measured over a 20 mm column; seated +12.3 mm along the approach, deeper than the pads]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "fixture/near_end_across_y",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.035662726],
+      [1.0, 0.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.011653883],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.072583529,
+     "face": "+z",
+     "source": "fixture",
+     "seat_mode": "clamped_deep",
+     "span": 0.06640216,
+     "seat_depth": -0.045,
+     "labels": [
+      "near_end"
+     ],
+     "notes": " [fixture: span 66.6 mm measured over a 20 mm column; seated +11.7 mm along the approach, deeper than the pads]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

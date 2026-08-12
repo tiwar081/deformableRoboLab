@@ -55,7 +55,7 @@ class RobotConfig:
     gripper_open: float = 0.04                        # URDF prismatic upper limit [m]
     # PD actuator gains (position mode) — arm DOFs 0-6, finger DOFs 7-8.
     # arm_target_ke/kd are the arm's joint impedance — they SET how much the arm sags/jolts under
-    # the harvested EE load (docs/gripper.md "net-to-EE"). 400/80 EXACTLY matches RoboLab's DROID
+    # the harvested EE load (docs/physicsEngine/gripper.md "net-to-EE"). 400/80 EXACTLY matches RoboLab's DROID
     # Franka (_external/RoboLab robolab/robots/droid.py, ImplicitActuatorCfg stiffness=400,
     # damping=80 on all 7 arm joints) — RoboLab is the sim2real reference, so the arm must feel
     # loads the same way. The old 420/42 had matching stiffness but HALF the damping (transients
@@ -229,12 +229,20 @@ class GraspWindow:
     centralized default ``GRIP.force_target``). The SAME bidirectional admittance controller regulates the
     closing-axis projected squeeze to that target for EVERY object (rigid, cable, AND soft) — the grasp does
     not depend on the object type, only on the target. Geometry-independent: the cable, a flat box and a soft
-    block each end at whatever width gives the requested force ("specify force, get emergent geometry")."""
+    block each end at whatever width gives the requested force ("specify force, get emergent geometry").
+
+    ``preshape_width`` is NOT a tuning knob but the grasp library's pre-shaped-approach CONTRACT
+    (docs/trajPipeline/README.md): the fingers hold this JAW WIDTH [m] while approaching, BEFORE
+    ``close_start`` (from t=0 or the previous window's release). Its value is DERIVED from the
+    selected candidate — ``min(candidate.width + PREGRASP_MARGIN, MAX_JAW_WIDTH)`` — because every
+    stored candidate's collision feasibility and measured hold quality were computed at exactly that
+    aperture. ``None`` (hand-written demos) keeps the legacy fully-open approach."""
     close_start: float
     close_end: float
     release_start: float = float("inf")
     release_end: float = float("inf")
     force_target: float | None = None    # per-demo target grasp force [N]; None → GRIP.force_target default
+    preshape_width: float | None = None  # pre-shaped approach jaw width [m]; None → fully open
 
 
 @dataclass(frozen=True)
@@ -423,7 +431,7 @@ class YcbMeshConfig:
     """A YCB mesh object loaded for Newton collision (deformableManipulationTools/mesh_collision.py).
 
     The full mesh renders; coacd convex-hull pieces collide (consistent normals, cavity
-    preserved — docs/SOLVERS.md §4: a raw concave mesh ejects the solve). ``target_mass`` is the
+    preserved — docs/physicsEngine/SOLVERS.md §4: a raw concave mesh ejects the solve). ``target_mass`` is the
     realistic YCB mass applied after finalize so the body isn't flung (SOLVERS.md §5); ``density``
     only seeds the pre-rescale inertia shape. ``ke``/``kd`` are the absolute VBD contact material."""
     usd_subpath: str                  # under assets/objects, e.g. "ycb/bowl.usd"
@@ -435,7 +443,7 @@ class YcbMeshConfig:
                                        # legacy per-object values (bowl 1.0, banana 2.0, rubiks 1.2)
                                        # were grasp-era tuning, not RoboLab/measured — banana 2.0 was
                                        # even documented ineffective against its wedge self-ejection
-                                       # (ONGOING/SOLVERS §6) — AND they were silently INERT on the
+                                       # (SOLVERS.md §6) — AND they were silently INERT on the
                                        # VBD path until the 2026-07-11 material-restore fix.
     color: tuple[float, float, float] = (0.7, 0.7, 0.7)
     # coacd convex decomposition (preprocess_mode='on' is forced in the worker — 'auto' segfaults

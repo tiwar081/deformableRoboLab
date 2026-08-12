@@ -36,27 +36,54 @@ Display this message (fill the object list from `assets/objects/scene_catalog.js
 
 I'll generate a full simulation setup (scene → task + robot placement → environment). I need:
 
-1. **Scene description** — what should be on the table? (e.g. "a laundry-folding station with a
-   green t-shirt and a mug", "a messy snack counter with cans and a sponge")
+1. **Scene description** — a BROAD description of the situation, not an inventory (e.g. "a messy
+   office desk after lunch", "dirty laundry in my laundry bin in my room", "a workshop bench
+   halfway through a repair"). The pipeline decides which objects appear and where they go; the
+   concrete layout comes back in the scene's `description`. A user who does name specific objects
+   is of course honored.
 2. **Number of objects** — blank = 3-5 for simple scenes (hard range 1-7).
 3. **Robot placement** — `default` (middle of the back long edge of the workspace table) or
    `task` (the agent picks the best edge/anchor for the task it designs).
 4. **Exterior camera** — describe a view, or blank for the default front bird's-eye view
    (opposite the robot, ~2 m above the table, whole workspace in frame). A wrist camera is always
    mounted regardless.
-5. **Visual verification?** — optional post-render check where the agent inspects the rendered
-   still (extra model calls + possible re-render; default off).
+5. **Visual verification?** — post-render check where the agent inspects BOTH rendered stills
+   (over-the-shoulder + wrist); extra model calls + possible re-render. Default ON; answer `n` to
+   skip.
 6. **Output directory** — default `outputs/agenticPipeline/`.
 
 **Objects I can pick from** (`assets/objects/scene_catalog.json`): rigid YCB/HOT3D/Objaverse items
 (banana, bowl, mug, cans, boxes, pitcher, wood block, rubik's cube, steel cube, apple), cloth
 garments (gray/green t-shirt, blue dress), cables (power cable, nylon rope), and squishy FEM
-objects (sponge, foam brick, soft banana, raspberry cube).
+objects (sponge, foam brick, soft banana, raspberry cube), plus three Objaverse-derived deformable
+bags (plastic recycle, woven tote, paper grocery). Generated scenes currently allow at most one
+total item across bag, garment cloth, and squishy families.
 
 ---
 
 Then wait for the answers. Reuse the user's previous answers for later runs in the same session
 instead of asking again (except the scene description).
+
+**Rearranging an existing run (`--scene_init`) — ask FEWER questions.** The source run supplies the
+scenario PROMPT (verbatim — the scenario does not change), the object multiset, the robot
+placement, and the environment (camera included), so questions 2, 3 and 4 are dead: their answers
+would be discarded, and `--count` / `--placement` / `--camera` are a hard CLI error alongside
+`--scene_init`. What changes is the ARRANGEMENT — positions, orientations, what sits on/in what —
+enough that a different task becomes natural. Ask only:
+
+1. **Any specific change to the arrangement?** — optional; blank = the pipeline invents one. This
+   is a CHANGE REQUEST ("stand the bucket on its side", "clear the bins"), NOT a new scenario; pass
+   it as the positional argument.
+2. **Any object-set changes?** — optional. A described change is followed EXACTLY as stated —
+   swaps, adds, or removals, even past the usual composition limits (pass it as
+   `--substitute "..."`). An answer of just "yes" means pass the flag BARE: the pipeline picks 1-2
+   strict one-for-one swaps itself (count invariant, limits respected). This is the ONLY way the
+   object set changes; without the flag the objects are fixed.
+3. **Visual verification?** (default ON) 4. **Output directory**.
+
+State what is being inherited (the scenario prompt, objects, robot placement, environment) instead
+of asking about it, and that the new task will differ from the source's. Only if the source run has
+no `env.json` does the camera question come back.
 
 ## Running the pipeline
 
@@ -65,14 +92,17 @@ Compose the command from the answers (long timeout — a render takes minutes; c
 ```bash
 .venv/bin/python agent_pipeline.py "<scene description>" \
     [--count N] [--placement default|task] [--camera "<camera description>"] \
-    [--verify] [--out-dir <dir>] [--device cuda:0]
+    [--no-verify] [--out-dir <dir>] [--device cuda:0]
 ```
 
 - Userless run (no description given at all): `.venv/bin/python agent_pipeline.py` — the agent
-  invents the prompt; defaults apply (default placement, default camera, no verification).
+  invents the prompt; defaults apply (default placement, default camera; verification still ON).
 - Rearrange an existing run: `.venv/bin/python agent_pipeline.py --scene_init <run_dir>` — reuses
-  that run's exact objects, robot placement, and environment; generates NEW placements and a NEW
-  task. Optionally add a description to steer the rearrangement.
+  that run's scenario prompt, exact objects, robot placement, and environment; generates a NEW
+  arrangement and a NEW task. A positional argument here is a CHANGE REQUEST for the arrangement,
+  not a new scenario (blank = the pipeline invents one); `--substitute "<changes>"` is followed
+  verbatim (bare flag = the pipeline picks 1-2 strict swaps). Do NOT pass `--count`,
+  `--placement` or `--camera` with it (inherited; the CLI rejects them).
 
 The run prints progress per stage (`[pipeline/scene]`, `[pipeline/task]`, `[pipeline/env]`) and
 writes `outputs/agenticPipeline/<name>/`:
@@ -90,7 +120,8 @@ writes `outputs/agenticPipeline/<name>/`:
    floating, arrangement matches the description. If something is off, say so and offer to re-run
    (a different seed, fewer objects, or more spread).
 4. Offer next steps:
-   - **Different task, same scene**: `--scene_init <run_dir>` keeps assets/placement/env.
+   - **Different task, same scenario**: `--scene_init <run_dir>` keeps the prompt, assets,
+     placement and env, and re-arranges the objects so a different task fits.
    - **Watch the settle**: `outputs/<robot>/pipeline_<name>/simulation_advanced.mp4`.
    - A trajectory/grasp pipeline is downstream work — task gen only IDEATES the task (the one
      grasp knob later will be `GraspWindow.force_target`).

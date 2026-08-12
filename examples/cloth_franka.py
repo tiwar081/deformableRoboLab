@@ -10,10 +10,10 @@ from the harvested squeeze. ``force_target=2 N`` sits INSIDE the shell's achieva
 error), and CONVERGES to a true force equilibrium near the proven ~8–9 mm jaw — the regulator itself
 stops the close and stays live to re-tighten a shedding pinch. (History: under the old fixed-constant
 law a ≤2 N target was literally dead — the 2 N absolute deadband exceeded the whole error range — and
-the workaround was an unreachable 8 N target creeping shut forever; see docs/gripper.md.) The controller must stop the close itself
-(a commanded zero-gap pinch expels a thin shell; docs/cloths.md).
+the workaround was an unreachable 8 N target creeping shut forever; see docs/physicsEngine/gripper.md.) The controller must stop the close itself
+(a commanded zero-gap pinch expels a thin shell; docs/physicsEngine/cloths.md).
 
-GRASP RECIPE (Newton's, docs/cloths.md): descend the fingertip COMMANDED 5 mm BELOW the table top
+GRASP RECIPE (Newton's, docs/physicsEngine/cloths.md): descend the fingertip COMMANDED 5 mm BELOW the table top
 (the stopper converts the excess into pressing normal force — the mu*N anchor that makes the pinch
 work at PHYSICAL per-object friction), straight-down pinch, lift, drag at ~TT+0.11. (Tilt 0 everywhere: Newton's right-side folds grasp untilted, and
 the tilted orientation is q6-limit-bound for the panda past x≈0 — a mid-drag tilt blend twisted the
@@ -85,5 +85,5 @@ DEMO = DemoSpec(
                           "rigid_body_particle_contact_buffer_size": 65536},
     object_pipeline_kwargs={"soft_contact_margin": CLOTH.contact_margin},
     substeps=10, vbd_iterations=5, num_frames=int(23.0 * 60),  # Newton's dt (10 @ 60 fps) — part of
-                                                       # the dimensionless contact parity (docs/cloths.md)
+                                                       # the dimensionless contact parity (docs/physicsEngine/cloths.md)
 )

@@ -89,5 +89,5 @@ python -m examples cable_soft_franka --output-style usd --device cuda:0
 style comes from `settings.yaml` `render.style`.)
 
 Add `--test` to run the demo's physics + render assertions. See
-[docs/examples.md](docs/examples.md) for the full demo list and flags, and
-[docs/robolab-graphics.md](docs/robolab-graphics.md) for the renderer.
+[docs/physicsEngine/examples.md](docs/physicsEngine/examples.md) for the full demo list and flags, and
+[docs/rendering/robolab-graphics.md](docs/rendering/robolab-graphics.md) for the renderer.

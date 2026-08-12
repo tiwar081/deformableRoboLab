@@ -1,0 +1,224 @@
+{
+ "_comment": [
+  "llm_retry state cache for catalog object 'mug' \u2014 the raw LLM responses the pass's",
+  "candidates are deterministically re-derived from (docs/trajPipeline/llm-retry.md).",
+  "GENERATED. Deleting this file RE-ARMS the retry (both rounds) for this asset."
+ ],
+ "asset": "mug",
+ "cache_key": "1|6bdc727421e688f2d6bea98a1b92211e9cae7c09|2|1",
+ "cache_version": 1,
+ "mesh_sha1": "6bdc727421e688f2d6bea98a1b92211e9cae7c09",
+ "pass_version": 1,
+ "prompt_version": 2,
+ "rounds": {
+  "a": {
+   "answer": {
+    "candidates": [
+     {
+      "approach": [
+       0.39,
+       0.0,
+       0.92
+      ],
+      "jaw_axis": [
+       -0.91,
+       0.11,
+       0.39
+      ],
+      "label": "rim",
+      "position": [
+       -0.037,
+       0.003,
+       -0.014
+      ],
+      "rationale": "Verbatim reuse of retreated pose rim_rim_0_p000 which HELD through shake (close 18mm, shake 15mm) pinching the -x rim wall.",
+      "width": 0.006
+     },
+     {
+      "approach": [
+       -0.13,
+       0.46,
+       0.88
+      ],
+      "jaw_axis": [
+       0.48,
+       -0.75,
+       0.46
+      ],
+      "label": "rim",
+      "position": [
+       0.011,
+       -0.024,
+       -0.013
+      ],
+      "rationale": "Verbatim reuse of retreated pose rim_rim_1_p018 which HELD through shake (shake 1mm) pinching the -y rim wall deep in the pads.",
+      "width": 0.006
+     },
+     {
+      "approach": [
+       -0.33,
+       -0.15,
+       0.93
+      ],
+      "jaw_axis": [
+       0.9,
+       0.24,
+       0.36
+      ],
+      "label": "rim",
+      "position": [
+       0.023,
+       0.007,
+       -0.01
+      ],
+      "rationale": "Verbatim reuse of retreated pose rim_rim_2_m126 which HELD (close 25mm, shake 21mm) pinching the +x rim wall.",
+      "width": 0.006
+     },
+     {
+      "approach": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "jaw_axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "label": "rim",
+      "position": [
+       -0.0475,
+       -0.001,
+       -0.011
+      ],
+      "rationale": "Vertical pinch of the -x cup wall exactly on the wall centreline (radius 0.041 about body centre x=-0.0065), 30mm deep so the ~6mm wall sits well up the pads; unlike failed px fixtures this is centred on real wall material.",
+      "width": 0.012
+     },
+     {
+      "approach": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "jaw_axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "label": "rim",
+      "position": [
+       -0.0065,
+       -0.042,
+       -0.011
+      ],
+      "rationale": "Vertical pinch of the -y cup wall at its true centre (y=-0.042), 30mm seat depth; outer finger at y=-0.054 clears the -0.048 flare.",
+      "width": 0.012
+     },
+     {
+      "approach": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "jaw_axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "label": "rim",
+      "position": [
+       -0.0065,
+       0.04,
+       -0.011
+      ],
+      "rationale": "Vertical pinch of the +y wall; differs from failed rim_wall_py by being centred on the wall (y=0.040 not 0.039 at x=0) at moderate 30mm depth instead of a 45mm palm-deep clamp that torqued the mug.",
+      "width": 0.012
+     },
+     {
+      "approach": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "jaw_axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "label": "rim",
+      "position": [
+       0.0345,
+       -0.001,
+       -0.011
+      ],
+      "rationale": "Vertical pinch of the +x wall at the semantic rim_2 point (x=0.0345), away from the handle azimuth; earlier px fixture at x=0.045 missed the wall (span 2mm), this one straddles it.",
+      "width": 0.012
+     },
+     {
+      "approach": [
+       0.242,
+       0.242,
+       0.94
+      ],
+      "jaw_axis": [
+       0.707,
+       0.707,
+       0.0
+      ],
+      "label": "rim",
+      "position": [
+       -0.0355,
+       -0.03,
+       -0.013
+      ],
+      "rationale": "Diagonal-azimuth wall pinch at 225deg, approach tilted 20deg inward like the three HELD poses so the outer finger clears the flared lip during entry.",
+      "width": 0.01
+     },
+     {
+      "approach": [
+       -0.84,
+       -0.54,
+       0.0
+      ],
+      "jaw_axis": [
+       -0.54,
+       0.84,
+       0.0
+      ],
+      "label": "handle",
+      "position": [
+       0.039,
+       0.033,
+       0.001
+      ],
+      "rationale": "Radial pinch of the vertical outer limb of the C-handle at mid-height, closing tangentially across the ~12mm bar with the bar seated 1-13mm up the pads.",
+      "width": 0.018
+     },
+     {
+      "approach": [
+       0.0,
+       0.0,
+       -1.0
+      ],
+      "jaw_axis": [
+       -0.54,
+       0.84,
+       0.0
+      ],
+      "label": "handle",
+      "position": [
+       0.048,
+       0.038,
+       0.002
+      ],
+      "rationale": "Top-down pinch of the upper handle limb (top surface z~0.020, TCP 18mm past it), jaws closing tangentially across the bar; fingertips stop above the lower limb.",
+      "width": 0.02
+     }
+    ]
+   },
+   "authoring_failures": [],
+   "model": "claude-fable-5",
+   "request_digest": "f5006bcacb291f4ff7838b02f115993b742cd569"
+  }
+ }
+}

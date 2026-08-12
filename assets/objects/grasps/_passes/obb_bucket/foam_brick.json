@@ -1,0 +1,284 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'obb_bucket' for catalog object 'foam_brick'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "obb_bucket",
+  "source": "obb_bucket",
+  "version": 1,
+  "requires": [
+   "obb_face"
+  ],
+  "notes": "bucketed 36 candidate(s) from [obb_face]; 0 borderline, frame ambiguous=True"
+ },
+ "upstream_sha1": "e8b82c052156cefae99877fc9de199fd9be4dc3b",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "foam_brick",
+   "kind": "soft_mesh",
+   "file": "squishy/foam_brick.tet",
+   "scale": 1.0,
+   "mesh_sha1": "ff3cf49c9d984b7e5690b9089380930cf898efce",
+   "extents": [0.077115107, 0.051320976, 0.0509944],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.011376317, -0.999933801, -0.001724054],
+     [0.999868771, -0.011355657, -0.011553748],
+     [0.011533406, -0.001855267, 0.999931767]
+    ],
+    "translation": [0.017054175, 0.018975397, -0.024790954],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew+handedness",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.000487581
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "obb_bucket@1",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {
+  "obb_face/px_jawy_m50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawy_c": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawy_p50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_m50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_c": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/px_jawz_p50": {
+   "labels": [
+    "face:+x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawy_m50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawy_c": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawy_p50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_m50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_c": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nx_jawz_p50": {
+   "labels": [
+    "face:-x",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawx_m50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawx_c": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawx_p50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_m50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_c": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/py_jawz_p50": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawx_m50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawx_c": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawx_p50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_m50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_c": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/ny_jawz_p50": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawx_m50": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawx_c": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawx_p50": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawy_m50": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawy_c": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/pz_jawy_p50": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawx_m50": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawx_c": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawx_p50": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawy_m50": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawy_c": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  },
+  "obb_face/nz_jawy_p50": {
+   "labels": [
+    "face:-z",
+    "face_ambiguous"
+   ]
+  }
+ }
+}

@@ -12,6 +12,15 @@ def quat_rotate_xyzw(q: np.ndarray, v: np.ndarray) -> np.ndarray:
     return v + q_w * t + np.cross(q_xyz, t)
 
 
+def quat_to_matrix_xyzw(q) -> np.ndarray:
+    """3x3 rotation matrix from an xyzw quaternion (the layout Newton's body_q stores)."""
+    x, y, z, w = (float(c) for c in q)
+    return np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+        [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+        [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
+
+
 def find_body(labels: list[str], suffix: str) -> int:
     for i, label in enumerate(labels):
         if label.endswith(suffix):

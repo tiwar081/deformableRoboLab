@@ -1,0 +1,524 @@
+{
+ "_comment": [
+  "The GOAL PREDICATE LIBRARY \u2014 task gen's analogue of RoboLab's conditionals.py. DATA, not code:",
+  "loaded by agentic_pipeline.load_goal_predicates() and consumed by BOTH task_generator (schema",
+  "enum + prompt table + feasibility dispatch) and success.py (which runtime evaluator scores it).",
+  "Adding a predicate here makes it selectable by the agent and feasibility-checked \u2014 no code edit.",
+  "",
+  "TASK GEN CAN PROPOSE EVERY PREDICATE HERE. Scoring is a SEPARATE concern: 'driver' names the",
+  "success.py evaluator that measures completion, and is null when no VERIFIED evaluator exists",
+  "yet. A null driver does not restrict generation \u2014 the task is ideated normally; its success",
+  "simply cannot be scored yet, which success.evaluate() reports explicitly (evaluable=false) and",
+  "NEVER papers over by returning a pass.",
+  "",
+  "The deformable SHAPE evaluators were withdrawn 2026-07-27 after probing each against a",
+  "true-success and a true-failure state: every one either false-positived or could never fire.",
+  "Common cause: an axis-aligned bounding box cannot express SHAPE or TOPOLOGY. The per-predicate",
+  "evidence and the replacement each one needs are in docs/agenticPipeline/success-evaluators.md, deliberately",
+  "NOT here, since task gen never needs to read it.",
+  "",
+  "Fields per predicate:",
+  "  params          \u2014 required role names; the agent must supply exactly these (check_static).",
+  "  container_param \u2014 which role must be an OPEN-TOP container, or null.",
+  "  obj_categories  \u2014 categories the manipulated object may be: THE AFFORDANCE GATE",
+  "                    (check_affordance). Gates WHAT the goal may be asked of.",
+  "  verb            \u2014 human phrasing, shown to the agent and used in rejection messages.",
+  "  attributes      \u2014 RoboLab-style competency tags.",
+  "  role_categories \u2014 optional category gate for a non-object role.",
+  "  driver          \u2014 success.py evaluator, or null if none is verified yet:",
+  "                    open_top_hull | footprint_support | robot_pov_cone  (RoboLab-derived)",
+  "                    proximity | separation | robot_reach | height       (generic, verified).",
+  "",
+  "kind_category maps a catalog entry's 'kind' onto the coarse category obj_categories refers to;",
+  "a catalog entry may override it with its own 'category' (a bag is built as cloth physics but",
+  "carries category 'bag')."
+ ],
+
+ "categories": [
+  "rigid",
+  "cloth",
+  "cable",
+  "squishy",
+  "bag"
+ ],
+ "kind_category": {
+  "ycb_mesh": "rigid",
+  "rigid_box": "rigid",
+  "rubiks_cube": "rigid",
+  "cloth": "cloth",
+  "cable": "cable",
+  "soft_mesh": "squishy",
+  "soft_block": "squishy"
+ },
+
+ "predicates": {
+  "object_in_container": {
+   "params": [
+    "object",
+    "container"
+   ],
+   "container_param": "container",
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "verb": "put ... in",
+   "attributes": [
+    "spatial"
+   ],
+   "driver": "open_top_hull"
+  },
+  "object_on_top": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "verb": "put ... on",
+   "attributes": [
+    "spatial"
+   ],
+   "driver": "footprint_support"
+  },
+  "object_left_of": {
+   "params": [
+    "object",
+    "reference"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "verb": "move ... left of",
+   "attributes": [
+    "spatial"
+   ],
+   "driver": "robot_pov_cone"
+  },
+  "object_right_of": {
+   "params": [
+    "object",
+    "reference"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "verb": "move ... right of",
+   "attributes": [
+    "spatial"
+   ],
+   "driver": "robot_pov_cone"
+  },
+  "object_in_front_of": {
+   "params": [
+    "object",
+    "reference"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "verb": "move ... in front of",
+   "attributes": [
+    "spatial"
+   ],
+   "driver": "robot_pov_cone"
+  },
+  "object_behind": {
+   "params": [
+    "object",
+    "reference"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "verb": "move ... behind",
+   "attributes": [
+    "spatial"
+   ],
+   "driver": "robot_pov_cone"
+  },
+  "object_outside_of": {
+   "params": [
+    "object",
+    "container"
+   ],
+   "container_param": "container",
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "verb": "take ... out of",
+   "attributes": [
+    "spatial"
+   ],
+   "driver": "open_top_hull"
+  },
+
+  "stacked": {
+   "params": [
+    "object",
+    "base"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid"
+   ],
+   "verb": "stack ... on",
+   "attributes": [
+    "procedural"
+   ],
+   "driver": "footprint_support"
+  },
+  "object_groups_in_containers": {
+   "params": [
+    "object",
+    "container"
+   ],
+   "container_param": "container",
+   "obj_categories": [
+    "rigid"
+   ],
+   "verb": "sort ... into",
+   "attributes": [
+    "relational",
+    "procedural"
+   ],
+   "driver": "open_top_hull"
+  },
+
+  "cloth_folded": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cloth"
+   ],
+   "verb": "fold",
+   "attributes": [
+    "deformable",
+    "procedural"
+   ],
+   "driver": null
+  },
+  "cloth_spread": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cloth"
+   ],
+   "verb": "spread ... flat",
+   "attributes": [
+    "deformable",
+    "procedural"
+   ],
+   "driver": null
+  },
+  "cloth_draped_over": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cloth"
+   ],
+   "verb": "drape ... over",
+   "attributes": [
+    "deformable",
+    "spatial"
+   ],
+   "driver": null
+  },
+  "cable_coiled": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cable"
+   ],
+   "verb": "coil",
+   "attributes": [
+    "deformable",
+    "procedural"
+   ],
+   "driver": null
+  },
+  "cable_straightened": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cable"
+   ],
+   "verb": "straighten",
+   "attributes": [
+    "deformable",
+    "procedural"
+   ],
+   "driver": null
+  },
+  "cable_routed_through": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cable"
+   ],
+   "verb": "route ... through",
+   "attributes": [
+    "deformable",
+    "procedural"
+   ],
+   "driver": null
+  },
+  "cable_threaded_through": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cable"
+   ],
+   "verb": "thread ... through",
+   "attributes": [
+    "deformable",
+    "procedural",
+    "precision"
+   ],
+   "driver": null
+  },
+  "object_compressed": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "squishy"
+   ],
+   "verb": "squeeze",
+   "attributes": [
+    "deformable"
+   ],
+   "driver": null
+  },
+
+  "cloth_uncovered_from": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cloth"
+   ],
+   "verb": "uncover ... by removing the cloth from",
+   "attributes": [
+    "deformable",
+    "spatial"
+   ],
+   "driver": "separation"
+  },
+  "cable_clear_of": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "cable"
+   ],
+   "verb": "keep ... clear of / avoid snagging on",
+   "attributes": [
+    "deformable",
+    "spatial",
+    "collision-avoidance"
+   ],
+   "driver": "separation"
+  },
+
+  "bag_opened": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "bag"
+   ],
+   "verb": "open the bag",
+   "attributes": [
+    "deformable",
+    "procedural"
+   ],
+   "driver": null
+  },
+  "bag_mouth_accessible": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "bag"
+   ],
+   "verb": "keep the bag mouth open and accessible",
+   "attributes": [
+    "deformable",
+    "procedural",
+    "accessibility"
+   ],
+   "driver": null
+  },
+  "object_in_bag": {
+   "params": [
+    "object",
+    "bag"
+   ],
+   "container_param": "bag",
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy"
+   ],
+   "role_categories": {
+    "bag": [
+     "bag"
+    ]
+   },
+   "verb": "insert ... into the bag",
+   "attributes": [
+    "deformable",
+    "spatial",
+    "procedural"
+   ],
+   "driver": null
+  },
+  "bag_lifted": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "bag"
+   ],
+   "verb": "lift the bag",
+   "attributes": [
+    "deformable",
+    "lifting"
+   ],
+   "driver": "height"
+  },
+
+  "object_pushed_to": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy",
+    "bag"
+   ],
+   "verb": "push ... to",
+   "attributes": [
+    "pushing",
+    "spatial"
+   ],
+   "driver": "proximity"
+  },
+  "object_pulled_to": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy",
+    "bag"
+   ],
+   "verb": "pull ... to",
+   "attributes": [
+    "pulling",
+    "spatial"
+   ],
+   "driver": "proximity"
+  },
+  "object_retrieved": {
+   "params": [
+    "object"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy",
+    "bag"
+   ],
+   "verb": "retrieve ... toward the robot",
+   "attributes": [
+    "retrieval",
+    "spatial"
+   ],
+   "driver": "robot_reach"
+  },
+  "object_cleared_from": {
+   "params": [
+    "object",
+    "target"
+   ],
+   "container_param": null,
+   "obj_categories": [
+    "rigid",
+    "cloth",
+    "cable",
+    "squishy",
+    "bag"
+   ],
+   "verb": "clear ... away from",
+   "attributes": [
+    "clearing",
+    "spatial"
+   ],
+   "driver": "separation"
+  }
+ }
+}

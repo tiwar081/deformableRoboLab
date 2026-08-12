@@ -1,0 +1,626 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'llm_retry' for catalog object 'banana_soft'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "llm_retry",
+  "source": "llm_retry",
+  "version": 1,
+  "requires": [],
+  "notes": "round A: 10 emitted (0 authoring-dropped); round B: 10 emitted (0 authoring-dropped); both rounds spent \u2014 llm-retry-exhausted"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "banana_soft",
+   "kind": "soft_mesh",
+   "file": "squishy/banana_soft.tet",
+   "scale": 1.0,
+   "mesh_sha1": "67f63b61a1ab33275007ea1c4902c9db414b38a9",
+   "extents": [0.196522116, 0.06802807, 0.03590102],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.413401839, 0.91054867, 0.000198609],
+     [0.910533448, -0.413393646, -0.005876412],
+     [-0.005268655, 0.00261016, -0.999982714]
+    ],
+    "translation": [-0.001859736, 0.005297063, 0.017844129],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 0.001658421
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "llm_retry@1",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "llm_retry/a00",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.0],
+      [1.0, -0.0, 0.0, -0.014],
+      [0.0, 0.0, -1.0, -0.014],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.024,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.035574413,
+     "seat_depth": -0.031623903,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Top-down centre pinch like pz_jawy_c but width cut from 45mm to 24mm so the pads indent the soft flesh (~6mm squeeze) instead of barely touching, with deep 31mm seat near the centre of mass.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a01",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.0],
+      [1.0, 0.0, 0.0, -0.014],
+      [0.0, 0.0, 1.0, 0.014],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.024,
+     "face": "-z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.035574413,
+     "seat_depth": -0.03195051,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Bottom-up mirror of the centre pinch; firm 24mm width on the 30mm y-section deforms the FEM flesh for form closure at the mass centre.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a02",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.03],
+      [1.0, 0.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.03,
+     "face": "+y",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.038007703,
+     "seat_depth": -0.033993668,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Side approach from +y across the 36mm z-thickness; unlike py_jawz_c (41mm width) this closes to 30mm so the fingers actually compress the soft banana rather than resting on it.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a03",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 1.0, 0.0],
+      [1.0, 0.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.03,
+     "face": "-y",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.038007703,
+     "seat_depth": -0.034014035,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Side approach from -y, seated 33mm deep (fixes a09's 4mm shallow seat) with 30mm squeezing width across the z-thickness at the mass centre.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a04",
+     "transform": [
+      [-0.369667449, 0.929164128, 0.0, 0.055],
+      [0.929164128, 0.369667449, 0.0, -0.01],
+      [0.0, 0.0, -1.0, -0.012],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.026,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.034372694,
+     "seat_depth": -0.02995051,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Top-down pinch on the +x half with jaw axis rotated to lie perpendicular to the local curved centerline, so both pads meet parallel flesh faces squarely.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a05",
+     "transform": [
+      [0.369667449, 0.929164128, 0.0, -0.055],
+      [0.929164128, -0.369667449, 0.0, -0.002],
+      [0.0, 0.0, -1.0, -0.012],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.026,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.03276284,
+     "seat_depth": -0.02995051,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Mirror tilted-jaw pinch on the -x half, jaw normal to the local tangent of the banana arc for even bilateral contact.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a06",
+     "transform": [
+      [0.0, 0.0, 1.0, -0.058],
+      [1.0, 0.0, 0.0, 0.001],
+      [0.0, 1.0, 0.0, -0.002],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.028,
+     "face": "-x",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.181294774,
+     "seat_depth": -0.035597054,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): End clamp over the blunt -x tip with jaw across y (all failed end clamps used jaw z); 40mm seat swallows the tip so the pads cup the tapering flesh.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a07",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.078],
+      [1.0, -0.0, 0.0, 0.008],
+      [0.0, 0.0, -1.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.029900549,
+     "seat_depth": -0.017757791,
+     "labels": [
+      "neck",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Top-down pinch on the narrow stiff neck below the stem (~15mm thick); the tight 18mm width gives high pressure on the least deformable part.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a08",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.03],
+      [1.0, -0.0, 0.0, -0.013],
+      [0.0, 0.0, -1.0, -0.014],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.024,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.035574413,
+     "seat_depth": -0.031623903,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Firm top-down squeeze slightly toward the stem side of centre, balancing the heavier stem half about the jaw line while indenting the soft flesh.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/a09",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.0],
+      [-0.8, -0.0, -0.6, -0.022],
+      [0.6, 0.0, -0.8, -0.01],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.026,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.038199288,
+     "seat_depth": -0.030974765,
+     "labels": [
+      "body",
+      "llm_round_a"
+     ],
+     "notes": "LLM-proposed (llm_round_a): Oblique approach onto the upper +y shoulder with jaw closing across the y-z diagonal (~32mm section), a contact geometry no prior axis-aligned attempt sampled, seated 30mm deep with squeeze.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b00",
+     "transform": [
+      [0.249576081, 0.968355193, 0.0, -0.072],
+      [0.968355193, -0.249576081, 0.0, 0.006],
+      [0.0, 0.0, -1.0, -0.016],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.016,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.031436039,
+     "seat_depth": -0.033451061,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Taper-cage at the thin -x tip: jaws close snugly around the ~20mm tip section so the thicker body cannot pull through the 16mm gap, adding mechanical caging that no failed centre pinch had.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b01",
+     "transform": [
+      [0.0, 1.0, 0.0, -0.072],
+      [0.0, 0.0, 1.0, 0.021],
+      [1.0, 0.0, 0.0, -0.004],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.014,
+     "face": "-y",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.043838144,
+     "seat_depth": -0.032811617,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Side pinch across the ~16mm z-thickness of the -x tip; taper toward the body jams in the jaws under load, and the 25mm seat keeps flesh deep on the pads.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b02",
+     "transform": [
+      [-0.6, 0.8, 0.0, 0.075],
+      [0.8, 0.6, 0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.008],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.013,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.029900549,
+     "seat_depth": -0.025757791,
+     "labels": [
+      "neck",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Retry of a07's stem-side neck with corrected centring (y=0 not +8mm) and jaw rotated normal to the strongly curved local tangent so both pads land simultaneously instead of pushing the fruit away (a07 slid 61mm).",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b03",
+     "transform": [
+      [-0.707106781, 0.707106781, 0.0, 0.091],
+      [0.707106781, 0.707106781, 0.0, 0.016],
+      [0.0, 0.0, -1.0, -0.005],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.008,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.022644291,
+     "seat_depth": -0.02120011,
+     "labels": [
+      "stem",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Tight 8mm pinch on the stiff woody stem nub itself, the only non-mushy feature; jaw set perpendicular to the stem axis.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b04",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.0],
+      [1.0, 0.0, 0.0, -0.014],
+      [0.0, 0.0, 1.0, 0.026],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.022,
+     "face": "-z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.035574413,
+     "seat_depth": -0.04395051,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): a01 (same bottom-up centre pinch) survived to 96%/96% shake before dropping; this deepens the seat from -32 to -44mm so the palm brackets the fruit and tightens width 24->22 for residual squeeze.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b05",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.0],
+      [1.0, -0.0, 0.0, -0.014],
+      [0.0, 0.0, -1.0, -0.026],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.022,
+     "face": "+z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.035574413,
+     "seat_depth": -0.043623903,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Top-down mirror of the near-success a01: 44mm seat puts the centre of mass right at the palm, width 22 gives 8mm of indentation into the 30mm section for sustained grip force.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b06",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.042],
+      [1.0, 0.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.03,
+     "face": "+y",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.038007703,
+     "seat_depth": -0.045993668,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Side grasp across the full 36mm z-thickness like a03 (which DID reach grip force) but seated 43mm deep so the palm blocks the squeeze-pop escape toward the opening that dumped a03 at gravity-on.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b07",
+     "transform": [
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 1.0, 0.014],
+      [1.0, 0.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.03,
+     "face": "-y",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.038007703,
+     "seat_depth": -0.048014035,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Mirror side grasp from -y with maximal 43mm seat; pads above and below the fruit directly support weight while the palm cages lateral pop-out.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b08",
+     "transform": [
+      [0.0, -1.0, 0.0, 0.03],
+      [1.0, 0.0, 0.0, -0.013],
+      [0.0, 0.0, 1.0, 0.025],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.022,
+     "face": "-z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.035574413,
+     "seat_depth": -0.04295051,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Bottom-up deep-seated pinch just stem-side of centre (a08's station but inverted approach, seat -43 vs -32) to balance the heavier stem half with the palm hugging the flesh.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "llm_retry/b09",
+     "transform": [
+      [0.0, -1.0, 0.0, -0.03],
+      [1.0, 0.0, 0.0, -0.006],
+      [0.0, 0.0, 1.0, 0.025],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.022,
+     "face": "-z",
+     "source": "llm_retry",
+     "seat_mode": "llm",
+     "span": 0.035486799,
+     "seat_depth": -0.042536289,
+     "labels": [
+      "body",
+      "llm_round_b"
+     ],
+     "notes": "LLM-proposed (llm_round_b): Bottom-up deep-seated pinch on the -x half, centred on the local arc centreline (y=-0.006); 22mm width indents the 30mm section 8mm and 43mm seat keeps mass at the palm.",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

@@ -1,0 +1,214 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'obb_bucket' for catalog object 'wood_block'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "obb_bucket",
+  "source": "obb_bucket",
+  "version": 1,
+  "requires": [
+   "geometric",
+   "llm_retry",
+   "obb_face",
+   "rim_pinch",
+   "vlm_regions"
+  ],
+  "notes": "bucketed 20 candidate(s) from [geometric, llm_retry]; 11 borderline, frame ambiguous=True"
+ },
+ "upstream_sha1": "55bdc41c0eb4f5bb4c02a57660b606d6eecd9c5a",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "wood_block",
+   "kind": "ycb_mesh",
+   "file": "ycb/wood_block.usd",
+   "scale": 1.0,
+   "mesh_sha1": "b9154dff9f1594bc187a585c6a0997d1cef734f0",
+   "extents": [0.205977591, 0.089670637, 0.089242924],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.005193343, -0.004430261, 0.999976701],
+     [0.977722509, -0.209860641, 0.004148007],
+     [0.209837374, 0.977721271, 0.005421444]
+    ],
+    "translation": [0.00029063, 0.00029107, 0.000502319],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew+handedness"
+    ],
+    "ambiguous": true,
+    "drift": 0.086046923
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "obb_bucket@1",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {
+  "geometric/medial_001_r1": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "geometric/medial_001_r3": {
+   "labels": [
+    "face:-y",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a00": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a01": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:-z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a02": {
+   "labels": [
+    "face:-y",
+    "face_borderline",
+    "face_alt:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a03": {
+   "labels": [
+    "face:-y",
+    "face_borderline",
+    "face_alt:-z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a04": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a05": {
+   "labels": [
+    "face:-y",
+    "face_borderline",
+    "face_alt:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a06": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:-z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a07": {
+   "labels": [
+    "face:-y",
+    "face_borderline",
+    "face_alt:-z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a08": {
+   "labels": [
+    "face:+x",
+    "face_borderline",
+    "face_alt:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/a09": {
+   "labels": [
+    "face:-x",
+    "face_borderline",
+    "face_alt:-z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b01": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b02": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b03": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b04": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b05": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b06": {
+   "labels": [
+    "face:+y",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b08": {
+   "labels": [
+    "face:+y",
+    "face_borderline",
+    "face_alt:+z",
+    "face_ambiguous"
+   ]
+  },
+  "llm_retry/b09": {
+   "labels": [
+    "face:+z",
+    "face_ambiguous"
+   ]
+  }
+ }
+}

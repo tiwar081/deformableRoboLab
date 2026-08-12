@@ -1,0 +1,209 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'obb_bucket' for catalog object 'sponge'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "obb_bucket",
+  "source": "obb_bucket",
+  "version": 1,
+  "requires": [
+   "fixture",
+   "obb_face"
+  ],
+  "notes": "bucketed 28 candidate(s) from [fixture, obb_face]; 0 borderline, frame ambiguous=False"
+ },
+ "upstream_sha1": "e0603ec53136371b42b1e4728f08f4d747a67e73",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "sponge",
+   "kind": "soft_mesh",
+   "file": "squishy/sponge.tet",
+   "scale": 1.0,
+   "mesh_sha1": "58f35210740fd5d3793b6f218d245e214d32b9ee",
+   "extents": [0.110645399, 0.078838428, 0.017468466],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [0.016547901, 0.99980779, 0.010514247],
+     [0.999729228, -0.016716828, 0.016186956],
+     [0.01635961, 0.01024354, -0.999813699]
+    ],
+    "translation": [-0.013657088, 0.016316383, 0.009401595],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": false,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "obb_bucket@1",
+   "notes": "",
+   "candidates": []
+  }
+ },
+ "annotations": {
+  "fixture/mid_across_thin": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "fixture/near_end_across_thin": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "obb_face/px_jawy_c": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "obb_face/px_jawz_m50": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "obb_face/px_jawz_c": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "obb_face/px_jawz_p50": {
+   "labels": [
+    "face:+x"
+   ]
+  },
+  "obb_face/nx_jawy_c": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "obb_face/nx_jawz_m50": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "obb_face/nx_jawz_c": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "obb_face/nx_jawz_p50": {
+   "labels": [
+    "face:-x"
+   ]
+  },
+  "obb_face/py_jawz_m50": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "obb_face/py_jawz_c": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "obb_face/py_jawz_p50": {
+   "labels": [
+    "face:+y"
+   ]
+  },
+  "obb_face/ny_jawz_m50": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "obb_face/ny_jawz_c": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "obb_face/ny_jawz_p50": {
+   "labels": [
+    "face:-y"
+   ]
+  },
+  "obb_face/pz_jawy_m50": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "obb_face/pz_jawy_m50_ctr": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "obb_face/pz_jawy_c": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "obb_face/pz_jawy_c_ctr": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "obb_face/pz_jawy_p50": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "obb_face/pz_jawy_p50_ctr": {
+   "labels": [
+    "face:+z"
+   ]
+  },
+  "obb_face/nz_jawy_m50": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "obb_face/nz_jawy_m50_ctr": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "obb_face/nz_jawy_c": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "obb_face/nz_jawy_c_ctr": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "obb_face/nz_jawy_p50": {
+   "labels": [
+    "face:-z"
+   ]
+  },
+  "obb_face/nz_jawy_p50_ctr": {
+   "labels": [
+    "face:-z"
+   ]
+  }
+ }
+}

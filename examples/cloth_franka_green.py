@@ -52,7 +52,7 @@ DEMO = DemoSpec(
                                # lift leaves the shirt behind (measured 2026-07-16). At 4 N the
                                # approach pushes through the wad and converges to a stable ~5.6 mm
                                # pinch at ~4.5 N; at 6 N the jaw grinds to ~1 mm (zero-gap expulsion
-                               # risk on a thin shell — docs/cloths.md).
+                               # risk on a thin shell — docs/physicsEngine/cloths.md).
                                force_target=4.0)],
     start_at_first_waypoint=True,
     coupling_soft_ke=CLOTH.soft_contact_ke,

@@ -510,5 +510,37 @@
   "static_friction": 0.5,
   "restitution": 0.1,
   "dataset": "vomp"
+ },
+ {
+  "name": "utilitybucket_a01",
+  "usd_path": "assets/objects/vomp/utilitybucket_a01/utilitybucket_a01.usd",
+  "prim_path": "/utilitybucket_a01",
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "quat_wxyz": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "payload": [],
+  "rigid_body": true,
+  "static_body": false,
+  "class": "storage",
+  "description": "open-top bucket",
+  "dims": [
+   0.271,
+   0.262,
+   0.207
+  ],
+  "mass": 0.6,
+  "density": 0.0,
+  "dynamic_friction": 0.5,
+  "static_friction": 0.5,
+  "restitution": 0.1,
+  "dataset": "vomp"
  }
 ]

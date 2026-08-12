@@ -444,6 +444,122 @@
    ]
   },
   {
+   "name": "plastic_recycle_bag",
+   "kind": "cloth",
+   "category": "bag",
+   "class": "bag",
+   "container": true,
+   "description": "Lightweight blue recycling bag laid collapsed for opening (deformable plastic film shell).",
+   "dims": [
+    0.219,
+    0.3,
+    0.02
+   ],
+   "config": {
+    "mesh_file": "objaverse_bags/plastic_recycle_bag.usda",
+    "expected_boundary_loops": 1,
+    "scale": 1.0,
+    "flatten_z": 1.0,
+    "rest_on_z": true,
+    "density": 0.025,
+    "particle_radius": 0.006,
+    "tri_ke": 4.0,
+    "tri_ka": 4.0,
+    "tri_kd": 3.4e-06,
+    "edge_ke": 5e-06,
+    "edge_kd": 5e-07,
+    "contact_margin": 0.006,
+    "soft_contact_ke": 1.875,
+    "soft_contact_kd": 0.001875,
+    "soft_contact_kf": 0.125,
+    "soft_contact_mu": 0.25
+   },
+   "source": "Objaverse 1.0 grocery_bag UID 181124c146e94ea7a03022d0c9b0c8d8 (OnlineExpo, CC BY 4.0); converted by assets/objects/_utils/convert_bag_mesh.py",
+   "inferred": [
+    "Objaverse supplies geometry but no physical parameters; density=0.025 kg/m^2 is a provisional lightweight-film areal density",
+    "tri/edge stiffness are flexible-film variants of the proven SI ClothConfig baseline, not source measurements",
+    "soft_contact_ke/kd/kf scale with area density relative to the 0.2 kg/m^2 canonical cloth so the contact operating point stays near the proven particle-mass-relative regime",
+    "source non-manifold seam repaired, laid flat without shrinking its wall panels, and isotropically remeshed to 3278 triangles at ~11.4 mm median edge"
+   ]
+  },
+  {
+   "name": "woven_tote_bag",
+   "kind": "cloth",
+   "category": "bag",
+   "class": "bag",
+   "container": true,
+   "description": "Wide red patterned tote shell laid collapsed for opening (deformable woven fabric).",
+   "dims": [
+    0.347,
+    0.28,
+    0.022
+   ],
+   "config": {
+    "mesh_file": "objaverse_bags/woven_tote_bag.usda",
+    "expected_boundary_loops": 1,
+    "scale": 1.0,
+    "flatten_z": 1.0,
+    "rest_on_z": true,
+    "density": 0.2,
+    "particle_radius": 0.006,
+    "tri_ke": 10.0,
+    "tri_ka": 10.0,
+    "tri_kd": 1.5e-05,
+    "edge_ke": 5e-05,
+    "edge_kd": 5e-06,
+    "contact_margin": 0.006,
+    "soft_contact_ke": 15.0,
+    "soft_contact_kd": 0.015,
+    "soft_contact_kf": 1.0,
+    "soft_contact_mu": 0.4
+   },
+   "source": "Objaverse 1.0 shopping_bag UID c7da540534134560af463fdd29ed209f (eeelabvisual, CC BY 4.0); converted by assets/objects/_utils/convert_bag_mesh.py",
+   "inferred": [
+    "Objaverse supplies geometry but no physical parameters; density=0.2 kg/m^2 and mu=0.4 are provisional woven-tote values",
+    "uses the proven SI ClothConfig stretch/bending/contact baseline; these are not source measurements",
+    "three detached render components were discarded because they had no sewn mesh connection; retained shell laid flat and isotropically remeshed to 2953 triangles at ~12.4 mm median edge"
+   ]
+  },
+  {
+   "name": "paper_grocery_bag",
+   "kind": "cloth",
+   "category": "bag",
+   "class": "bag",
+   "container": true,
+   "description": "Brown grocery sack laid collapsed for opening (deformable paper shell, stiffer than fabric or film).",
+   "dims": [
+    0.321,
+    0.26,
+    0.032
+   ],
+   "config": {
+    "mesh_file": "objaverse_bags/paper_grocery_bag.usda",
+    "expected_boundary_loops": 1,
+    "scale": 1.0,
+    "flatten_z": 1.0,
+    "rest_on_z": true,
+    "density": 0.08,
+    "particle_radius": 0.006,
+    "tri_ke": 30.0,
+    "tri_ka": 30.0,
+    "tri_kd": 1.6e-05,
+    "edge_ke": 0.0002,
+    "edge_kd": 2e-05,
+    "contact_margin": 0.006,
+    "soft_contact_ke": 6.0,
+    "soft_contact_kd": 0.006,
+    "soft_contact_kf": 0.4,
+    "soft_contact_mu": 0.45
+   },
+   "source": "Objaverse 1.0 grocery_bag UID d6814ce433f64d0da49f4a8b1ca3bb00 (RPSebb, CC BY 4.0); converted by assets/objects/_utils/convert_bag_mesh.py",
+   "inferred": [
+    "Objaverse supplies geometry but no physical parameters; density=0.08 kg/m^2 and mu=0.45 are provisional kraft-paper values",
+    "tri_ke/tri_ka=30 and edge_ke=2e-4 make paper stiffer than the proven fabric baseline while keeping the same SI constitutive schema; these are not source measurements",
+    "soft contact is area-density-scaled from the canonical cloth operating point",
+    "two detached handle components were discarded; retained shell laid flat and isotropically remeshed to 2724 triangles at ~12.5 mm median edge"
+   ]
+  },
+  {
    "name": "power_cable",
    "kind": "cable",
    "class": "cable",
@@ -671,6 +787,36 @@
    "inferred": [
     "mass 0.35 kg; mu 0.5 plastic"
    ]
+  },
+  {
+   "name": "bucket",
+   "kind": "ycb_mesh",
+   "class": "storage",
+   "container": true,
+   "description": "Gray utility bucket, open top (for tools/parts).",
+   "dims": [
+    0.271,
+    0.262,
+    0.207
+   ],
+   "config": {
+    "usd_subpath": "vomp/utilitybucket_a01/utilitybucket_a01.usd",
+    "target_mass": 0.6,
+    "mu": 0.5,
+    "density": 300.0,
+    "color": [
+     0.5,
+     0.52,
+     0.55
+    ],
+    "coacd_threshold": 0.06,
+    "coacd_max_convex_hull": 20
+   },
+   "source": "RoboLab VoMP utilitybucket_a01 (open-top bucket; multi-mesh USD merged by load_usd_mesh)",
+   "inferred": [
+    "mass 0.6 kg empty; mu 0.5 plastic",
+    "mesh uniformly scaled to 0.8x (radius+height, same shape) via a root xformOp:scale in the USD (baked, not per-render)"
+   ]
   }
  ],
  "soft_body_colors": {
@@ -708,6 +854,21 @@
    0.16,
    0.3,
    0.65
+  ],
+  "plastic_recycle_bag": [
+   0.22,
+   0.58,
+   0.68
+  ],
+  "woven_tote_bag": [
+   0.72,
+   0.28,
+   0.22
+  ],
+  "paper_grocery_bag": [
+   0.62,
+   0.43,
+   0.25
   ]
  }
 }

@@ -1,0 +1,1164 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'rim_pinch' for catalog object 'parts_bin'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "rim_pinch",
+  "source": "rim_pinch",
+  "version": 4,
+  "requires": [],
+  "notes": "lip pinches seeded from 5 vlm_regions region(s) [lip_0=9, lip_1=9, rim_0=0, rim_1=15, rim_2=6]; 39 site(s) traced, 37 after dedup, 39 stored. seat modes {'clamped_deep': 11, 'retreated': 24, 'span_flush': 2}, 4 blocked. Wall thickness is measured, not assumed; quality unmeasured."
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "parts_bin",
+   "kind": "ycb_mesh",
+   "file": "vomp/bin_a03/bin_a03.usd",
+   "scale": 1.0,
+   "mesh_sha1": "7d3c6dacd1c56e677c07a74d689b87f259a842ea",
+   "extents": [0.157149919, 0.101057927, 0.079753747],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-1.0, 1.69e-07, 4.378e-06],
+     [-1.69e-07, -1.0, 0.0],
+     [4.378e-06, -0.0, 1.0]
+    ],
+    "translation": [-2.38e-07, 1e-09, -0.039877068],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "asset_align+handedness",
+     "skew"
+    ],
+    "ambiguous": true,
+    "drift": 4.561e-06
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "rim_pinch@4",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "rim_pinch/rim_lip_0_m018",
+     "transform": [
+      [-0.20429217, 0.317700047, 0.925921913, -0.027398186],
+      [0.947356609, 0.302380205, 0.105269495, 0.051965974],
+      [-0.246536334, 0.898683978, -0.362749147, -0.007799268],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004599584,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.074070874,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc -18 mm; wall 0.6 mm, jaw 4.6 mm; seated +44.6 mm [clamped_deep]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p000",
+     "transform": [
+      [-0.120694918, 0.010218823, 0.99263705, -0.037098781],
+      [0.97854951, 0.169399182, 0.117238111, 0.049510747],
+      [-0.166953868, 0.985494542, -0.030445245, -0.008125843],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.013994144,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.111934049,
+     "seat_depth": -0.042,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +0 mm; wall 10.0 mm, jaw 14.0 mm; seated +39.1 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p018",
+     "transform": [
+      [-0.845530515, 0.517266125, 0.132340108, -0.075277672],
+      [0.385318049, 0.762731117, -0.519395075, 0.049042212],
+      [-0.369605396, -0.388171353, -0.844224408, -0.003948176],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004565178,
+     "face": "+z",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.044082939,
+     "seat_depth": -0.001782939,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +18 mm; wall 0.6 mm, jaw 4.6 mm; seated -23.4 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p036",
+     "transform": [
+      [-0.881394139, -0.198205084, 0.428787961, -0.072137965],
+      [0.000102254, -0.907795249, -0.41941361, 0.015709422],
+      [0.472381584, -0.369624852, 0.800145679, 0.000100568],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004501393,
+     "face": "-z",
+     "source": "rim_pinch",
+     "seat_mode": "span_flush",
+     "span": 0.018881812,
+     "seat_depth": -0.019581812,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +36 mm; wall 0.5 mm, jaw 4.5 mm; seated +10.0 mm [span_flush]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p054",
+     "transform": [
+      [-0.271588991, 0.062126749, 0.960406001, -0.044489492],
+      [0.936402115, 0.247495654, 0.248791037, 0.049228321],
+      [-0.222239733, 0.966895118, -0.125392714, -0.009742327],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.007488148,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.05065917,
+     "seat_depth": -0.035,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +54 mm; wall 3.5 mm, jaw 7.5 mm; seated +32.1 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p072",
+     "transform": [
+      [-0.065480082, -0.300149326, 0.951642129, -0.033862109],
+      [0.997688883, -0.002350657, 0.067907042, 0.034293233],
+      [-0.018145269, 0.953889331, 0.299609567, -0.01057049],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.011181393,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.161795277,
+     "seat_depth": -0.044,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +72 mm; wall 7.2 mm, jaw 11.2 mm; seated +40.3 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p090",
+     "transform": [
+      [-0.307856766, 0.06446915, 0.949245985, -0.04224467],
+      [0.607351875, 0.781289257, 0.143912465, 0.03870335],
+      [-0.732357776, 0.620830755, -0.279680644, -0.044319701],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004659832,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.034492909,
+     "seat_depth": -0.033192909,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +90 mm; wall 0.7 mm, jaw 4.7 mm; seated +25.9 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p090_ctr",
+     "transform": [
+      [-0.307856766, 0.06446915, 0.949245985, -0.042573541],
+      [0.607351875, 0.781289257, 0.143912465, 0.038653491],
+      [-0.732357776, 0.620830755, -0.279680644, -0.044222804],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004659832,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.034492909,
+     "seat_depth": -0.032846455,
+     "labels": [
+      "rim_pinch",
+      "lip",
+      "centred_variant"
+     ],
+     "notes": "centred depth variant of rim_lip_0_p090 [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p108",
+     "transform": [
+      [-0.067696875, 0.302836709, 0.950635083, -0.034657588],
+      [0.013075702, 0.953008384, -0.302661603, 0.010685062],
+      [-0.997620248, -0.008059024, -0.068475492, -0.038793271],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004506736,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.079661452,
+     "seat_depth": -0.043,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +108 mm; wall 0.5 mm, jaw 4.5 mm; seated +24.0 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_0_p126",
+     "transform": [
+      [-6e-09, -0.449030838, 0.89351626, -0.03132769],
+      [1.0, -2e-09, 5e-09, 1.5125e-05],
+      [-0.0, 0.89351626, 0.449030838, -0.015743529],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.011862985,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.167981129,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_0 (lip) at arc +126 mm; wall 7.9 mm, jaw 11.9 mm; seated +45.0 mm [clamped_deep]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_m108",
+     "transform": [
+      [-0.067696855, -0.302845603, 0.950632251, -0.035608414],
+      [-0.013065496, 0.95300547, 0.30267122, -0.010987729],
+      [-0.997620383, 0.008069408, -0.068472301, -0.038724704],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004506722,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.079662049,
+     "seat_depth": -0.042,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc -108 mm; wall 0.5 mm, jaw 4.5 mm; seated +23.0 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_m090",
+     "transform": [
+      [-0.307857639, -0.064475079, 0.949245299, -0.042245339],
+      [-0.607350683, 0.781291054, -0.143907739, -0.038703414],
+      [-0.732358397, -0.620827878, -0.279685403, -0.044319626],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004659831,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.034492284,
+     "seat_depth": -0.033192284,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc -90 mm; wall 0.7 mm, jaw 4.7 mm; seated +25.9 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_m090_ctr",
+     "transform": [
+      [-0.307857639, -0.064475079, 0.949245299, -0.042573912],
+      [-0.607350683, 0.781291054, -0.143907739, -0.038653601],
+      [-0.732358397, -0.620827878, -0.279685403, -0.044222815],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004659831,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.034492284,
+     "seat_depth": -0.032846142,
+     "labels": [
+      "rim_pinch",
+      "lip",
+      "centred_variant"
+     ],
+     "notes": "centred depth variant of rim_lip_1_m090 [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_m072",
+     "transform": [
+      [-0.065480037, 0.300148505, 0.951642391, -0.033862071],
+      [-0.997688889, -0.002350725, -0.067906957, -0.034293465],
+      [-0.018145122, -0.95388959, 0.299608754, -0.010570443],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.011181484,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.161795203,
+     "seat_depth": -0.044,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc -72 mm; wall 7.2 mm, jaw 11.2 mm; seated +40.3 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_m054",
+     "transform": [
+      [-0.271588524, -0.062128951, 0.960405991, -0.044489448],
+      [-0.936402241, 0.247496203, -0.248790017, -0.04922859],
+      [-0.222239773, -0.966894836, -0.125394817, -0.009742328],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.007488174,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.050658251,
+     "seat_depth": -0.035,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc -54 mm; wall 3.5 mm, jaw 7.5 mm; seated +32.1 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_m036",
+     "transform": [
+      [-0.881394955, 0.198207583, 0.42878513, -0.072137953],
+      [-0.000103629, -0.907793255, 0.419417924, -0.015709625],
+      [0.472380062, 0.369628407, 0.800144935, 0.000100637],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00450139,
+     "face": "-z",
+     "source": "rim_pinch",
+     "seat_mode": "span_flush",
+     "span": 0.018882008,
+     "seat_depth": -0.019582008,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc -36 mm; wall 0.5 mm, jaw 4.5 mm; seated +10.0 mm [span_flush]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_m018",
+     "transform": [
+      [-0.845531945, -0.51726788, 0.132324112, -0.07527724],
+      [-0.385313666, 0.76271373, 0.519423858, -0.049042714],
+      [-0.369606695, 0.388203176, -0.844209207, -0.003948826],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004565178,
+     "face": "+z",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.044084345,
+     "seat_depth": -0.001784345,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc -18 mm; wall 0.6 mm, jaw 4.6 mm; seated -23.4 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_p000",
+     "transform": [
+      [-0.12069455, -0.010218836, 0.992637094, -0.036106143],
+      [-0.978549555, 0.169399174, -0.117237746, -0.049627972],
+      [-0.16695387, -0.985494544, -0.030445194, -0.008156285],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.013994134,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.111934051,
+     "seat_depth": -0.043,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc +0 mm; wall 10.0 mm, jaw 14.0 mm; seated +40.1 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_lip_1_p018",
+     "transform": [
+      [-0.204292973, -0.317699834, 0.925921809, -0.027398194],
+      [-0.947356603, 0.302379869, -0.105270512, -0.051966013],
+      [-0.246535692, -0.898684166, -0.362749118, -0.007799263],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004599576,
+     "face": "-x",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.074070372,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "lip"
+     ],
+     "notes": "lip pinch on lip_1 (lip) at arc +18 mm; wall 0.6 mm, jaw 4.6 mm; seated +44.6 mm [clamped_deep]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_m126",
+     "transform": [
+      [0.982519005, -0.116353669, 0.145321124, 0.020960375],
+      [0.047821792, -0.596672027, -0.801059029, 0.014706892],
+      [0.179915207, 0.794005237, -0.580677365, 0.014123342],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.009931991,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.129104664,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim",
+      "seat_blocked"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc -126 mm; wall 5.9 mm, jaw 9.9 mm; seated +40.2 mm [clamped_deep], NO clear depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_m108",
+     "transform": [
+      [0.855807816, 0.510138623, -0.085741282, 0.00927446],
+      [0.280189174, -0.596461902, -0.752148407, 0.046361937],
+      [-0.434841361, 0.619670706, -0.653392077, 0.036990402],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.0052152,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.12363659,
+     "seat_depth": -0.005,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc -108 mm; wall 1.2 mm, jaw 5.2 mm; seated +1.1 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_m090",
+     "transform": [
+      [0.993552205, 0.048818069, -0.102326984, 0.005960786],
+      [-0.048530053, -0.632561354, -0.772988336, 0.013059472],
+      [-0.102463893, 0.7729702, -0.626113585, 0.010310777],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.008973393,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.12552122,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim",
+      "seat_blocked"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc -90 mm; wall 5.0 mm, jaw 9.0 mm; seated +43.8 mm [clamped_deep], NO clear depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_m072",
+     "transform": [
+      [0.842001767, -0.53018997, -0.099657508, 0.01689908],
+      [-0.35445549, -0.404445242, -0.843080869, 0.046239198],
+      [0.406687016, 0.745199733, -0.528472355, 0.037118835],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.005181624,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.1215056,
+     "seat_depth": -0.005,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc -72 mm; wall 1.2 mm, jaw 5.2 mm; seated +1.2 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_m036",
+     "transform": [
+      [0.839948625, 0.522354886, 0.147077122, 0.009931551],
+      [0.478740906, -0.585650919, -0.654079617, 0.047125726],
+      [-0.255525832, 0.61980511, -0.741989336, 0.036158834],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00468517,
+     "face": "+z",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.116344249,
+     "seat_depth": -0.005,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc -36 mm; wall 0.7 mm, jaw 4.7 mm; seated +4.9 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_m018",
+     "transform": [
+      [0.903707374, -0.428122495, 0.004910336, 0.015891512],
+      [-0.218542236, -0.471113903, -0.854570641, 0.04792718],
+      [0.368174243, 0.771208675, -0.519311956, 0.038099512],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00566744,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.120388897,
+     "seat_depth": -0.003,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc -18 mm; wall 1.7 mm, jaw 5.7 mm; seated +2.8 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p000",
+     "transform": [
+      [0.985701176, -0.159807029, -0.053431304, 0.021205304],
+      [-0.135588559, -0.563961319, -0.814593993, 0.049108734],
+      [0.100044657, 0.810190931, -0.57756534, 0.038366491],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.007600124,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.123066219,
+     "seat_depth": -0.002,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +0 mm; wall 3.6 mm, jaw 7.6 mm; seated +1.4 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p018",
+     "transform": [
+      [0.192551349, -0.885075045, -0.423752455, 0.027663974],
+      [0.172634916, 0.455651845, -0.873257455, 0.050228726],
+      [0.965981969, 0.094992432, 0.240531233, 0.01682114],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018779367,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.118985941,
+     "seat_depth": -0.004,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +18 mm; wall 14.8 mm, jaw 18.8 mm; seated -2.0 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p036",
+     "transform": [
+      [0.492588331, 0.639653269, -0.590085106, 0.046287057],
+      [0.137338352, -0.726694902, -0.673091893, 0.048314993],
+      [-0.859357268, 0.250515896, -0.445810354, 0.021965039],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.007782878,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.150549024,
+     "seat_depth": -0.01,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +36 mm; wall 3.8 mm, jaw 7.8 mm; seated -2.0 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p054",
+     "transform": [
+      [0.012025136, 0.527521833, -0.849456363, 0.034623423],
+      [0.999809426, -0.019408739, 0.002100532, 0.048267806],
+      [-0.015378801, -0.849319738, -0.527654693, 0.020401968],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.006965654,
+     "face": "+x",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.163944822,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +54 mm; wall 3.0 mm, jaw 7.0 mm; seated -7.6 mm [clamped_deep]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p072",
+     "transform": [
+      [0.760796605, -0.63010042, -0.155441266, 0.017137004],
+      [-0.368934276, -0.222857627, -0.902342495, 0.011002814],
+      [0.533925113, 0.743846717, -0.402014968, 0.017812937],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.005342808,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.112958857,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +72 mm; wall 1.3 mm, jaw 5.3 mm; seated +39.9 mm [clamped_deep]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p090",
+     "transform": [
+      [-0.011972946, 0.502207816, -0.864664072, 0.033250456],
+      [0.999840629, 0.017464799, -0.003700951, 0.048325914],
+      [0.013242538, -0.864570581, -0.502336884, 0.020290583],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.006940989,
+     "face": "+x",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.163679987,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +90 mm; wall 2.9 mm, jaw 6.9 mm; seated -0.4 mm [clamped_deep]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p108",
+     "transform": [
+      [-0.554225078, 0.707272291, -0.438862699, 0.006206218],
+      [0.740527613, 0.178223354, -0.647962414, 0.02244066],
+      [-0.380070279, -0.684106967, -0.622530514, 0.012262608],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.005301929,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.137399365,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +108 mm; wall 1.3 mm, jaw 5.3 mm; seated +41.0 mm [clamped_deep]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_1_p126",
+     "transform": [
+      [0.987370872, 0.150890122, 0.048279724, 0.012361207],
+      [0.134284425, -0.635401872, -0.760415777, 0.049651161],
+      [-0.084062202, 0.757295604, -0.647639494, 0.039196393],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.006464373,
+     "face": "+y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.123024168,
+     "seat_depth": -0.001,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_1 (rim) at arc +126 mm; wall 2.5 mm, jaw 6.5 mm; seated +0.9 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_2_m036",
+     "transform": [
+      [0.81883079, 0.534035414, -0.210528652, 0.008121471],
+      [0.424651465, -0.316759477, 0.848135937, -0.015036699],
+      [0.38624768, -0.78388112, -0.486151334, 0.01160912],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.00518663,
+     "face": "-y",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.126508317,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim",
+      "seat_blocked"
+     ],
+     "notes": "lip pinch on rim_2 (rim) at arc -36 mm; wall 1.2 mm, jaw 5.2 mm; seated +37.7 mm [clamped_deep], NO clear depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_2_m018",
+     "transform": [
+      [-0.15410495, 0.987847623, -0.020217265, -0.00308165],
+      [0.11194279, 0.037785788, 0.992995995, -0.022529712],
+      [0.981692659, 0.150762421, -0.116405396, 0.025838688],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.008124943,
+     "face": "-y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.101370352,
+     "seat_depth": -0.028,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_2 (rim) at arc -18 mm; wall 4.1 mm, jaw 8.1 mm; seated +27.2 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_2_p000",
+     "transform": [
+      [0.895899049, -0.438382556, -0.072011311, 0.008623305],
+      [-0.232528212, -0.6008368, 0.7648044, -0.047441272],
+      [-0.378543954, -0.668442873, -0.64022543, 0.036987686],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.005923248,
+     "face": "-y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.124458847,
+     "seat_depth": -0.004,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_2 (rim) at arc +0 mm; wall 1.9 mm, jaw 5.9 mm; seated +3.7 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_2_p018",
+     "transform": [
+      [-0.799585357, -0.523809142, -0.293746898, 0.004621992],
+      [-0.53807808, 0.407630972, 0.73777298, -0.016551396],
+      [-0.266711899, 0.747971238, -0.607785974, 0.012257027],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.005740215,
+     "face": "-y",
+     "source": "rim_pinch",
+     "seat_mode": "clamped_deep",
+     "span": 0.129334197,
+     "seat_depth": -0.045,
+     "labels": [
+      "rim_pinch",
+      "rim",
+      "seat_blocked"
+     ],
+     "notes": "lip pinch on rim_2 (rim) at arc +18 mm; wall 1.7 mm, jaw 5.7 mm; seated +42.0 mm [clamped_deep], NO clear depth on this approach",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_2_p036",
+     "transform": [
+      [0.204962191, 0.886300686, -0.415284956, 0.028002646],
+      [-0.177284596, 0.450892019, 0.874795153, -0.051089413],
+      [0.962580216, -0.105676306, 0.249543275, 0.016871863],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.018391913,
+     "face": "-y",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.122444012,
+     "seat_depth": -0.003,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_2 (rim) at arc +36 mm; wall 14.4 mm, jaw 18.4 mm; seated -2.9 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "rim_pinch/rim_rim_2_p054",
+     "transform": [
+      [0.004505135, -0.271654876, -0.962384192, 0.034811375],
+      [-0.901659253, 0.415062712, -0.12138178, -0.044149544],
+      [0.432423745, 0.868289453, -0.243070219, 0.031995677],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.004568088,
+     "face": "+x",
+     "source": "rim_pinch",
+     "seat_mode": "retreated",
+     "span": 0.145247,
+     "seat_depth": -0.044,
+     "labels": [
+      "rim_pinch",
+      "rim"
+     ],
+     "notes": "lip pinch on rim_2 (rim) at arc +54 mm; wall 0.6 mm, jaw 4.6 mm; seated -23.4 mm [retreated]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}

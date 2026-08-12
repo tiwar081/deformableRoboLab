@@ -1,0 +1,176 @@
+{
+ "_comment": [
+  "Sidecar written by grasp pass 'fixture' for catalog object 'banana'.",
+  "GENERATED \u2014 re-running the pass replaces this file. Do not hand-edit.",
+  "'record' is a complete grasp_library record holding ONLY this pass's candidates;",
+  "'annotations' updates candidates owned by other passes (keyed by their id).",
+  "assets/objects/grasps/<name>.json is composed from these by grasp_passes.merge."
+ ],
+ "sidecar_version": 1,
+ "pass": {
+  "name": "fixture",
+  "source": "fixture",
+  "version": 8,
+  "requires": [],
+  "notes": "hand-placed placeholders; widths measured from the mesh, poses pad-seated"
+ },
+ "upstream_sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+ "record": {
+  "_comment": [
+   "Precomputed grasp candidates for one catalog object. Poses are in the object's",
+   "CANONICAL frame (obb_extent_desc_v1: OBB centre, axes by descending extent);",
+   "each transform places the grasp frame (tcp_z_approach_x_jaw_v2: origin at the TCP grasp",
+   "centre, +z approach, +x jaw axis). Layout mirrors the ACRONYM dataset's HDF5 records.",
+   "Generated offline \u2014 see deformableManipulationTools/grasp_library.py; do not hand-edit",
+   "the frame block (it is derived from the mesh and guarded by object.mesh_sha1)."
+  ],
+  "schema_version": 5,
+  "object": {
+   "name": "banana",
+   "kind": "ycb_mesh",
+   "file": "ycb/banana.usd",
+   "scale": 1.0,
+   "mesh_sha1": "4bb7ac61301dd9f87133b322e723ae483c39322c",
+   "extents": [0.197574922, 0.069097621, 0.036244017],
+   "frame": {
+    "convention": "obb_extent_desc_v1",
+    "rotation": [
+     [-0.418424303, -0.908251656, -0.000177693],
+     [-0.907559888, 0.41809796, 0.039104293],
+     [-0.035442245, 0.016523454, -0.999235119]
+    ],
+    "translation": [0.00382614, -0.018517369, -0.001039009],
+    "axis_order": [2, 1, 0],
+    "sign_rules": [
+     "skew",
+     "skew",
+     "skew"
+    ],
+    "ambiguous": false,
+    "drift": 0.0
+   }
+  },
+  "gripper": {
+   "type": "franka_panda",
+   "max_width": 0.08,
+   "pose_convention": "tcp_z_approach_x_jaw_v2"
+  },
+  "grasps": {
+   "generator": "fixture@8",
+   "notes": "",
+   "candidates": [
+    {
+     "id": "fixture/mid_span_top",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.0],
+      [1.0, 0.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, 0.005297365],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.0460588,
+     "face": "+z",
+     "source": "fixture",
+     "seat_mode": "retreated",
+     "span": 0.035293157,
+     "seat_depth": -0.011993157,
+     "labels": [
+      "mid_span"
+     ],
+     "notes": "straight down onto the widest face, across the middle of the shaft [fixture: span 40.1 mm measured over a 20 mm column; seated -5.3 mm along the approach, retreated 24 mm to clear the hand]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "fixture/near_end_top",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.059272477],
+      [1.0, 0.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.016481157],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.055025423,
+     "face": "+z",
+     "source": "fixture",
+     "seat_mode": "span_flush",
+     "span": 0.033635993,
+     "seat_depth": -0.034335993,
+     "labels": [
+      "near_end"
+     ],
+     "notes": " [fixture: span 49.0 mm measured over a 20 mm column; seated +16.5 mm along the approach]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "fixture/near_end_top_ctr",
+     "transform": [
+      [0.0, 1.0, -0.0, 0.059272477],
+      [1.0, 0.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.026563161],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.055025423,
+     "face": "+z",
+     "source": "fixture",
+     "seat_mode": "centred",
+     "span": 0.033635993,
+     "seat_depth": -0.044417996,
+     "labels": [
+      "near_end",
+      "centred_variant"
+     ],
+     "notes": "centred depth variant of near_end_top [centred]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    },
+    {
+     "id": "fixture/mid_span_side",
+     "transform": [
+      [0.0, -1.0, -0.0, 0.0],
+      [0.0, 0.0, -1.0, -0.006385571],
+      [1.0, 0.0, -0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+     ],
+     "width": 0.040716552,
+     "face": "+y",
+     "source": "fixture",
+     "seat_mode": "span_flush",
+     "span": 0.040037506,
+     "seat_depth": -0.040737506,
+     "labels": [
+      "mid_span",
+      "side"
+     ],
+     "notes": " [fixture: span 34.7 mm measured over a 20 mm column; seated +6.4 mm along the approach]",
+     "quality": {
+      "object_in_gripper": null,
+      "object_motion_during_closing_linear": null,
+      "object_motion_during_closing_angular": null,
+      "object_motion_during_shaking_linear": null,
+      "object_motion_during_shaking_angular": null
+     },
+     "quality_source": null
+    }
+   ]
+  }
+ },
+ "annotations": {}
+}
