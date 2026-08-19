@@ -172,7 +172,7 @@ def scene_init_reuse(scene_init: Path | str) -> dict:
 def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
                  fixed_placement: dict | None = None, camera_spec: str | None = None,
                  scene_init: Path | str | None = None, substitutions: str | None = None,
-                 count_hint: int | None = None,
+                 count_hint: int | None = None, task_count: int = 3,
                  out_root: Path | str = OUTPUT_ROOT, name: str | None = None,
                  model: str = sg.DEFAULT_MODEL, device: str = "cuda:0", seed: int = 0,
                  render: bool = True, verify: bool = True, settle: bool = True,
@@ -189,6 +189,8 @@ def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
     object set: ``None`` = off (the multiset is exact), a phrase = up to MAX_SUBSTITUTIONS
     one-for-one swaps as requested, ``""`` (flag given bare) = the agent infers 1-2 appropriate
     swaps and writes the phrase itself. Never an add or a remove in any case."""
+    import time
+    t_pipeline = time.time()
     fixed_multiset = prev_objects = change_request = None
     init_env = avoid_goal = None
     allow_substitutions, substitutions_free = 0, False
@@ -277,10 +279,29 @@ def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
             print(f"[pipeline/scene] wrote back {n} settled object pose(s) into scene.json")
 
     # Stage 2 — task gen (+ robot placement; scene_init requires a DIFFERENT task than the source).
+    # SCENE REUSE: the same scene gets ``task_count`` different tasks (task.json, task_2.json, ...),
+    # all sharing the FIRST task's robot placement (the scene settled under one mount); each extra
+    # task also gets its own runnable demo file so the trajectory stage can execute every task.
+    avoid = [avoid_goal] if avoid_goal else []
     task, placement = task_gen.call_task_agent(scene, mode=placement_mode,
-                                               placement=fixed_placement, avoid_goal=avoid_goal,
+                                               placement=fixed_placement, avoid_goal=avoid,
                                                model=model, verbose=verbose)
     (run_dir / "task.json").write_text(json.dumps(task_gen.task_dict(task, placement), indent=1))
+    tasks = [task]
+    for k in range(2, max(int(task_count), 1) + 1):
+        avoid = avoid + [tasks[-1].goal]
+        try:
+            tk, _ = task_gen.call_task_agent(scene, mode="fixed", placement=placement,
+                                             avoid_goal=avoid, model=model, verbose=verbose)
+        except Exception as exc:                       # noqa: BLE001 - extra tasks are best-effort
+            if verbose:
+                print(f"[pipeline/task] task {k} generation failed ({exc}); "
+                      f"continuing with {len(tasks)} task(s)")
+            break
+        (run_dir / f"task_{k}.json").write_text(json.dumps(task_gen.task_dict(tk, placement),
+                                                           indent=1))
+        build.write_task_demo(run_dir, k)
+        tasks.append(tk)
 
     # Stage 3 — environment gen (skipped in scene_init mode: the environment is REUSED).
     if init_env is not None:
@@ -312,6 +333,9 @@ def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
         "scene_metrics": metrics, "quality_notes": quality_notes,
         "feasibility": task.feasibility,
         "success_spec": task_gen.task_dict(task, placement)["success_spec"],
+        "tasks": [{"file": "task.json" if i == 0 else f"task_{i + 1}.json",
+                   "name": t.name, "goal": t.goal, "feasible": bool(t.feasibility.get("ok"))}
+                  for i, t in enumerate(tasks)],
         "camera": env.get("camera"), "camera_report": env.get("camera_report"),
         "paths": {"scene": str(run_dir / "scene.json"), "task": str(run_dir / "task.json"),
                   "env": str(run_dir / "env.json"), "demo": str(demo_py)},
@@ -334,6 +358,9 @@ def run_pipeline(prompt: str | None = None, *, placement_mode: str = "default",
                 print(f"[pipeline] verification: ok={verdict.get('ok')} "
                       f"issues={verdict.get('issues', [])}")
 
+    manifest["duration_s"] = round(time.time() - t_pipeline, 1)
+    if verbose:
+        print(f"[pipeline] total wall-clock: {manifest['duration_s']:.0f} s")
     (run_dir / "pipeline.json").write_text(json.dumps(manifest, indent=1))
     return manifest
 
@@ -396,6 +423,8 @@ def interview(scene_init: Path | str | None = None) -> dict:
         place = step("Robot placement — 'default' (middle of the back long edge) or 'task' "
                      "(chosen per task)", "task")
         answers["placement_mode"] = "task" if place.lower().startswith("t") else "default"
+        ntasks = step("How many tasks for this scene? (each gets its own trajectory)", "3")
+        answers["task_count"] = int(ntasks) if ntasks.isdigit() and int(ntasks) >= 1 else 3
 
     if reuse is None or reuse["env"] is None:
         camera = step("Exterior camera — describe it, or blank for the default front bird's-eye view")
@@ -424,6 +453,9 @@ if __name__ == "__main__":
                     help="robot placement mode (userless default: 'default')")
     ap.add_argument("--camera", default=None, help="exterior-camera specification text")
     ap.add_argument("--count", type=int, default=None, help="approximate object count")
+    ap.add_argument("--tasks", type=int, default=3,
+                    help="tasks to generate for the ONE scene (scene reuse; each gets its own "
+                         "task_k.json + demo file for the trajectory stage; default 3)")
     ap.add_argument("--name", default=None, help="run folder name (default: the scene slug)")
     ap.add_argument("--out-dir", default=str(OUTPUT_ROOT))
     ap.add_argument("--model", default=sg.DEFAULT_MODEL)
@@ -458,7 +490,7 @@ if __name__ == "__main__":
 
     kw = dict(placement_mode=args.placement or "default", camera_spec=args.camera,
               count_hint=args.count, out_root=args.out_dir, verify=args.verify,
-              substitutions=args.substitute)
+              substitutions=args.substitute, task_count=args.tasks)
     if args.user:
         answers = interview(args.scene_init)                 # only the LIVE questions come back
         args.prompt = answers.pop("prompt")
@@ -468,6 +500,8 @@ if __name__ == "__main__":
                          ("count_hint", args.count), ("substitutions", args.substitute)):
             if key in answers and cli is None:               # an explicit CLI flag still wins
                 kw[key] = answers[key]
+        if "task_count" in answers and args.tasks == 3:      # the interview answer wins the default
+            kw["task_count"] = answers["task_count"]
 
     manifest = run_pipeline(
         args.prompt, scene_init=args.scene_init, name=args.name, model=args.model,

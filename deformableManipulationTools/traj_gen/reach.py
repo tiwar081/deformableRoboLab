@@ -45,10 +45,16 @@ class ArmChecker:
 
     def tcp_error(self, pos, yaw: float = 0.0, tilt: float = 0.0,
                   tilt_axis=(1.0, 0.0, 0.0)) -> float:
-        """IK the pose, FK the solution, return |achieved TCP - commanded TCP| [m]."""
+        """IK the pose, FK the solution, return |achieved TCP - commanded TCP| [m].
+
+        The state is FK-RESET TO HOME first: the solver seeds from the entry state, so without
+        the reset a check's verdict depends on whatever pose the PREVIOUS check left behind —
+        measured 2026-08-13: the same candidate passed the gate in one task and 'missed by
+        85 mm' in another, purely from check order."""
         from ..mathutils import quat_rotate_xyzw
         from ..robot import solve_gripper_ik
 
+        self._newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state)
         q = solve_gripper_ik(self.model, self.state, self.ee_body, self.ee_offset,
                              np.asarray(pos, dtype=np.float32), self.gripper_open,
                              yaw=float(yaw), tilt=float(tilt), tilt_axis=tuple(tilt_axis))
@@ -81,9 +87,11 @@ class ArmChecker:
         specs = [(None if w.get("pos") is None else np.asarray(w["pos"], dtype=np.float32),
                   float(w.get("yaw", 0.0)), float(w.get("tilt", 0.0)),
                   tuple(w.get("tilt_axis", (1.0, 0.0, 0.0)))) for w in waypoints]
+        wins = grasp_window if isinstance(grasp_window, list) else [grasp_window]
 
         def gripped(t0: float, t1: float) -> bool:
-            return float(grasp_window["close_start"]) < t1 and t0 < float(grasp_window["release_end"])
+            return any(float(w["close_start"]) < t1 and t0 < float(w["release_end"])
+                       for w in wins)
 
         edge_w = [8.0 if gripped(a["t"], b["t"]) else 1.0
                   for a, b in zip(waypoints, waypoints[1:])]

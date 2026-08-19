@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import math
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -211,11 +212,101 @@ def test_llm(fix: dict) -> None:
           and "ALTERNATIVE CANDIDATES" in content[0]["text"])
 
 
+def test_scene_reuse_and_verify(fix: dict) -> None:
+    print("scene reuse + visual verify + deformables: pure logic")
+    import tempfile
+    from . import annotate, deform_grasp, verify
+    from .stage import task_tag
+
+    check("task tags resolve", task_tag("task.json") == "" and task_tag("task_2.json") == "_2")
+
+    scene, task, placement, by_name = _fixture()
+    # duplicate-instance choice: add a second can already inside the bucket footprint
+    s2 = {**scene, "objects": scene["objects"] + [
+        {"name": "tomato_soup_can", "x": 0.12, "y": -0.32, "yaw_deg": 0.0}]}
+    idx = policy.choose_target_index(s2, task, by_name)
+    check("duplicate choice skips the instance already at the goal", idx == 0, f"chose {idx}")
+    t_in = {**task, "goal": {"predicate": "object_in_container",
+                             "params": {"object": "tomato_soup_can", "container": "bucket"}}}
+    s3 = {**scene, "objects": [{"name": "tomato_soup_can", "x": 0.12, "y": -0.32, "yaw_deg": 0.0},
+                               scene["objects"][1],          # the bucket
+                               scene["objects"][0]]}         # the counter can
+    check("duplicate choice picks the counter instance",
+          policy.choose_target_index(s3, t_in, by_name) == 2)
+
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        plan = fix["plan"].to_dict()
+        (d / "traj.json").write_text(json.dumps(plan))
+        old_xy = list(plan["place"]["xy"])
+        tuned = verify.tune_place(d, "traj.json", 0.04, -0.02, round_no=1)
+        check("tune_place shifts the place column",
+              abs(tuned["place"]["xy"][0] - old_xy[0] - 0.04) < 1e-6
+              and any(abs(w["pos"][0] - old_xy[0] - 0.04) < 1e-3 for w in tuned["waypoints"]))
+        (d / "scene.json").write_text(json.dumps(scene))
+        report = {"ok": True, "run_dir": str(d), "final": {"candidate_id": "x"},
+                  "attempts": [{"evaluation": {"held": True, "carried": True,
+                                               "goal": {"ok": True}}, "plan_pick": plan["pick"]}]}
+        verdict = {"ok": False, "observed_outcome": "ended right of the can",
+                   "achieved_instruction": {"vague": "move it", "default": "Place right",
+                                            "specific": "Place to the right of the can"}}
+        row = annotate.build_row(task=task, task_name="task.json", report=report, round_no=0,
+                                 traj_file="traj.json", video=None, verdict=verdict)
+        check("mismatch relabels instructions (original preserved)",
+              row["relabeled"] and row["instructions"]["default"] == "Place right"
+              and row["intended_instructions"] == task["instruction"])
+        annotate.upsert(d, row)
+        annotate.upsert(d, {**row, "round": 1, "id": "task_r1"})
+        data = json.loads((d / "annotations.json").read_text())
+        check("annotations accumulate per scene", len(data["trajectories"]) == 2
+              and data["scene"] == "selftest")
+
+    # ---- multi-step: two chained segments in ONE plan ----
+    by_name2 = {**by_name, "spam_can": {"kind": "ycb_mesh", "dims": [0.1, 0.08, 0.08],
+                                        "config": {"target_mass": 0.44, "mu": 0.4,
+                                                   "usd_subpath": "ycb/spam_can.usd"}}}
+    scene2 = {**scene, "objects": scene["objects"] + [
+        {"name": "spam_can", "x": -0.15, "y": -0.55, "yaw_deg": 0.0}]}
+    task2 = {**task, "subgoals": [
+        {"predicate": "object_in_container",
+         "params": {"object": "tomato_soup_can", "container": "bucket"}},
+        {"predicate": "object_in_container",
+         "params": {"object": "spam_can", "container": "bucket"}}]}
+    from dataclasses import replace as _rp
+    pick1 = fix["pick"]
+    pose2 = grasp_transform((-0.15, -0.55, TABLE.top_z + 0.07), (0, 0, -1), (1, 0, 0))
+    pick2 = _rp(pick1, id="fake/two", pose=np.asarray(pose2, dtype=float))
+    segs = [policy.SegmentSpec(goal=task2["subgoals"][0], pick=pick1, target_bottom_dz=-0.051),
+            policy.SegmentSpec(goal=task2["subgoals"][1], pick=pick2, target_bottom_dz=-0.04)]
+    mplan = policy.plan_segments(scene2, task2, placement, by_name2, segs)
+    ts2 = [w["t"] for w in mplan.waypoints]
+    check("multi-step waypoints strictly increasing", all(b > a for a, b in zip(ts2, ts2[1:])))
+    check("one grasp window per segment", len(mplan.grasp_windows) == 2
+          and mplan.grasp_windows[0]["release_end"] < mplan.grasp_windows[1]["close_start"])
+    check("segment rows carry targets in order",
+          [s["target"] for s in mplan.segments] == ["tomato_soup_can", "spam_can"])
+    d2 = mplan.to_dict()
+    check("multi-step traj dict round-trips",
+          len(json.loads(json.dumps(d2))["segments"]) == 2)
+
+    snap = {"kind": "cloth", "points": [[0.1, -0.4, 0.075], [0.2, -0.4, 0.08]],
+            "z_min": 0.07, "z_max": 0.085, "extent_xy": [0.3, 0.2], "n_material_points": 900}
+    ok_prop = {"position": [0.1, -0.4, 0.072], "approach": [0, 0, -1], "jaw_axis": [1, 0, 0],
+               "width_mm": 12, "force_n": 3, "rationale": "corner pinch"}
+    pick, why = deform_grasp.pick_from_proposal(ok_prop, snap, 0)
+    check("deform proposal builds a pick", pick is not None and pick.seat_mode == "llm", why or "")
+    bad, why = deform_grasp.pick_from_proposal({**ok_prop, "position": [0.9, 0.9, 0.1]}, snap, 0)
+    check("off-material proposal rejected", bad is None and "material" in (why or ""))
+    bad, why = deform_grasp.pick_from_proposal({**ok_prop, "approach": [0, 0, 1]}, snap, 0)
+    check("upward approach rejected", bad is None)
+
+
 def main() -> None:
     test_curve()
     ranking, held = test_selection()
     fix = test_policy(ranking, held)
     test_llm(fix)
+    test_scene_reuse_and_verify(fix)
     print(f"traj_gen selftest: all {PASS} checks passed")
 
 

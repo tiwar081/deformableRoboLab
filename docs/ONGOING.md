@@ -379,6 +379,73 @@ in [trajPipeline/trajectory-generation.md](trajPipeline/trajectory-generation.md
 - **Duplicate-instance choice**: with two apples, the first-in-scene one sat inside the goal bowl
   already; `choose_target_index` picks an instance that does not already satisfy the goal.
 
+### LANDED (2026-08-13): trajectory stage round 2 — scene reuse, multi-step, deformables online, visual verification, annotations (user-directed)
+
+Seven user directives, all in [trajPipeline/trajectory-generation.md](trajPipeline/trajectory-generation.md)
+(the authority) + [agenticPipeline/agentic-pipeline.md](agenticPipeline/agentic-pipeline.md):
+
+1. **Generators stay grasp-blind** (verified: prompts carry only the catalog; the one
+   grasp-adjacent import is the physical jaw-width ceiling). Consistent grasp-failure evidence
+   from full-pipeline runs goes to **`assets/low_graspability.md`** (stage-written, object-bound
+   evidence only, deduped; seeded with tuna_can's flat-can class — 2 runs, 16-17 pad-sweep
+   rejections + 4 pure grasp failures).
+2. **Trajectory videos now render in the scene_overview look** (`mp4_advanced` default in the
+   traj CLI; `mp4` stays as a fast preview).
+3. **Cloth/cable targets get their grasp ONLINE** (`deform_grasp.py` + `deform_snapshot.py`):
+   settle-state snapshot (numbered world-frame material points + scatter PNG) → LLM proposes
+   position/approach/jaw/width/force → same spline/collision/IK machinery + rollout →
+   **3 proposals with measured feedback**, then honest abort. Cloth press allowance (8 mm) in the
+   pad gate; hang-below-TCP from material extent; rollout tracks the material point nearest the
+   grasp (cable = capsule bodies, cloth = particles). Bags stay out.
+4. **Scene reuse**: `agent_pipeline.py --tasks N` (default 3, interview-asked) → N different
+   tasks per scene (multi-goal avoid in `call_task_agent`), per-task demo files
+   (`pipeline_<slug>__t<k>.py`), and the traj CLI iterates them all (`traj<k>.json` etc.).
+5. **Post-trajectory VISUAL verification** (`verify.py`): a VLM judges the before/after stills +
+   measured coordinates against the instruction; mismatch → the executed round is ARCHIVED and
+   its annotation RELABELED with the achieved instruction set (never scrapped — training data for
+   what it actually did), then a bounded place nudge re-executes, ≤2 rounds per demo.
+6. **`annotations.json` per scene** (`annotate.py`): one row per executed trajectory
+   (instructions incl. relabels, goal+subgoals, grasp, phase timeline, metrics, verification,
+   artifact paths) — the VLA training-data record; labels always match the video.
+7. **Multi-step tasks**: task gen may emit a `subgoals` chain (schema + prompt + per-subgoal
+   feasibility, `subgoal_specs` compiled); `policy.plan_segments` chains one pick-place segment
+   per subgoal (per-segment GraspWindows — the grip kernel iterates them; placed objects become
+   obstacles for later segments); the rollout scores every segment (the first failing segment
+   names the failure; the LLM retry targets exactly that segment); subgoals are geometrically
+   checked at the final state. First live result: the can-sorting scene produced 3/3 feasible
+   tasks including two genuine multi-step ones on the first attempt.
+
+Selftest now 45 checks. NOTE: previous demo runs were archived to
+`outputs/agenticPipeline_old/`; new runs land in a fresh `outputs/agenticPipeline/`.
+
+**VALIDATED 2026-08-13 (three fully TIMED end-to-end runs; timing is now instrumented at every
+level — pipeline.json `duration_s`, traj_result `duration_s` + per-rollout/render/verify, CLI
+per-task + per-run totals):**
+
+- `demo_cans_full` (pipeline 112 s + traj 1068 s): multi-step machinery works — the per-segment
+  LLM retry fixed segment 0 mid-task (2 mm TCP hit after a switch); all 3 tasks then failed
+  HONESTLY (tuna_can flat-can gap ×2; a stack target 0.30 m from the base — too close for the
+  arm, caught by the gates in 79 s with zero rollouts). Bought three fixes: aborts now report
+  `arm_rejected` reasons; the per-pose IK gate FK-resets to home (verdicts were order-dependent —
+  same candidate 2 mm in one task, "85 mm" in another); approach_missed feedback now steers the
+  LLM away from same-approach candidates.
+- `demo_laundry_full` (pipeline 186 s; final task 363 s): the ONLINE CLOTH PATH works end-to-end
+  — shirt retrieval grasped on the first proposal after the prompt gained the measured sheet
+  recipe (each clause bought by failed rollouts: interior wad not edge pinch; z below the
+  TABLETOP not the cloth surface; 4-5 N not 2-3 N; 2 s close + 3 s press-hold), advanced-look
+  video + visual verification passed. Also bought: the crumple set-down footprint (0.4× flat
+  extent) and OUTCOME-BASED SUCCESS (goal met at final state counts even if the sheet slipped
+  late in the drag — every "dropped" attempt had satisfied `object_retrieved`).
+- `demo_fruit_full` (pipeline 170 s + traj 2019 s): task 2 (apple→bowl) SUCCEEDED and was
+  visually verified with a precise verdict; task 1 (multi-step "all fruits") executed one of
+  three segments, the primary groups predicate OVER-PASSED (single-name schema), the VISUAL
+  verifier caught it and the annotation was RELABELED to "Put the apple into the bowl" — the
+  training-label consistency loop working as designed. Fix landed: the multi-step geometric goal
+  now ANDs the primary with every evaluable subgoal. Task 3 aborted honestly in 6 s (banana =
+  flat-object class + place point off the table edge).
+- Ledger state: tuna_can (stands), banana (new — flat-object class), green_tshirt (superseded in
+  place: recipe-sensitive, not low-graspability).
+
 ### Next
 
 - **Flat-cylinder chord-pinch generator** (from the 2026-08-12 traj-stage validation above):

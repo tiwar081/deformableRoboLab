@@ -8,7 +8,7 @@ interactively as a Claude Code session via `agentic_pipeline/SKILL.md` (register
 | stage | decides | checks |
 |---|---|---|
 | **scene gen** (`agentic_pipeline/scene_gen.py`) | object selection + placement ONLY (per prompt; relations incl. on/in stacking) | grammar + spatial solver + headless PHYSICS SETTLE CHECK (`agentic_pipeline/settle.py`: NaN, fell-off-table, >5 cm drift, residual deformable motion) with one feedback retry |
-| **task gen** (`agentic_pipeline/task_gen.py`) | the manipulation task (reuses `agentic_pipeline/task_generator.py`'s predicates + deformable-aware feasibility) AND the ROBOT PLACEMENT | edge alignment (robot table touches, never overlaps, ≥5 cm edge contact; overhang allowed) + task-object reachability from the ACTUAL base (nearest-point ≤0.80 m); on failure the agent moves the robot or redesigns the task |
+| **task gen** (`agentic_pipeline/task_gen.py`) | the manipulation task (reuses `agentic_pipeline/task_generator.py`'s predicates + deformable-aware feasibility) AND the ROBOT PLACEMENT. **Scene reuse**: `--tasks N` (default 3) generates N DIFFERENT tasks for the one scene (`task.json`, `task_2.json`, … each avoiding all earlier goals, sharing task 1's placement, each with its own demo file). Tasks may be **MULTI-STEP** (optional `subgoals` chain of 2–4 single-object goals — "put all the cans in the bin"); each subgoal is feasibility-checked and compiled into `subgoal_specs`. Task gen sees NO grasp-candidate data (only the physical jaw-width ceiling) — grasp-difficulty evidence goes to `assets/low_graspability.md`, written by the trajectory stage, never read by generation | edge alignment (robot table touches, never overlaps, ≥5 cm edge contact; overhang allowed) + task-object reachability from the ACTUAL base (nearest-point ≤0.80 m); on failure the agent moves the robot or redesigns the task |
 | **env gen** (`agentic_pipeline/env_gen.py`) | background HDRI, table material, lighting (dome + key light), exterior camera | camera bounds (0.5–3.5 m from table center, above the top); wrist camera ALWAYS on; no user camera spec → REPORTED default front bird's-eye view (opposite the robot, ~2 m up, whole workspace framed) |
 
 Temporary solver/catalog guard: scene gen permits at most **one total** among a deformable bag,
@@ -163,6 +163,7 @@ runner/renderer is reused), `scene_overview.png`, `scene_wrist.png`.
 | `--placement default\|task` | robot placement mode (userless default: `default`); invalid with `--scene_init` |
 | `--camera "..."` | exterior-camera specification (else the reported bird's-eye default); invalid with `--scene_init` unless the source run has no `env.json` |
 | `--count N` | approximate object count; invalid with `--scene_init` (the count is the source multiset's) |
+| `--tasks N` | tasks to generate for the ONE scene (scene reuse; default 3; also asked in the `--user` interview). Each extra task gets `task_k.json` + `pipeline_<slug>__t<k>.py`; the trajectory stage runs them all |
 | `--name` / `--out-dir` / `--model` / `--device` / `--seed` | run identity + engine knobs |
 | `--no-render` | **[heavyweight]** skip the final PBR render |
 | `--no-verify` | **[heavyweight]** skip the post-render visual verification (agent inspects BOTH the over-the-shoulder and the wrist-camera stills); ON by default |

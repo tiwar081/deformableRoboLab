@@ -20,27 +20,47 @@ DEMO_TEMPLATE = (
     "import agentic_pipeline.build\n\n"
     "DEMO = agentic_pipeline.build.demo_from_dir(Path(__file__).parent)\n")
 
+# Extra-task demo file (scene REUSE: one scene, several tasks): same assembly, but reading the
+# k-th task's artifacts. The distinct file stem also keys a distinct render output folder.
+TASK_DEMO_TEMPLATE = (
+    '"""GENERATED pipeline demo (agentic_pipeline) — task {k} of the shared scene."""\n'
+    "from pathlib import Path\n\n"
+    "import agentic_pipeline.build\n\n"
+    "DEMO = agentic_pipeline.build.demo_from_dir(Path(__file__).parent,\n"
+    '                                            task_name="task_{k}.json",\n'
+    '                                            traj_name="traj_{k}.json")\n')
+
 
 def _read(d: Path, name: str) -> dict | None:
     p = d / name
     return json.loads(p.read_text()) if p.exists() else None
 
 
-def placement_from_dir(d: Path | str) -> dict:
-    task = _read(Path(d), "task.json")
+def placement_from_dir(d: Path | str, task_name: str = "task.json") -> dict:
+    task = _read(Path(d), task_name)
     if task and task.get("robot_placement"):
         return task["robot_placement"]
     return geometry.default_placement()
 
 
-def demo_from_dir(d: Path | str):
-    """scene.json (+ task.json robot placement, + env.json look, + traj.json policy) -> DemoSpec.
+def write_task_demo(run_dir: Path | str, k: int) -> Path:
+    """Write the runnable demo data file for the k-th (k >= 2) task of a shared scene."""
+    run_dir = Path(run_dir)
+    slug = run_dir.name
+    demo_py = run_dir / f"pipeline_{slug}__t{k}.py"
+    demo_py.write_text(TASK_DEMO_TEMPLATE.replace("{k}", str(k)))
+    return demo_py
 
-    Without ``traj.json`` the demo is the settle-only parked-arm scene (the pre-trajectory-stage
-    behavior, used by the settle check and the still renders). WITH ``traj.json`` — written by
+
+def demo_from_dir(d: Path | str, task_name: str = "task.json", traj_name: str = "traj.json"):
+    """scene.json (+ task robot placement, + env.json look, + traj policy) -> DemoSpec.
+
+    Without the traj file the demo is the settle-only parked-arm scene (the pre-trajectory-stage
+    behavior, used by the settle check and the still renders). WITH it — written by
     ``deformableManipulationTools.traj_gen`` — the demo plays the generated pick-and-place policy:
     the plan's timed ``(pos, yaw, tilt)`` waypoints and its ONE force ``GraspWindow`` (incl. the
-    pre-shaped approach aperture, the grasp library's contract)."""
+    pre-shaped approach aperture, the grasp library's contract). ``task_name``/``traj_name``
+    select WHICH task of a shared scene this demo plays (scene reuse: task_2.json/traj_2.json)."""
     import warp as wp
     from deformableManipulationTools.demo_runner import WP
 
@@ -48,7 +68,7 @@ def demo_from_dir(d: Path | str):
     scene = _read(d, "scene.json")
     if scene is None:
         raise FileNotFoundError(f"no scene.json in {d}")
-    placement = placement_from_dir(d)
+    placement = placement_from_dir(d, task_name)
     env = _read(d, "env.json") or env_gen.default_env(placement)
 
     spec = sg.demo_spec_from_scene(scene)
@@ -56,7 +76,7 @@ def demo_from_dir(d: Path | str):
     spec.robot_base_xform = wp.transform(
         wp.vec3(float(base[0]), float(base[1]), float(base[2])),
         wp.quat_from_axis_angle(wp.vec3(0.0, 0.0, 1.0), math.radians(placement["yaw_deg"])))
-    traj = _read(d, "traj.json")
+    traj = _read(d, traj_name)
     if traj is not None:
         from deformableManipulationTools.params import GraspWindow
         spec.waypoints = [WP(t=w["t"], pos=tuple(w["pos"]), yaw=w.get("yaw", 0.0),
@@ -64,12 +84,12 @@ def demo_from_dir(d: Path | str):
                              tilt_axis=tuple(w.get("tilt_axis", (1.0, 0.0, 0.0))),
                              via=bool(w.get("via", False)))
                           for w in traj["waypoints"]]
-        gw = traj["grasp_window"]
         spec.grasp_windows = [GraspWindow(
             close_start=float(gw["close_start"]), close_end=float(gw["close_end"]),
             release_start=float(gw["release_start"]), release_end=float(gw["release_end"]),
             force_target=float(gw["force_target"]),
-            preshape_width=float(gw["preshape_width"]))]
+            preshape_width=float(gw["preshape_width"]))
+            for gw in (traj.get("grasp_windows") or [traj["grasp_window"]])]
         spec.num_frames = int(traj["num_frames"])
     else:
         # Start the arm at a RAISED, out-of-the-way pose (frame 0) instead of home_q, so the parked

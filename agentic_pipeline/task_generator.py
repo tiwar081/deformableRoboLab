@@ -43,7 +43,7 @@ import argparse
 import json
 import math
 import urllib.error
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 from agentic_pipeline import load_goal_predicates
@@ -91,6 +91,10 @@ class Task:
     instruction: dict            # {"default":..., "vague":..., "specific":...}
     goal: dict                   # {"predicate": str, "params": {role: object_name, ...}}
     subtasks: list = field(default_factory=list)
+    # MULTI-STEP tasks ("put all the fruit in the bowl"): an ordered chain of 2-4 single-object
+    # goals, each executed as one pick-and-place segment by the trajectory stage. Empty for
+    # single-step tasks; `goal` then states the OVERALL end state the instruction describes.
+    subgoals: list = field(default_factory=list)
     attributes: list = field(default_factory=list)
     difficulty: str = "simple"   # "simple" | "moderate" | "complex"
     feasibility: dict = field(default_factory=dict)
@@ -376,28 +380,38 @@ def check_feasibility(task: Task, scene: dict, *, base_xy: tuple[float, float] |
         checks.append({"name": name, "ok": bool(ok), "reason": reason})
         return ok
 
-    ok_static = _run("static", lambda: check_static(task, scene))
-    # If the structure is broken, the object-level checks would raise on missing params — stop here.
-    if ok_static:
-        _run("affordance", lambda: check_affordance(task, scene))
-        _run("reachable", lambda: check_reachable(task, scene, base_xy=base_xy))
-        pred = task.goal.get("predicate")
+    def _goal_battery(goal_task: Task, prefix: str = "") -> None:
+        """The per-goal checks (affordance/reach/fit/support), name-prefixed for subgoals."""
+        _run(prefix + "affordance", lambda: check_affordance(goal_task, scene))
+        _run(prefix + "reachable", lambda: check_reachable(goal_task, scene, base_xy=base_xy))
+        pred = goal_task.goal.get("predicate")
         spec = GOAL_PREDICATES.get(pred, {})
-        params = task.goal["params"]
+        params = goal_task.goal["params"]
         cp = spec.get("container_param")
         if cp is not None:
             obj = params.get("object")
             cont = params.get(cp)
             if pred == "object_groups_in_containers":     # GROUP feasibility: all objects together
                 objs = obj if isinstance(obj, list) else [obj]
-                _run("group_fits", lambda: check_group_fits(objs, cont, scene))
+                _run(prefix + "group_fits", lambda: check_group_fits(objs, cont, scene))
             else:
-                _run("fits_in", lambda: check_fits_in(obj, cont, scene))
+                _run(prefix + "fits_in", lambda: check_fits_in(obj, cont, scene))
         # SUPPORT-RATIO stacking check for on-top / stacked goals.
         if pred in ("object_on_top", "stacked"):
             support = params.get("target") or params.get("base")
             if support:
-                _run("support_ratio", lambda: check_support(params.get("object"), support, scene))
+                _run(prefix + "support_ratio",
+                     lambda: check_support(params.get("object"), support, scene))
+
+    ok_static = _run("static", lambda: check_static(task, scene))
+    # If the structure is broken, the object-level checks would raise on missing params — stop here.
+    if ok_static:
+        _goal_battery(task)
+        # MULTI-STEP: every subgoal is a full goal and gets the whole battery, name-prefixed.
+        for i, sg in enumerate(task.subgoals or []):
+            sub = replace(task, goal=sg, subgoals=[])
+            if _run(f"sg{i}:static", lambda s=sub: check_static(s, scene)):
+                _goal_battery(sub, prefix=f"sg{i}:")
     all_ok = all(c["ok"] for c in checks)
     fails = [c for c in checks if not c["ok"]]
     summary = "all feasibility checks pass" if all_ok else "; ".join(c["reason"] for c in fails)
@@ -468,6 +482,11 @@ HARD RULES (the feasibility checker enforces them — violating one gets the tas
   (fold it in your subtasks); if it cannot fit even folded, pick another goal.
 - REACH: only use objects on the tabletop within the arm's reach.
 
+MULTI-STEP TASKS: some tasks should be BROADER than a single pick-and-place — "put all the cans in
+the bin". For such a task, fill the OPTIONAL "subgoals" field with the ordered chain of 2-4
+SINGLE-object goals that accomplishes it (same shape as "goal"), and make the main "goal" the
+OVERALL end state. Omit subgoals for single-step tasks.
+
 Also produce THREE instruction phrasings (default = clear and complete; vague = terse/underspecified;
 specific = names colors/attributes), a SUBTASK list (ordered atomic steps, e.g. grasp -> fold ->
 place), competency ATTRIBUTES, and a difficulty (simple|moderate|complex). Prefer tasks that exercise
@@ -507,6 +526,28 @@ def _task_schema(scene: dict) -> dict:
                 "additionalProperties": False,
             },
             "subtasks": {"type": "array", "items": {"type": "string"}},
+            "subgoals": {
+                "type": "array",
+                "description": "ONLY for a MULTI-STEP task ('put all the cans in the bin'): the "
+                               "ordered chain of 2-4 SINGLE-object goals that accomplishes the "
+                               "instruction, one entry per object moved (same shape as 'goal'). "
+                               "The main 'goal' then states the overall end state. OMIT (empty) "
+                               "for single-step tasks.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "predicate": {"type": "string", "enum": list(GOAL_PREDICATES)},
+                        "params": {
+                            "type": "object",
+                            "properties": {role: {"type": "string", "enum": names}
+                                           for role in _PARAM_ROLES},
+                            "additionalProperties": False,
+                        },
+                    },
+                    "required": ["predicate", "params"],
+                    "additionalProperties": False,
+                },
+            },
             "attributes": {"type": "array", "items": {"type": "string"}},
             "difficulty": {"type": "string", "enum": ["simple", "moderate", "complex"]},
         },
@@ -521,6 +562,7 @@ def _task_from_json(data: dict, scene: dict) -> Task:
         instruction=data.get("instruction", {}),
         goal=data.get("goal", {}),
         subtasks=data.get("subtasks", []),
+        subgoals=list(data.get("subgoals") or [])[:4],   # the schema cannot carry maxItems
         attributes=data.get("attributes", []),
         difficulty=data.get("difficulty", "simple"),
         scene_name=scene.get("name", ""),

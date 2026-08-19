@@ -94,22 +94,25 @@ def _task_schema(scene: dict, mode: str) -> dict:
 
 
 def call_task_agent(scene: dict, *, mode: str = "task", placement: dict | None = None,
-                    avoid_goal: dict | None = None, model: str = sg.DEFAULT_MODEL,
+                    avoid_goal=None, model: str = sg.DEFAULT_MODEL,
                     attempts: int = 4, verbose: bool = True) -> tuple[tg.Task, dict]:
     """Scene -> (Task, robot placement), with structural validation + base-aware feasibility +
     edge-alignment checks, and feedback retries in which the agent may move the robot or redesign
-    the task. ``avoid_goal`` (scene_init mode) is a previous run's goal that the new task must
-    DIFFER from. Returns the accepted (or best-effort) pair; the placement is also embedded in
-    the task dict written by ``write_task``."""
+    the task. ``avoid_goal`` is a goal dict — or a LIST of them (scene reuse: the same scene gets
+    several tasks) — that the new task must DIFFER from. Returns the accepted (or best-effort)
+    pair; the placement is also embedded in the task dict written by ``write_task``."""
     if mode not in ("task", "default", "fixed"):
         raise ValueError(f"unknown placement mode {mode!r}")
     fixed = placement or geometry.default_placement() if mode in ("default", "fixed") else placement
     system, schema = task_system(scene, mode, fixed), _task_schema(scene, mode)
     by_name = sg.catalog_by_name()
+    avoid = [avoid_goal] if isinstance(avoid_goal, dict) else list(avoid_goal or [])
     avoid_txt = ""
-    if avoid_goal:
-        avoid_txt = (f" The previous run's task was {avoid_goal.get('predicate')} "
-                     f"{avoid_goal.get('params')} — propose a DIFFERENT task this time.")
+    if avoid:
+        listed = "; ".join(f"{g.get('predicate')} {g.get('params')}" for g in avoid)
+        avoid_txt = (f" Tasks ALREADY generated for this scene (or its previous run): {listed} — "
+                     f"propose a DIFFERENT task this time (a different goal predicate, or the "
+                     f"same predicate on different objects).")
     messages = [{"role": "user", "content":
                  f"Scene '{scene.get('name', '')}' ({scene.get('description', '')}). "
                  f"Original request: {scene.get('prompt', '(none)')}. Propose one task"
@@ -140,9 +143,9 @@ def call_task_agent(scene: dict, *, mode: str = "task", placement: dict | None =
         align_ok, align_msg = geometry.alignment_check(chosen)
         if not align_ok:
             errs.append(align_msg)
-        if avoid_goal and task.goal.get("predicate") == avoid_goal.get("predicate") \
-                and task.goal.get("params") == avoid_goal.get("params"):
-            errs.append("this is the SAME goal as the previous run's task — choose a different one")
+        if any(task.goal.get("predicate") == g.get("predicate")
+               and task.goal.get("params") == g.get("params") for g in avoid):
+            errs.append("this is the SAME goal as an already-generated task — choose a different one")
         feedback = "; ".join(errs)
         if not errs:
             report = tg.check_feasibility(task, scene, base_xy=tuple(chosen["base"][:2]))
@@ -182,4 +185,6 @@ def task_dict(task: tg.Task, placement: dict) -> dict:
     # driver evaluates it, so a downstream rollout can score success without re-deriving it.
     from . import success
     d["success_spec"] = success.compile_success_spec(task.goal)
+    if task.subgoals:                    # multi-step: one compiled spec per subgoal, same contract
+        d["subgoal_specs"] = [success.compile_success_spec(g) for g in task.subgoals]
     return d

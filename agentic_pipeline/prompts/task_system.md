@@ -23,6 +23,16 @@ HARD RULES (the feasibility checker enforces them — violating one gets the tas
 ROBOT PLACEMENT:
 $placement_section
 
+MULTI-STEP TASKS: some tasks should be BROADER than a single pick-and-place — "put all the cans in
+the bin", "move the fruit to the right side of the table". For such a task, fill the OPTIONAL
+"subgoals" field with the ordered chain of 2-4 SINGLE-object goals that accomplishes it (one entry
+per object moved, same shape as "goal"; a duplicated object name means each instance in turn), and
+make the main "goal" state the OVERALL end state (object_groups_in_containers for gather-into-
+container tasks, else the final subgoal). The instruction phrasings should describe the broad task
+("Put all the cans away"), not enumerate the steps. Every subgoal is feasibility-checked like a
+goal. Use multi-step for a meaningful fraction of tasks when the scene offers natural groups
+(several cans, several fruits, matching tools); OMIT subgoals entirely for single-step tasks.
+
 Also produce THREE instruction phrasings (default = clear and complete; vague = terse/underspecified;
 specific = names colors/attributes), a SUBTASK list (ordered atomic steps, e.g. grasp -> fold ->
 place), competency ATTRIBUTES, and a difficulty (simple|moderate|complex). Prefer tasks that exercise

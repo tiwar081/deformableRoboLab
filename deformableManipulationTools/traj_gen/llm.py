@@ -88,8 +88,8 @@ def _image_block(png: Path) -> dict:
                        "data": base64.standard_b64encode(Path(png).read_bytes()).decode()}}
 
 
-def _candidate_line(r) -> str:
-    """One alternative, compact: id, physics tier, score, geometry."""
+def _candidate_line(r, failed_approach=None) -> str:
+    """One alternative, compact: id, physics tier, score, geometry (+ same-approach warning)."""
     g = r.grasp
     c = g.candidate
     q = getattr(c, "quality", None) or {}
@@ -97,11 +97,16 @@ def _candidate_line(r) -> str:
     phys = ("HELD in shake test" if held is not None and float(held) >= 0.5 else
             "DROPPED in shake test" if held is not None else "not physics-tested")
     p = g.position
+    same = ""
+    if failed_approach is not None:
+        a = np.asarray(g.pose)[:3, 2]
+        if float(np.dot(a, failed_approach)) > 0.9:
+            same = "  << SAME approach direction as the failed attempt — likely blocked the same way"
     return (f"- {g.id}: {phys}; cost {r.cost:.3f}; seat {getattr(c, 'seat_mode', '?')}; "
             f"width {float(c.width) * 1000:.0f} mm; span {float(getattr(c, 'span', 0)) * 1000:.0f} mm; "
             f"approach tilt {math.degrees(g.command.tilt):.0f} deg, yaw "
             f"{math.degrees(g.command.yaw):.0f} deg; world pos "
-            f"({p[0]:+.3f}, {p[1]:+.3f}, {p[2]:+.3f})")
+            f"({p[0]:+.3f}, {p[1]:+.3f}, {p[2]:+.3f}){same}")
 
 
 def build_package(*, task: dict, plan: dict, evaluation: dict, pick, alternatives,
@@ -146,9 +151,17 @@ def build_package(*, task: dict, plan: dict, evaluation: dict, pick, alternative
                       f"adjust={h.get('adjusted')} -> {h['failure']} "
                       f"(close drift {(h.get('close_drift') or 0) * 1000:.0f} mm, "
                       f"lift rise {(h.get('lift_rise') or 0) * 1000:.0f} mm)"]
+    failed_approach = None
+    if evaluation.get("failure") == "approach_missed":
+        failed_approach = np.asarray(pick.approach, dtype=float)
+        lines += ["", "IMPORTANT: the arm was PHYSICALLY BLOCKED on this approach (the TCP "
+                      "stopped short of the pose while the IK itself was feasible — something is "
+                      "in the arm's way). Retrying a candidate with a SIMILAR approach direction "
+                      "will fail the same way; switch to one whose approach/tilt differs "
+                      "substantially (e.g. top-down instead of side, or the opposite side)."]
     lines += ["", f"ALTERNATIVE CANDIDATES (top {len(alternatives)} by physics-tiered score; "
                   f"'switch' must name one of these):"]
-    lines += [_candidate_line(r) for r in alternatives]
+    lines += [_candidate_line(r, failed_approach) for r in alternatives]
     lines += ["", "The first image is the scene overview camera; the second is the attempted grasp "
                   "drawn on the object mesh (red = pad chords, blue arrow = approach, purple = the "
                   "object's measured path, green x = the place point)."]
